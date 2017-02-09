@@ -1,6 +1,7 @@
 import numpy as np
 from autoregressive.distributions import AutoRegression
 from autoregressive.models import FastARWeakLimitStickyHDPHMM
+from util import merge_dicts
 
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):
@@ -31,7 +32,7 @@ def _get_empirical_ar_params(train_datas, params):
     return obs_params
 
 
-def ARHMM(data_dict, kappa=1e8, gamma=999, nlags=3,
+def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
         K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
         affine=True, model_hypparams={}, obs_hypparams={}):
 
@@ -54,13 +55,16 @@ def ARHMM(data_dict, kappa=1e8, gamma=999, nlags=3,
         'init_state_distn': 'uniform'
         }
 
+    obs_hypparams=merge_dicts(default_obs_hypparams,obs_hypparams)
+    model_hypparams=merge_dicts(default_model_hypparams,model_hypparams)
+
     # TODO: return initialization parameters for saving downstream
 
     if empirical_bayes:
-        default_obs_hypparams=_get_empirical_ar_params(data_dict.values(),default_obs_hypparams)
+        obs_hypparams=_get_empirical_ar_params(data_dict.values(),obs_hypparams)
 
-    obs_distns = [AutoRegression(**default_obs_hypparams) for _ in range(max_states)]
-    model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **default_model_hypparams)
+    obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
+    model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
 
     # add ze data
 
