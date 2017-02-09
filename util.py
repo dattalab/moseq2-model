@@ -4,6 +4,7 @@ import h5py as h5
 import cPickle as pickle
 import gzip
 import scipy.io as sio
+import copy
 from collections import OrderedDict
 from train.util import merge_dicts
 
