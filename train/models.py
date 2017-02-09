@@ -54,6 +54,8 @@ def ARHMM(data_dict, kappa=1e8, gamma=999, nlags=3,
         'init_state_distn': 'uniform'
         }
 
+    # TODO: return initialization parameters for saving downstream
+
     if empirical_bayes:
         default_obs_hypparams=_get_empirical_ar_params(data_dict.values(),default_obs_hypparams)
 

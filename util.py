@@ -5,16 +5,11 @@ import cPickle as pickle
 import gzip
 from collections import OrderedDict
 
-# taken from moseq's train function by @mattjj and @alexbw
-
-
 # grab matlab data
 
 def load_data_from_matlab(filename,varname="features",pcs=10):
 
     f=h5.File(filename)
-
-    print(varname)
     score_tmp=f[varname]
     data_dict=OrderedDict()
 
@@ -25,7 +20,9 @@ def load_data_from_matlab(filename,varname="features",pcs=10):
 
     return data_dict
 
-def save_model_fit(filename, model, loglikes, all_labels):
+# per Scott's suggestion
+
+def save_model_fit(filename, model, loglikes, labels):
 
     def copy_model(self):
         tmp = []
@@ -38,9 +35,11 @@ def save_model_fit(filename, model, loglikes, all_labels):
         return cp
 
     with gzip.open(filename, 'w') as outfile:
-        pickle.dump({'model': model, 'loglikes': loglikes, 'all_labels': all_labels},
+        pickle.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels},
                     outfile, protocol=-1)
 
-    # also save in another format for analyzing in other languages
+def export_model_to_matlab(filename, model, loglikes, labels)
 
-    return model
+    # save initialization parameters along with AR matrices, noise matrix
+    
+    # export all the stuff we need for analyzing data downstream in MATLAB

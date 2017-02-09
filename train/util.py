@@ -6,27 +6,22 @@ from collections import OrderedDict
 
 # taken from moseq by @mattjj and @alexbw
 def train_model(model, num_iter=100, save_every=1, num_procs=8):
-    def resample(model):
-        #model.resample_model(num_procs=num_procs)
+
+    log_likelihoods=[]
+    labels=[]
+
+    for itr in progprint_xrange(num_iter):
         model.resample_model()
-        return model
-
-    def snapshot(model):
-        return model.log_likelihood(), get_labels_from_model(model)
-
-    print(str(num_iter))
-    model_samples = [resample(model) for itr in progprint_xrange(num_iter)]
-    saved_samples = [snapshot(model) for itr, model in enumerate(model_samples) if eq_mod(itr, -1, save_every)]
-
-    loglikes, labels = zip(*saved_samples)
+        log_likelihoods.append(model.log_likelihood())
+        labels.append([s.copy() for s in model.stateseqs])
 
     # different format for storing labels
+    labels_cat=[]
 
-    for i in xrange(0,itr):
-        labels_cat[i]=np.array([tmp[i] for tmp in labels])
+    for i in xrange(0,len(labels[0])):
+        labels_cat.append(np.array([tmp[i] for tmp in labels]))
 
-    return model, loglikes, labels_cat
-    #return model
+    return model, log_likelihoods, labels_cat
 
 # simple function for grabbing model labels across the dict
 
@@ -52,7 +47,3 @@ def whiten_all(data_dict, center=True):
 # taken from moseq by @mattjj and @alexbw
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
-
-
-def eq_mod(a, b, c):
-    return (a % c) == (b % c)
