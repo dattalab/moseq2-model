@@ -5,13 +5,16 @@ from functools import partial
 from collections import OrderedDict
 
 # taken from moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, num_procs=8):
+def train_model(model, num_iter=100, save_every=1, num_procs=1):
+
+    # per conversations w/ @mattjj, the fast class of models use openmp no need
+    # for "extra" parallelism
 
     log_likelihoods=[]
     labels=[]
 
     for itr in progprint_xrange(num_iter):
-        model.resample_model()
+        model.resample_model(num_procs)
         log_likelihoods.append(model.log_likelihood())
         labels.append([s.copy() for s in model.stateseqs])
 

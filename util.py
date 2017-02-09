@@ -7,7 +7,7 @@ import scipy.io as sio
 from collections import OrderedDict
 from train.util import merge_dicts
 
-# sort data into n splits
+# sort data into n splits, farm each split w/ bsub in one version
 
 def cv_parameter_scan(data_dict, config_file, output_dir, use_min=True):
 
@@ -47,7 +47,7 @@ def save_model_fit(filename, model, loglikes, labels):
     def copy_model(self):
         tmp = []
         for s in self.states_list:
-            tmp.append(self.data)
+            tmp.append(s.data)
             s.data = None
         cp=copy.deepcopy(self)
         for s,t in zip(self.states_list, tmp):
