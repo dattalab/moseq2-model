@@ -4,6 +4,9 @@ from pyhsmm.util.text import progprint_xrange
 from functools import partial
 from collections import OrderedDict
 
+# TODO: simple function for cross-validation optimization of parameters
+#def cv_parameter_scan()
+
 # taken from moseq by @mattjj and @alexbw
 def train_model(model, num_iter=100, save_every=1, num_procs=8):
 
