@@ -3,7 +3,28 @@ import numpy as np
 import h5py as h5
 import cPickle as pickle
 import gzip
+import scipy.io as sio
+import copy
 from collections import OrderedDict
+from train.util import merge_dicts
+
+# sort data into n splits, farm each split w/ bsub in one version
+
+def cv_parameter_scan(data_dict, config_file, output_dir, use_min=True):
+
+    print('Will use '+len(data_dict)+' splits')
+
+    if use_min:
+        lens=[len(item) for item in data_dict.values()]
+        use_frames=min(lens)
+        print('Only using '+use_frames+'per split')
+        for key, item in data_dict.iteritems():
+            data_dict[key]=item[:use_frames,:]
+
+    # config file yaml?
+
+
+    pass
 
 # grab matlab data
 
@@ -27,7 +48,7 @@ def save_model_fit(filename, model, loglikes, labels):
     def copy_model(self):
         tmp = []
         for s in self.states_list:
-            tmp.append(self.data)
+            tmp.append(s.data)
             s.data = None
         cp=copy.deepcopy(self)
         for s,t in zip(self.states_list, tmp):
@@ -38,8 +59,35 @@ def save_model_fit(filename, model, loglikes, labels):
         pickle.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels},
                     outfile, protocol=-1)
 
-def export_model_to_matlab(filename, model, loglikes, labels)
+def export_model_to_matlab(filename, model, log_likelihoods, labels):
 
-    # save initialization parameters along with AR matrices, noise matrix
-    
-    # export all the stuff we need for analyzing data downstream in MATLAB
+    trans_dist=model.trans_distn
+    init_obs_dist=model.init_emission_distn.hypparams
+
+    parameters= {
+        'ar_mat':[obs.A for obs in model.obs_distns],
+        'sig':[obs.sigma for obs in model.obs_distns],
+        'kappa':trans_dist.kappa,
+        'gamma':trans_dist.gamma,
+        'alpha':trans_dist.alpha,
+        'num_states':trans_dist.N,
+        'nu_0':init_obs_dist['nu_0'],
+        'sigma_0':init_obs_dist['sigma_0'],
+        'kappa_0':init_obs_dist['kappa_0'],
+        'nlags':model.nlags,
+        'mu_0':init_obs_dist['mu_0']
+    }
+
+    # use savemat to save in a format convenient for dissecting in matlab
+
+    # prepend labels with -1 to account for lags, also put into Dict to convert to a cell array
+
+    labels=[np.hstack((np.full((label.shape[0],model.nlags),-1),label)) for label in labels]
+    labels_export=np.empty(len(labels),dtype=object)
+
+    for i in xrange(0,len(labels)):
+        labels_export[i]=labels[i]
+
+    sio.savemat(filename,mdict={'labels':labels_export,'parameters':parameters,'log_likelihoods':log_likelihoods})
+
+    pass
