@@ -3,6 +3,7 @@ import numpy as np
 from pyhsmm.util.text import progprint_xrange
 from functools import partial
 from collections import OrderedDict
+from tqdm import tqdm_notebook
 
 # TODO: simple function for cross-validation optimization of parameters
 #def cv_parameter_scan()
@@ -16,7 +17,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1):
     log_likelihoods=[]
     labels=[]
 
-    for itr in progprint_xrange(num_iter):
+    for itr in tqdm_notebook(range(num_iter),leave=False):
         model.resample_model(num_procs)
         log_likelihoods.append(model.log_likelihood())
         labels.append([s.copy() for s in model.stateseqs])
