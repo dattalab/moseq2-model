@@ -25,7 +25,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1):
     # different format for storing labels
     labels_cat=[]
 
-    for i in xrange(0,len(labels[0])):
+    for i in xrange(len(labels[0])):
         labels_cat.append(np.array([tmp[i] for tmp in labels]))
 
     return model, log_likelihoods, labels_cat

@@ -11,7 +11,28 @@ from train.util import merge_dicts, train_model
 from tqdm import tqdm_notebook
 # sort data into n splits, farm each split w/ bsub in one version
 
-def cv_parameter_scan(data_dict, parameter, values, restarts=5, use_min=True):
+def parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=100, restarts=5, use_min=True):
+
+    nparameters=len(values)
+    print('User passed '+str(nparameters)+' parameter values for '+parameter)
+
+    labels=np.empty((restarts,nparameters),dtype=object)
+    models=[[[] for i in range(nparameters)] for j in range(restarts)]
+    loglikes=np.empty((restarts,nparameters),dtype=object)
+
+    for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
+        for itr in xrange(restarts):
+
+            tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
+            arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
+            [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
+            loglikes[itr][parameter_idx] = tmp_loglikes
+            labels[itr][parameter_idx]=tmp_labels
+            models[itr][parameter_idx]=copy_model(arhmm)
+
+    return loglikes, labels, models
+
+def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=100, restarts=5, use_min=False):
 
     nsplits=len(data_dict)
     nparameters=len(values)
@@ -46,11 +67,12 @@ def cv_parameter_scan(data_dict, parameter, values, restarts=5, use_min=True):
         test_data['1']=data_dict[test_key]
 
         for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
+            for itr in xrange(restarts):
 
-            for itr in xrange(0,restarts):
-
-                arhmm=ARHMM(data_dict=train_data, **{parameter: parameter_value})
-                [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=5, num_procs=1)
+                tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
+                print(tmp_parameters)
+                arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
+                [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
                 heldout_ll[itr+data_idx*(restarts)][parameter_idx] = arhmm.log_likelihood(test_data['1'])
                 labels[itr+data_idx*(restarts)][parameter_idx]=tmp_labels
                 models[itr+data_idx*(restarts)][parameter_idx]=copy_model(arhmm)
@@ -94,7 +116,6 @@ def copy_model(self):
 
 def save_model_fit(filename, model, loglikes, labels):
 
-
     with gzip.open(filename, 'w') as outfile:
         pickle.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels},
         outfile, protocol=-1)
@@ -125,7 +146,7 @@ def export_model_to_matlab(filename, model, log_likelihoods, labels):
     labels=[np.hstack((np.full((label.shape[0],model.nlags),-1),label)) for label in labels]
     labels_export=np.empty(len(labels),dtype=object)
 
-    for i in xrange(0,len(labels)):
+    for i in xrange(len(labels)):
         labels_export[i]=labels[i]
 
     sio.savemat(filename,mdict={'labels':labels_export,'parameters':parameters,'log_likelihoods':log_likelihoods})
