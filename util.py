@@ -39,8 +39,6 @@ def cv_parameter_scan(data_dict, config_file, output_file, parameter, values, re
         test_data=OrderedDict()
         test_data['1']=features_trim[test_key]
 
-        # stride across parameter values
-
         for parameter_idx, parameter_values in enumerate(values):
 
             for itr in xrange(0,restarts):
