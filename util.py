@@ -40,14 +40,14 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
     print('Will use '+str(nsplits)+' splits')
     print('User passed '+str(nparameters)+' parameter values for '+parameter)
 
+    # by default use all the data
+
     if use_min:
         lens=[len(item) for item in data_dict.values()]
         use_frames=min(lens)
         print('Only using '+str(use_frames)+' per split')
         for key, item in data_dict.iteritems():
             data_dict[key]=item[:use_frames,:]
-
-        # config file yaml?
 
     # return the heldout likelihood, model object and labels
 
@@ -61,16 +61,13 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
 
         # set up the split
 
-        train_keys=[x for x in all_keys if x not in test_key]
-        train_data=OrderedDict((i,data_dict[i]) for i in train_keys)
-        test_data=OrderedDict()
-        test_data['1']=data_dict[test_key]
+        train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in test_key)
+        test_data=OrderedDict([(1,data_dict[test_key])])
 
         for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
             for itr in xrange(restarts):
 
                 tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
-                print(tmp_parameters)
                 arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
                 [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
                 heldout_ll[itr+data_idx*(restarts)][parameter_idx] = arhmm.log_likelihood(test_data['1'])
