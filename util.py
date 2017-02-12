@@ -12,6 +12,8 @@ from train.util import merge_dicts
 
 def cv_parameter_scan(data_dict, config_file, output_dir, use_min=True):
 
+    # number of keys in dictionary defines splits (could think of more complicated schemes)
+
     print('Will use '+len(data_dict)+' splits')
 
     if use_min:
@@ -22,6 +24,9 @@ def cv_parameter_scan(data_dict, config_file, output_dir, use_min=True):
             data_dict[key]=item[:use_frames,:]
 
     # config file yaml?
+
+    # consider this a gateway from a command line interface, data_dict points to a pickle
+    # and yaml specifies parameter and scan values (could do fminsearch-like thing here)
 
 
     pass

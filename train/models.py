@@ -69,7 +69,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
     # add ze data
 
     for data_name, data in data_dict.items():
-        print('Adding '+str(data.shape[0])+' frames from '+data_name)
+        #print('Adding '+str(data.shape[0])+' frames from '+data_name)
         model.add_data(data)
 
     # initialize ze states per SL's recommendation
