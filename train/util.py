@@ -8,8 +8,8 @@ from tqdm import tqdm_notebook
 # TODO: simple function for cross-validation optimization of parameters
 #def cv_parameter_scan()
 
-# taken from moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, num_procs=1):
+# based on moseq by @mattjj and @alexbw
+def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
@@ -17,16 +17,27 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1):
     log_likelihoods=[]
     labels=[]
 
-    for itr in tqdm_notebook(range(num_iter),leave=False):
-        model.resample_model(num_procs)
-        log_likelihoods.append(model.log_likelihood())
-        labels.append([s.copy() for s in model.stateseqs])
+    if cli:
+        for itr in range(num_iter):
+            model.resample_model(num_procs)
+            log_likelihoods.append(model.log_likelihood())
+            seq_list=[s.copy() for s in model.stateseqs]
+            for seq_itr in range(len(seq_list)):
+                seq_list[seq_itr]=np.append(np.repeat(-5,model.nlags),seq_list[seq_itr])
+            labels.append(seq_list)
+    else:
+        for itr in tqdm_notebook(range(num_iter),leave=False):
+            model.resample_model(num_procs)
+            log_likelihoods.append(model.log_likelihood())
+            seq_list=[s.copy() for s in model.stateseqs]
+            for seq_itr in range(len(seq_list)):
+                seq_list[seq_itr]=np.append(np.repeat(-5,model.nlags),seq_list[seq_itr])
+            labels.append(seq_list)
 
-    # different format for storing labels
     labels_cat=[]
 
     for i in xrange(len(labels[0])):
-        labels_cat.append(np.array([tmp[i] for tmp in labels]))
+        labels_cat.append(np.array([tmp[i] for tmp in labels],dtype=np.int32))
 
     return model, log_likelihoods, labels_cat
 

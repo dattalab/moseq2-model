@@ -9,15 +9,22 @@ from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model
 from tqdm import tqdm_notebook
-# sort data into n splits, farm each split w/ bsub in one version
+
+# stolen from MoSeq thanks @alexbw
+def enum(*sequential, **named):
+    """Handy way to fake an enumerated type in Python
+    http://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
+    """
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
 
 def parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=100, restarts=5, use_min=True):
 
     nparameters=len(values)
     print('User passed '+str(nparameters)+' parameter values for '+parameter)
 
-    labels=np.empty((restarts,nparameters),dtype=object)
-    models=[[[] for i in range(nparameters)] for j in range(restarts)]
+    labels=np.empty((restarts,nparameters,len(data_dict)),dtype=object)
+    #models=[[[] for i in range(nparameters)] for j in range(restarts)]
     loglikes=np.empty((restarts,nparameters),dtype=object)
 
     for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
@@ -27,10 +34,13 @@ def parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=1
             arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
             [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
             loglikes[itr][parameter_idx] = tmp_loglikes
-            labels[itr][parameter_idx]=tmp_labels
-            models[itr][parameter_idx]=copy_model(arhmm)
 
-    return loglikes, labels, models
+            for label_itr,tmp_label in enumerate(tmp_labels):
+                labels[itr,parameter_idx,label_itr]=tmp_label
+
+            #models[itr][parameter_idx]=copy_model(arhmm)
+
+    return loglikes, labels
 
 def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=100, restarts=5, use_min=False):
 
@@ -51,9 +61,9 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
 
     # return the heldout likelihood, model object and labels
 
-    heldout_ll=np.empty((nsplits*restarts,nparameters))
-    labels=np.empty((nsplits*restarts,nparameters),dtype=object)
-    models=[[[] for i in range(nparameters)] for j in range(nsplits*restarts)]
+    heldout_ll=np.empty((restarts,nsplits,nparameters),np.float64)
+    labels=np.empty((restarts,nsplits,nparameters,len(data_dict)),dtype=object)
+    #models=[[[] for i in range(nparameters)] for j in range(nsplits*restarts)]
 
     all_keys=data_dict.keys()
 
@@ -62,7 +72,7 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
         # set up the split
 
         train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in test_key)
-        test_data=OrderedDict([(1,data_dict[test_key])])
+        test_data=OrderedDict([('1',data_dict[test_key])])
 
         for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
             for itr in xrange(restarts):
@@ -70,11 +80,16 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
                 tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
                 arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
                 [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
-                heldout_ll[itr+data_idx*(restarts)][parameter_idx] = arhmm.log_likelihood(test_data['1'])
-                labels[itr+data_idx*(restarts)][parameter_idx]=tmp_labels
-                models[itr+data_idx*(restarts)][parameter_idx]=copy_model(arhmm)
+                heldout_ll[itr,data_idx,parameter_idx] = arhmm.log_likelihood(test_data['1'])
 
-    return heldout_ll, labels, models
+                for label_itr,tmp_label in enumerate(tmp_labels):
+                    labels[itr,data_idx,parameter_idx,label_itr]=tmp_label
+
+
+                #labels[itr+data_idx*(restarts)][parameter_idx]=tmp_labels
+                #models[itr+data_idx*(restarts)][parameter_idx]=copy_model(arhmm)
+
+    return heldout_ll, labels
 
 # grab matlab data
 
