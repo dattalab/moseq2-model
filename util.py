@@ -5,6 +5,7 @@ import cPickle as pickle
 import gzip
 import scipy.io as sio
 import copy
+import yaml
 from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model
@@ -93,6 +94,39 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
 
 # grab matlab data
 
+def load_pcs(filename,varname,pcs=10):
+
+    # TODO: trim pickles down to right number of pcs
+
+    if filename.endswith('.mat'):
+        data_dict=load_data_from_matlab(filename,varname,pcs)
+    elif filename.endswith('.pklz') | filename.endswith('.pz'):
+        with gzip.open(varname+"."+filename,"rb") as f:
+            data_dict=pickle.load(f)
+    elif filename.endswith('.pkl') | filename.endwith('p'):
+        with open(varname+"."+filename,"rb") as f:
+            data_dict=pickle.load(f)
+    else:
+        raise ValueError('Did understand filetype')
+
+    return data_dict
+
+
+def save_dict(filename,dict_to_save):
+    if filename.endswith('.mat'):
+        sio.savemat(filename,mdict=dict_to_save)
+    elif filename.endswith('.pklz') | filename.endswith('.pz'):
+        # pickle it
+        with gzip.open(filename, 'w') as outfile:
+            pickle.dump(dict_to_save, outfile, protocol=-1)
+    elif filename.endswith('.pkl') | filename.endswith('.p'):
+        # pickle it
+        with open(filename, 'wb') as outfile:
+            pickle.dump(dict_to_save, outfile, protocol=-1)
+    else:
+        raise ValueError('Did understand filetype')
+
+
 def load_data_from_matlab(filename,varname="features",pcs=10):
 
     f=h5.File(filename)
@@ -162,3 +196,26 @@ def export_model_to_matlab(filename, model, log_likelihoods, labels):
         labels_export[i]=labels[i]
 
     sio.savemat(filename,mdict={'labels':labels_export,'parameters':parameters,'log_likelihoods':log_likelihoods})
+
+
+def read_cli_config(filename):
+
+    with open(filename, 'r') as f:
+        config = yaml.load(f.read())
+
+    scan_settings = config['scan_settings']
+    scan_parameter = scan_settings['scan_parameter']
+    scan_range =  scan_settings['scan_range']
+    scan_scale =  scan_settings['scan_scale']
+
+    if scan_scale=='log':
+        scan_values=np.logspace(*scan_range)
+    elif scan_scale=='linear':
+        scan_values=np.linspace(*scan_range)
+
+    other_parameters={}
+
+    if 'parameters' in config.keys():
+        other_parameters=config['parameters']
+
+    return scan_parameter,scan_values,other_parameters,scan_settings

@@ -7,7 +7,7 @@ from tqdm import tqdm
 from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import load_data_from_matlab, enum
+from util import load_data_from_matlab, enum, save_dict, load_pcs, read_cli_config
 from mpi4py import MPI
 import scipy.io as sio
 import warnings
@@ -47,39 +47,14 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         elif destfile.endswith('.h5'):
             raise NotImplementedError
 
-        with open(paramfile, 'r') as f:
-            config = yaml.load(f.read())
-
-        scan_settings = config['scan_settings']
-        scan_parameter = scan_settings['scan_parameter']
-        scan_range =  scan_settings['scan_range']
-        scan_scale =  scan_settings['scan_scale']
-
-        if scan_scale=='log':
-            scan_values=np.logspace(*scan_range)
-        elif scan_scale=='linear':
-            scan_values=np.linspace(*scan_range)
-
-        #scan_parameter = config['scan_parameter']
-        #tmp_scan = config['scan_values']
-        #scan_values=[x for x in tmp_scan]
+        [scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
         click.echo('Will scan parameter '+scan_parameter)
         click.echo('Scan values '+str(scan_values))
 
-        other_parameters={}
-
-        if 'parameters' in config.keys():
-            other_parameters=config['parameters']
-
         # get them pc's
 
-        if inputfile.endswith('.mat'):
-            data_dict=load_data_from_matlab(inputfile)
-        elif inputfile.endswith('.pklz') | inputfile.endswith('.pz'):
-            data_dict=pickle.load(gzip.open("data_dict.inputfile","rb"))
-        elif inputfile.endswith('.pkl') | inputfile.endwith('p'):
-            data_dict=pickle.load(open("data_dict.inputfile","rb"))
+        data_dict=load_pcs(filename=inputfile,varname="features",pcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -110,7 +85,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         task_index = 0
         num_workers = size - 1
         closed_workers = 0
-        pbar = tqdm(total=len(worker_dicts))
+        pbar = tqdm(total=len(worker_dicts),smoothing=0)
 
         while closed_workers < num_workers:
 
@@ -137,8 +112,11 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
                 worker_idx=data['index']
 
                 tmp_labels=data['labels']
-                for label_itr,label in enumerate(tmp_labels):
-                    labels[(worker_idx[0],worker_idx[1],label_itr)]=label
+                if np.isnan(tmp_labels):
+                    labels[worker_idx[0]][worker_idx[1]][:]=np.nan
+                else:
+                    for label_itr,label in enumerate(tmp_labels):
+                        labels[(worker_idx[0],worker_idx[1],label_itr)]=label
 
                 loglikes[worker_idx]=data['loglikes']
                 pbar.update(1)
@@ -177,21 +155,9 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
     if rank==0:
 
         click.echo('Saving results to '+destfile)
+        export_dict=dict({'loglikes':loglikes, 'labels':labels},**scan_settings)
+        save_dict(filename=destfile,dict_to_save=export_dict)
 
-        if destfile.endswith('.mat'):
-            sio.savemat(destfile,mdict=dict({'loglikes':loglikes ,'labels':labels}, **scan_settings))
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
-            # pickle it
-            with gzip.open(destfile, 'w') as outfile:
-                pickle.dump(dict({'loglikes': loglikes, 'labels': labels}, **scan_settings),
-                    outfile, protocol=-1)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
-            # pickle it
-            with open(destfile, 'wb') as outfile:
-                pickle.dump(dict({'loglikes': loglikes, 'labels': labels}, **scan_settings),
-                    outfile, protocol=-1)
-        elif destfile.endswith('.h5'):
-            raise NotImplementedError
 
 @cli.command()
 @click.argument("paramfile", type=click.Path(exists=True))
@@ -227,32 +193,14 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         with open(paramfile, 'r') as f:
             config = yaml.load(f.read())
 
-        scan_settings = config['scan_settings']
-        scan_parameter = scan_settings['scan_parameter']
-        scan_range =  scan_settings['scan_range']
-        scan_scale =  scan_settings['scan_scale']
-
-        if scan_scale=='log':
-            scan_values=np.logspace(*scan_range)
-        elif scan_scale=='linear':
-            scan_values=np.linspace(*scan_range)
+        [scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
         click.echo('Will scan parameter '+scan_parameter)
         click.echo('Scan values '+str(scan_values))
 
-        other_parameters={}
-
-        if 'parameters' in config.keys():
-            other_parameters=config['parameters']
-
         # get them pc's
 
-        if inputfile.endswith('.mat'):
-            data_dict=load_data_from_matlab(inputfile)
-        elif inputfile.endswith('.pklz') | inputfile.endswith('.pz'):
-            data_dict=pickle.load(gzip.open("data_dict.inputfile","rb"))
-        elif inputfile.endswith('.pkl') | inputfile.endwith('p'):
-            data_dict=pickle.load(open("data_dict.inputfile","rb"))
+        data_dict=load_pcs(filename=inputfile,varname="features",pcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -290,7 +238,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         task_index = 0
         num_workers = size - 1
         closed_workers = 0
-        pbar = tqdm(total=len(worker_dicts))
+        pbar = tqdm(total=len(worker_dicts),smoothing=0)
 
         while closed_workers < num_workers:
 
@@ -313,13 +261,14 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
                 # sort out the data brutha
 
-                #click.echo('Worker '+str(source)+' finished')
                 worker_idx=data['index']
                 tmp_labels=data['labels']
-                #click.echo(worker_idx)
 
-                for label_itr,label in enumerate(tmp_labels):
-                    labels[(worker_idx[0],worker_idx[1],worker_idx[2],label_itr)]=label
+                if np.isnan(tmp_labels):
+                    labels[worker_idx[0]][worker_idx[1]][worker_idx[2]][:]=np.nan
+                else:
+                    for label_itr,label in enumerate(tmp_labels):
+                        labels[(worker_idx[0],worker_idx[1],worker_idx[2],label_itr)]=label
 
                 heldout_ll[worker_idx]=data['heldout_ll']
 
@@ -345,9 +294,6 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
                 # if we get marching orders, fire up the task
 
                 tmp_parameters=merge_dicts(worker_dict['other_parameters'],{worker_dict['scan_parameter']:worker_dict['scan_value']})
-                # click.echo(tmp_parameters)
-                # click.echo(worker_dict['train_keys'])
-                # click.echo(worker_dict['test_key'])
                 train_data=OrderedDict((i,data_dict[i]) for i in worker_dict['train_keys'])
                 arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)
@@ -366,21 +312,8 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
     if rank==0:
 
         click.echo('Saving results to '+destfile)
-
-        if destfile.endswith('.mat'):
-            sio.savemat(destfile,mdict=dict({'heldout_ll':heldout_ll ,'labels':labels}, **scan_settings))
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
-            # pickle it
-            with gzip.open(destfile, 'w') as outfile:
-                pickle.dump(dict({'heldout_ll': heldout_ll, 'labels': labels}, **scan_settings),
-                    outfile, protocol=-1)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
-            # pickle it
-            with open(destfile, 'wb') as outfile:
-                pickle.dump(dict({'heldout_ll': heldout_ll, 'labels': labels}, **scan_settings),
-                    outfile, protocol=-1)
-        elif destfile.endswith('.h5'):
-            raise NotImplementedError
+        export_dict=dict({'heldout_ll':heldout_ll, 'labels':labels},**scan_settings)
+        save_dict(filename=destfile,dict_to_save=export_dict)
 
 
 
