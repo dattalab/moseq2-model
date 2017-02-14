@@ -3,6 +3,7 @@ import numpy as np
 import click
 import cPickle as pickle
 import yaml
+import gzip
 from tqdm import tqdm
 from train.models import ARHMM
 from collections import OrderedDict
@@ -40,12 +41,14 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
+        elif destfile.endswith('.pklz') or destfile.endswith('.pz'):
             click.echo('Will save gzipped pickle: '+destfile)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
+        elif destfile.endswith('.pkl') or destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
         elif destfile.endswith('.h5'):
             raise NotImplementedError
+        else:
+            raise Exception('Output file format not understood')
 
         with open(paramfile, 'r') as f:
             config = yaml.load(f.read())
@@ -75,11 +78,18 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         # get them pc's
 
         if inputfile.endswith('.mat'):
-            data_dict=load_data_from_matlab(inputfile)
-        elif inputfile.endswith('.pklz') | inputfile.endswith('.pz'):
-            data_dict=pickle.load(gzip.open("data_dict.inputfile","rb"))
-        elif inputfile.endswith('.pkl') | inputfile.endwith('p'):
-            data_dict=pickle.load(open("data_dict.inputfile","rb"))
+            data_dict = load_data_from_matlab(inputfile)
+        elif inputfile.endswith('.pklz') or inputfile.endswith('.pz'):
+            with gzip.open("data_dict.inputfile","rb") as gzip_input:
+                data_dict = pickle.load(gzip_input)
+        elif inputfile.endswith('.pkl') or inputfile.endwith('p'):
+            with open("data_dict.inputfile","rb") as pickle_input:
+                data_dict = pickle.load(pickle_input)
+        elif inputfile.endswith('.h5'):
+            from moseq.util import load_field_from_hdf
+            data_dict = load_field_from_hdf(inputfile, 'data')
+        else:
+            raise Exception('Input file extension not understood')
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -89,21 +99,21 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         worker_dicts=[]
 
-        for scan_idx,scan_value in enumerate(scan_values):
+        for scan_idx, scan_value in enumerate(scan_values):
             for restart_idx in xrange(restarts):
                 worker_dicts.append({'scan_parameter': scan_parameter,
-                    'scan_value':scan_value,
-                    'index': (restart_idx,scan_idx),
-                    'other_parameters':other_parameters})
+                    'scan_value': scan_value,
+                    'index': (restart_idx, scan_idx),
+                    'other_parameters': other_parameters})
 
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
-        labels=np.empty((restarts,len(scan_values),len(data_dict)),dtype=object)
-        loglikes=np.empty((restarts,len(scan_values)),dtype=object)
+        labels = np.empty((restarts, len(scan_values), len(data_dict)), dtype=object)
+        loglikes = np.empty((restarts, len(scan_values)), dtype=object)
 
     data_dict = comm.bcast(data_dict,root=0)
 
-    if rank==0:
+    if rank == 0:
 
         click.echo('Starting training...')
 
@@ -118,29 +128,28 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
             data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
             source = status.Get_source()
-            tag=status.Get_tag()
+            tag = status.Get_tag()
 
             if tag == tags.READY:
 
                 if task_index < len(worker_dicts):
                     #click.echo('Distributing task '+str(task_index))
-                    comm.send(worker_dicts[task_index],dest=source, tag=tags.START)
-                    task_index+=1
+                    comm.send(worker_dicts[task_index], dest=source, tag=tags.START)
+                    task_index += 1
                 else:
                     comm.send(None, dest=source, tag=tags.EXIT)
 
             elif tag == tags.DONE:
-
                 # sort out the data brutha
 
                 #click.echo('Worker '+str(source)+' finished')
-                worker_idx=data['index']
+                worker_idx = data['index']
 
-                tmp_labels=data['labels']
-                for label_itr,label in enumerate(tmp_labels):
-                    labels[(worker_idx[0],worker_idx[1],label_itr)]=label
+                tmp_labels = data['labels']
+                for label_itr, label in enumerate(tmp_labels):
+                    labels[(worker_idx[0], worker_idx[1], label_itr)] = label
 
-                loglikes[worker_idx]=data['loglikes']
+                loglikes[worker_idx] = data['loglikes']
                 pbar.update(1)
 
             elif tag == tags.EXIT:
@@ -160,7 +169,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
             if tag == tags.START:
 
                 # if we get marching orders, fire up the task
-                tmp_parameters=merge_dicts(worker_dict['other_parameters'],{worker_dict['scan_parameter']:worker_dict['scan_value']})
+                tmp_parameters = merge_dicts(worker_dict['other_parameters'],
+                                            {worker_dict['scan_parameter']: worker_dict['scan_value']})
                 arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)
                 comm.send({'index':worker_dict['index'],
@@ -180,12 +190,12 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             sio.savemat(destfile,mdict=dict({'loglikes':loglikes ,'labels':labels}, **scan_settings))
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
+        elif destfile.endswith('.pklz') or destfile.endswith('.pz'):
             # pickle it
             with gzip.open(destfile, 'w') as outfile:
                 pickle.dump(dict({'loglikes': loglikes, 'labels': labels}, **scan_settings),
                     outfile, protocol=-1)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
+        elif destfile.endswith('.pkl') or destfile.endswith('.p'):
             # pickle it
             with open(destfile, 'wb') as outfile:
                 pickle.dump(dict({'loglikes': loglikes, 'labels': labels}, **scan_settings),
@@ -217,12 +227,14 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
+        elif destfile.endswith('.pklz') or destfile.endswith('.pz'):
             click.echo('Will save gzipped pickle: '+destfile)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
+        elif destfile.endswith('.pkl') or destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
         elif destfile.endswith('.h5'):
             raise NotImplementedError
+        else:
+            raise Exception('File extension not recognized')
 
         with open(paramfile, 'r') as f:
             config = yaml.load(f.read())
@@ -249,10 +261,12 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if inputfile.endswith('.mat'):
             data_dict=load_data_from_matlab(inputfile)
-        elif inputfile.endswith('.pklz') | inputfile.endswith('.pz'):
-            data_dict=pickle.load(gzip.open("data_dict.inputfile","rb"))
-        elif inputfile.endswith('.pkl') | inputfile.endwith('p'):
-            data_dict=pickle.load(open("data_dict.inputfile","rb"))
+        elif inputfile.endswith('.pklz') or inputfile.endswith('.pz'):
+            with gzip.open("data_dict.inputfile","rb") as gzip_input:
+                data_dict=pickle.load(gzip_input)
+        elif inputfile.endswith('.pkl') or inputfile.endwith('p'):
+            with open("data_dict.inputfile","rb") as pickle_input:
+                data_dict=pickle.load(pickle_input)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -266,16 +280,16 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         nsplits=len(data_dict)
         nparameters=len(scan_values)
 
-        for cv_idx,test_key in enumerate(all_keys):
-            train_keys=[key for key in all_keys if key not in test_key]
-            for scan_idx,scan_value in enumerate(scan_values):
+        for cv_idx, test_key in enumerate(all_keys):
+            train_keys = [key for key in all_keys if key not in test_key]
+            for scan_idx, scan_value in enumerate(scan_values):
                 for restart_idx in xrange(restarts):
                     worker_dicts.append({'scan_parameter': scan_parameter,
-                        'scan_value':scan_value,
-                        'index': (restart_idx,cv_idx,scan_idx),
-                        'train_keys': train_keys,
-                        'test_key': test_key,
-                        'other_parameters':other_parameters})
+                                        'scan_value':scan_value,
+                                        'index': (restart_idx,cv_idx,scan_idx),
+                                        'train_keys': train_keys,
+                                        'test_key': test_key,
+                                        'other_parameters':other_parameters})
 
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
@@ -290,7 +304,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         task_index = 0
         num_workers = size - 1
         closed_workers = 0
-        pbar = tqdm(total=len(worker_dicts))
+        pbar = tqdm(total = len(worker_dicts))
 
         while closed_workers < num_workers:
 
@@ -369,12 +383,12 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             sio.savemat(destfile,mdict=dict({'heldout_ll':heldout_ll ,'labels':labels}, **scan_settings))
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
+        elif destfile.endswith('.pklz') or destfile.endswith('.pz'):
             # pickle it
             with gzip.open(destfile, 'w') as outfile:
                 pickle.dump(dict({'heldout_ll': heldout_ll, 'labels': labels}, **scan_settings),
                     outfile, protocol=-1)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
+        elif destfile.endswith('.pkl') or destfile.endswith('.p'):
             # pickle it
             with open(destfile, 'wb') as outfile:
                 pickle.dump(dict({'heldout_ll': heldout_ll, 'labels': labels}, **scan_settings),
