@@ -177,16 +177,16 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         click.echo('Saving results to '+destfile)
 
         if destfile.endswith('.mat'):
-            sio.savemat(destfile,mdict={'loglikes':loglikes,'labels':labels})
+            sio.savemat(destfile,mdict={'loglikes':loglikes,'labels':labels', **scan_settings})
         elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
             # pickle it
             with gzip.open(destfile, 'w') as outfile:
-                pickle.dump({'loglikes': loglikes, 'labels': labels},
+                pickle.dump({'loglikes': loglikes, 'labels': labels, **scan_settings},
                     outfile, protocol=-1)
         elif destfile.endswith('.pkl') | destfile.endswith('.p'):
             # pickle it
             with open(destfile, 'wb') as outfile:
-                pickle.dump({'loglikes': loglikes, 'labels': labels},
+                pickle.dump({'loglikes': loglikes, 'labels': labels, **scan_settings},
                     outfile, protocol=-1)
         elif destfile.endswith('.h5'):
             raise NotImplementedError
@@ -364,16 +364,16 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         click.echo('Saving results to '+destfile)
 
         if destfile.endswith('.mat'):
-            sio.savemat(destfile,mdict={'heldout_ll':heldout_ll ,'labels':labels})
+            sio.savemat(destfile,mdict={'heldout_ll':heldout_ll ,'labels':labels, **scan_settings})
         elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
             # pickle it
             with gzip.open(destfile, 'w') as outfile:
-                pickle.dump({'heldout_ll': heldout_ll, 'labels': labels},
+                pickle.dump({'heldout_ll': heldout_ll, 'labels': labels, **scan_settings},
                     outfile, protocol=-1)
         elif destfile.endswith('.pkl') | destfile.endswith('.p'):
             # pickle it
             with open(destfile, 'wb') as outfile:
-                pickle.dump({'heldout_ll': heldout_ll, 'labels': labels},
+                pickle.dump({'heldout_ll': heldout_ll, 'labels': labels, **scan_settings},
                     outfile, protocol=-1)
         elif destfile.endswith('.h5'):
             raise NotImplementedError
