@@ -1,4 +1,5 @@
 scan_settings:
   scan_parameter: kappa
-  scan_range: [1,16,16]
-  scan_scale: log
+  scan_range: [1,16,16] # start, stop, numvals
+  scan_scale: log # where val = 1*10^start..1*10^stop for log
+  # scan_scale = log, linear with same scan_range signature

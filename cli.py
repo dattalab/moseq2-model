@@ -1,15 +1,13 @@
 from __future__ import division
 import numpy as np
 import click
-import cPickle as pickle
 import yaml
 from tqdm import tqdm
 from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import load_data_from_matlab, enum, save_dict, load_pcs, read_cli_config
+from util import enum, save_dict, load_pcs, read_cli_config
 from mpi4py import MPI
-import scipy.io as sio
 import warnings
 
 @click.group()
@@ -22,7 +20,8 @@ def cli():
 @click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
+@click.option('--varname', type=str, default='features')
+def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -42,10 +41,12 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
             click.echo('Will save to MAT-file: '+destfile)
         elif destfile.endswith('.z'):
             click.echo('Will save compressed pickle: '+destfile)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
+        elif destfile.endswith('.pkl') or destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
         elif destfile.endswith('.h5'):
             raise NotImplementedError
+        else:
+            raise Exception('Output file format not understood')
 
         [scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
@@ -54,7 +55,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile,varname="features",pcs=10)
+        data_dict=load_pcs(filename=inputfile, varname=varname, pcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -64,21 +65,21 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
 
         worker_dicts=[]
 
-        for scan_idx,scan_value in enumerate(scan_values):
+        for scan_idx, scan_value in enumerate(scan_values):
             for restart_idx in xrange(restarts):
                 worker_dicts.append({'scan_parameter': scan_parameter,
-                    'scan_value':scan_value,
-                    'index': (restart_idx,scan_idx),
-                    'other_parameters':other_parameters})
+                    'scan_value': scan_value,
+                    'index': (restart_idx, scan_idx),
+                    'other_parameters': other_parameters})
 
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
-        labels=np.empty((restarts,len(scan_values),len(data_dict)),dtype=object)
-        loglikes=np.empty((restarts,len(scan_values)),dtype=object)
+        labels = np.empty((restarts, len(scan_values), len(data_dict)), dtype=object)
+        loglikes = np.empty((restarts, len(scan_values)), dtype=object)
 
     data_dict = comm.bcast(data_dict,root=0)
 
-    if rank==0:
+    if rank == 0:
 
         click.echo('Starting training...')
 
@@ -93,23 +94,22 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
 
             data = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=status)
             source = status.Get_source()
-            tag=status.Get_tag()
+            tag = status.Get_tag()
 
             if tag == tags.READY:
 
                 if task_index < len(worker_dicts):
                     #click.echo('Distributing task '+str(task_index))
-                    comm.send(worker_dicts[task_index],dest=source, tag=tags.START)
-                    task_index+=1
+                    comm.send(worker_dicts[task_index], dest=source, tag=tags.START)
+                    task_index += 1
                 else:
                     comm.send(None, dest=source, tag=tags.EXIT)
 
             elif tag == tags.DONE:
-
                 # sort out the data brutha
 
                 #click.echo('Worker '+str(source)+' finished')
-                worker_idx=data['index']
+                worker_idx = data['index']
 
                 tmp_labels=data['labels']
                 if type(tmp_labels) is float and np.isnan(tmp_labels):
@@ -118,7 +118,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
                     for label_itr,label in enumerate(tmp_labels):
                         labels[(worker_idx[0],worker_idx[1],label_itr)]=label
 
-                loglikes[worker_idx]=data['loglikes']
+                loglikes[worker_idx] = data['loglikes']
                 pbar.update(1)
 
             elif tag == tags.EXIT:
@@ -138,7 +138,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
             if tag == tags.START:
 
                 # if we get marching orders, fire up the task
-                tmp_parameters=merge_dicts(worker_dict['other_parameters'],{worker_dict['scan_parameter']:worker_dict['scan_value']})
+                tmp_parameters = merge_dicts(worker_dict['other_parameters'],
+                                            {worker_dict['scan_parameter']: worker_dict['scan_value']})
                 arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)
                 comm.send({'index':worker_dict['index'],
@@ -165,7 +166,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
 @click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
+@click.option('--varname', type=str, default='features')
+def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -184,11 +186,13 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
         elif destfile.endswith('.z'):
-            click.echo('Will save gzipped pickle: '+destfile)
-        elif destfile.endswith('.pkl') | destfile.endswith('.p'):
+            click.echo('Will save compressed pickle: '+destfile)
+        elif destfile.endswith('.pkl') or destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
         elif destfile.endswith('.h5'):
             raise NotImplementedError
+        else:
+            raise Exception('Output file format not understood')
 
         with open(paramfile, 'r') as f:
             config = yaml.load(f.read())
@@ -200,7 +204,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile,varname="features",pcs=10)
+        data_dict=load_pcs(filename=inputfile,varname=varname,pcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -214,16 +218,16 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         nsplits=len(data_dict)
         nparameters=len(scan_values)
 
-        for cv_idx,test_key in enumerate(all_keys):
-            train_keys=[key for key in all_keys if key not in test_key]
-            for scan_idx,scan_value in enumerate(scan_values):
+        for cv_idx, test_key in enumerate(all_keys):
+            train_keys = [key for key in all_keys if key not in test_key]
+            for scan_idx, scan_value in enumerate(scan_values):
                 for restart_idx in xrange(restarts):
                     worker_dicts.append({'scan_parameter': scan_parameter,
-                        'scan_value':scan_value,
-                        'index': (restart_idx,cv_idx,scan_idx),
-                        'train_keys': train_keys,
-                        'test_key': test_key,
-                        'other_parameters':other_parameters})
+                                        'scan_value':scan_value,
+                                        'index': (restart_idx,cv_idx,scan_idx),
+                                        'train_keys': train_keys,
+                                        'test_key': test_key,
+                                        'other_parameters':other_parameters})
 
         # each worker gets a dictionary, the tuple index points to where the data will end up
 

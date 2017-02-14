@@ -20,7 +20,9 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
-def parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=100, restarts=5, use_min=True):
+
+def parameter_scan(data_dict, parameter, values, other_parameters=dict(),
+                   num_iter=100, restarts=5, use_min=True):
 
     nparameters=len(values)
     print('User passed '+str(nparameters)+' parameter values for '+parameter)
@@ -44,13 +46,15 @@ def parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=1
 
     return loglikes, labels
 
-def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_iter=100, restarts=5, use_min=False):
 
-    nsplits=len(data_dict)
-    nparameters=len(values)
+def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
+                      num_iter=100, restarts=5, use_min=False):
 
-    print('Will use '+str(nsplits)+' splits')
-    print('User passed '+str(nparameters)+' parameter values for '+parameter)
+    nsplits = len(data_dict)
+    nparameters = len(values)
+
+    print 'Will use '+str(nsplits)+' splits'
+    print 'User passed '+str(nparameters)+' parameter values for '+parameter
 
     # by default use all the data
 
@@ -63,7 +67,7 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
 
     # return the heldout likelihood, model object and labels
 
-    heldout_ll=np.empty((restarts,nsplits,nparameters),np.float64)
+    heldout_ll=np.empty((restarts,nsplits,nparameters), np.float64)
     labels=np.empty((restarts,nsplits,nparameters,len(data_dict)),dtype=object)
     #models=[[[] for i in range(nparameters)] for j in range(nsplits*restarts)]
 
@@ -81,11 +85,11 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters={}, num_ite
 
                 tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
                 arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
-                [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
+                [arhmm, _, tmp_labels]=train_model(model=arhmm, num_iter=num_iter, num_procs=1)
                 heldout_ll[itr,data_idx,parameter_idx] = arhmm.log_likelihood(test_data['1'])
 
                 for label_itr,tmp_label in enumerate(tmp_labels):
-                    labels[itr,data_idx,parameter_idx,label_itr]=tmp_label
+                    labels[itr, data_idx, parameter_idx, label_itr] = tmp_label
 
 
                 #labels[itr+data_idx*(restarts)][parameter_idx]=tmp_labels
@@ -101,12 +105,12 @@ def load_pcs(filename,varname,pcs=10):
 
     if filename.endswith('.mat'):
         data_dict=load_data_from_matlab(filename,varname,pcs)
-    elif filename.endswith('.pklz') | filename.endswith('.pz'):
-        with gzip.open(varname+"."+filename,"rb") as f:
-            data_dict=pickle.load(f)
-    elif filename.endswith('.pkl') | filename.endwith('p'):
+    elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
         with open(varname+"."+filename,"rb") as f:
-            data_dict=pickle.load(f)
+            data_dict=joblib.load(f)
+    elif filename.endswith('.h5'):
+        from moseq.util import load_field_from_hdf
+        data_dict = load_field_from_hdf(filename, 'data')
     else:
         raise ValueError('Did understand filetype')
 
