@@ -225,12 +225,18 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         with open(paramfile, 'r') as f:
             config = yaml.load(f.read())
 
-        scan_parameter = config['scan_parameter']
-        tmp_scan = config['scan_values']
-        scan_values=[x for x in tmp_scan]
+        scan_settings = config['scan_settings']
+        scan_parameter = scan_settings['scan_parameter']
+        scan_range =  scan_settings['scan_range']
+        scan_scale =  scan_settings['scan_scale']
+
+        if scan_scale=='log':
+            scan_values=np.logspace(*scan_range)
+        elif scan_scale=='linear':
+            scan_values=np.linspace(*scan_range)
 
         click.echo('Will scan parameter '+scan_parameter)
-        click.echo('Scan values '+str(tmp_scan))
+        click.echo('Scan values '+str(scan_values))
 
         other_parameters={}
 
