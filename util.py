@@ -110,6 +110,9 @@ def load_pcs(filename,varname,pcs=10):
     elif filename.endswith('.pkl') | filename.endwith('p'):
         with open(varname+"."+filename,"rb") as f:
             data_dict=pickle.load(f)
+    elif filename.endswith('.h5'):
+        from moseq.util import load_field_from_hdf
+        data_dict = load_field_from_hdf(filename, 'data')
     else:
         raise ValueError('Did understand filetype')
 

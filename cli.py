@@ -1,16 +1,13 @@
 from __future__ import division
 import numpy as np
 import click
-import cPickle as pickle
 import yaml
-import gzip
 from tqdm import tqdm
 from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import load_data_from_matlab, enum, save_dict, load_pcs, read_cli_config
+from util import enum, save_dict, load_pcs, read_cli_config
 from mpi4py import MPI
-import scipy.io as sio
 import warnings
 
 @click.group()
@@ -23,7 +20,8 @@ def cli():
 @click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
+@click.option('--varname', type=str, default='features')
+def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -57,7 +55,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile,varname="features",pcs=10)
+        data_dict=load_pcs(filename=inputfile, varname=varname, pcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -168,7 +166,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 @click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
+@click.option('--varname', type=str, default='features')
+def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -205,7 +204,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile,varname="features",pcs=10)
+        data_dict=load_pcs(filename=inputfile,varname=varname,pcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
