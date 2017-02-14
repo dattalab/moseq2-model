@@ -112,7 +112,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
                 worker_idx=data['index']
 
                 tmp_labels=data['labels']
-                if np.isnan(tmp_labels):
+                if np.isnan(tmp_labels).all():
                     labels[worker_idx[0]][worker_idx[1]][:]=np.nan
                 else:
                     for label_itr,label in enumerate(tmp_labels):
@@ -264,7 +264,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
                 worker_idx=data['index']
                 tmp_labels=data['labels']
 
-                if np.isnan(tmp_labels):
+                if np.isnan(tmp_labels).all():
                     labels[worker_idx[0]][worker_idx[1]][worker_idx[2]][:]=np.nan
                 else:
                     for label_itr,label in enumerate(tmp_labels):
