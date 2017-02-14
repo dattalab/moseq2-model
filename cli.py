@@ -40,7 +40,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
-        elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
+        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
             click.echo('Will save gzipped pickle: '+destfile)
         elif destfile.endswith('.pkl') | destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
@@ -76,7 +76,9 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if inputfile.endswith('.mat'):
             data_dict=load_data_from_matlab(inputfile)
-        elif inputfile.endswidth('.p'):
+        elif inputfile.endswith('.pklz') | inputfile.endswith('.pz'):
+            data_dict=pickle.load(gzip.open("data_dict.inputfile","rb"))
+        elif inputfile.endswith('.pkl') | inputfile.endwith('p'):
             data_dict=pickle.load(open("data_dict.inputfile","rb"))
 
         # use a list of dicts, with everything formatted ready to go
@@ -178,7 +180,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             sio.savemat(destfile,mdict={'loglikes':loglikes,'labels':labels', **scan_settings})
-        elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
+        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
             # pickle it
             with gzip.open(destfile, 'w') as outfile:
                 pickle.dump({'loglikes': loglikes, 'labels': labels, **scan_settings},
@@ -215,7 +217,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
-        elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
+        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
             click.echo('Will save gzipped pickle: '+destfile)
         elif destfile.endswith('.pkl') | destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
@@ -247,7 +249,9 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if inputfile.endswith('.mat'):
             data_dict=load_data_from_matlab(inputfile)
-        elif inputfile.endswidth('.p'):
+        elif inputfile.endswith('.pklz') | inputfile.endswith('.pz'):
+            data_dict=pickle.load(gzip.open("data_dict.inputfile","rb"))
+        elif inputfile.endswith('.pkl') | inputfile.endwith('p'):
             data_dict=pickle.load(open("data_dict.inputfile","rb"))
 
         # use a list of dicts, with everything formatted ready to go
@@ -365,7 +369,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             sio.savemat(destfile,mdict={'heldout_ll':heldout_ll ,'labels':labels, **scan_settings})
-        elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
+        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
             # pickle it
             with gzip.open(destfile, 'w') as outfile:
                 pickle.dump({'heldout_ll': heldout_ll, 'labels': labels, **scan_settings},
