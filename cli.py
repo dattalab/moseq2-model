@@ -260,13 +260,18 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
         # get them pc's
 
         if inputfile.endswith('.mat'):
-            data_dict=load_data_from_matlab(inputfile)
+            data_dict = load_data_from_matlab(inputfile)
         elif inputfile.endswith('.pklz') or inputfile.endswith('.pz'):
             with gzip.open("data_dict.inputfile","rb") as gzip_input:
-                data_dict=pickle.load(gzip_input)
+                data_dict = pickle.load(gzip_input)
         elif inputfile.endswith('.pkl') or inputfile.endwith('p'):
             with open("data_dict.inputfile","rb") as pickle_input:
-                data_dict=pickle.load(pickle_input)
+                data_dict = pickle.load(pickle_input)
+        elif inputfile.endswith('.h5'):
+            from moseq.util import load_field_from_hdf
+            data_dict = load_field_from_hdf(inputfile, 'data')
+        else:
+            raise Exception('Input file extension not recognized: ' + inputfile.split('.')[-1])
 
         # use a list of dicts, with everything formatted ready to go
 
