@@ -1,7 +1,8 @@
 from __future__ import division
 import numpy as np
 import h5py as h5
-import cPickle as pickle
+#import cPickle as pickle
+import joblib
 import gzip
 import scipy.io as sio
 import copy
@@ -112,17 +113,20 @@ def load_pcs(filename,varname,pcs=10):
     return data_dict
 
 
-def save_dict(filename,dict_to_save):
+def save_dict(filename,obj_to_save):
     if filename.endswith('.mat'):
-        sio.savemat(filename,mdict=dict_to_save)
-    elif filename.endswith('.pklz') | filename.endswith('.pz'):
+        print('Saving MAT-file...')
+        sio.savemat(filename,mdict=obj_to_save)
+    elif filename.endswith('.z'):
         # pickle it
-        with gzip.open(filename, 'w') as outfile:
-            pickle.dump(dict_to_save, outfile, protocol=-1)
+        print('Saving compressed pickle...')
+        with open(filename, 'wb') as outfile:
+            joblib.dump(obj_to_save, outfile, compress=3)
     elif filename.endswith('.pkl') | filename.endswith('.p'):
         # pickle it
+        print('Saving pickle...')
         with open(filename, 'wb') as outfile:
-            pickle.dump(dict_to_save, outfile, protocol=-1)
+            joblib.dump(obj_to_save, outfile, compress=0)
     else:
         raise ValueError('Did understand filetype')
 

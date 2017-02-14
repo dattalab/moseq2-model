@@ -22,7 +22,7 @@ def cli():
 @click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
+def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -40,8 +40,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
-            click.echo('Will save gzipped pickle: '+destfile)
+        elif destfile.endswith('.z'):
+            click.echo('Will save compressed pickle: '+destfile)
         elif destfile.endswith('.pkl') | destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
         elif destfile.endswith('.h5'):
@@ -183,7 +183,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
         if destfile.endswith('.mat'):
             click.echo('Will save to MAT-file: '+destfile)
-        elif destfile.endswith('.pklz') | destfile.endswith('.pz'):
+        elif destfile.endswith('.z'):
             click.echo('Will save gzipped pickle: '+destfile)
         elif destfile.endswith('.pkl') | destfile.endswith('.p'):
             click.echo('Will save pickle: '+destfile)
