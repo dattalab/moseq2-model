@@ -157,7 +157,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
         click.echo('Saving results to '+destfile)
         export_dict=dict({'loglikes':loglikes, 'labels':labels},**scan_settings)
-        save_dict(filename=destfile,dict_to_save=export_dict)
+        save_dict(filename=destfile,obj_to_save=export_dict)
 
 
 @cli.command()
@@ -317,7 +317,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         click.echo('Saving results to '+destfile)
         export_dict=dict({'heldout_ll':heldout_ll, 'labels':labels},**scan_settings)
-        save_dict(filename=destfile,dict_to_save=export_dict)
+        save_dict(filename=destfile,obj_to_save=export_dict)
 
 
 
