@@ -1,6 +1,5 @@
 from __future__ import division
 import numpy as np
-from pyhsmm.util.text import progprint_xrange
 from functools import partial
 from collections import OrderedDict
 from tqdm import tqdm_notebook

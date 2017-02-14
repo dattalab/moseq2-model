@@ -111,7 +111,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
             if tag == tags.READY:
 
                 if task_index < len(worker_dicts):
-                    click.echo('Distributing task '+str(task_index))
+                    #click.echo('Distributing task '+str(task_index))
                     comm.send(worker_dicts[task_index],dest=source, tag=tags.START)
                     task_index+=1
                 else:
@@ -121,7 +121,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
 
                 # sort out the data brutha
 
-                click.echo('Worker '+str(source)+' finished')
+                #click.echo('Worker '+str(source)+' finished')
                 worker_idx=data['index']
 
                 tmp_labels=data['labels']
@@ -346,7 +346,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter=100, restarts=5):
     if rank==0:
 
         click.echo('Saving results to '+destfile)
-        
+
         if destfile.endswith('.mat'):
             sio.savemat(destfile,mdict={'heldout_ll':heldout_ll ,'labels':labels})
         elif destfile.endswith('.pklz') | destfile.endswidth('.pz'):
