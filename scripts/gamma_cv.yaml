@@ -1,0 +1,4 @@
+scan_settings:
+  scan_parameter: gamma
+  scan_range: [1,20,20]
+  scan_scale: log

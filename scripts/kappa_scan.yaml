@@ -1,0 +1,4 @@
+scan_settings:
+  scan_parameter: kappa
+  scan_range: [1,16,16]
+  scan_scale: log
