@@ -38,7 +38,7 @@ esac
 shift
 done
 
-FILELIST=(`find . -type f -name "*.$EXT" -mtime $MTIME`)
+FILELIST=(`find . -type f -name "$EXT" -mtime $MTIME`)
 
 for i in "${FILELIST[@]}"; do
 
