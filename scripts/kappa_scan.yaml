@@ -1,5 +1,13 @@
 scan_settings:
   scan_parameter: kappa
-  scan_range: [1,16,16] # start, stop, numvals
-  scan_scale: log # where val = 1*10^start..1*10^stop for log
-  # scan_scale = log, linear with same scan_range signature
+  scan_range: [1,20,20]
+  scan_scale: log
+bash:
+  OUTPUT: kappa_scan.p.z
+  INPUT: export_pca_smooth.mat
+  QUEUE: mpi
+  NPROCS: 102
+  WALLTIME: 24:00
+  SUBCOMMAND: parameter_scan
+  OPTIONS: "--restarts 5"
+  LOG: kappa_scan.out
