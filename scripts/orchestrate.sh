@@ -4,7 +4,7 @@
 # all credit to @pkuczynski https://gist.github.com/pkuczynski/8665367
 parse_yaml() {
    local prefix=$2
-   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   local s='[[:space:]]*' w='[a-zA-Z0-9_\_]*' fs=$(echo @|tr @ '\034')
    sed -ne "s|^\($s\)\($w\)$s:$s\"\(.*\)\"$s\$|\1$fs\2$fs\3|p" \
         -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
    awk -F$fs '{
@@ -95,45 +95,15 @@ CONFIG="$DIR"/$(basename "$CONFIG")
 
 if [ -e $CONFIG ]; then
 
-	YAML=parse_yaml($CONFIG)
+	eval $(parse_yaml $CONFIG "YAML_")
 
 	for i in "${OPTION_ARRAY[@]}"; do
-		if [-n "$YAML_bash_$i"]; then
-			$i=$YAML_bash_$i
+		a="YAML_bash_$i"
+		if [[ ${!a:+1} ]]; then
+			echo "Setting" $i "to" ${!a}
+			declare $i="${!a}"
 		fi
 	done
-
-	# if [ -n "$YAML_bash_input" ]; then
-	# 	$INPUT=$YAML_bash_input
-	# fi
-	#
-	# if [ -n "$YAML_bash_output" ]; then
-	# 	$OUTPUT=$YAML_bash_output
-	# fi
-	#
-	# if [ -n "$YAML_bash_log" ]; then
-	# 	$LOG=$YAML_bash_log
-	# fi
-	#
-	# if [ -n "$YAML_bash_queue" ]; then
-	# 	$QUEUE=$YAML_bash_queue
-	# fi
-	#
-	# if [ -n "$YAML_bash_subcommand" ]; then
-	# 	$SUBCOMMAND=$YAML_bash_subcommand
-	# fi
-	#
-	# if [ -n "$YAML_bash_nprocs" ]; then
-	# 	$NPROCS=$YAML_bash_nprocs
-	# fi
-	#
-	# if [ -n "$YAML_bash_walltime" ]; then
-	# 	$WALLTIME=$YAML_bash_walltime
-	# fi
-	#
-	# if [ -n "$YAML_bash_options" ]; then
-	# 	$OPTIONS=$YAML_bash_options
-	# fi
 
 fi
 
