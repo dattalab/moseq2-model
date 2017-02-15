@@ -75,7 +75,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
         labels = np.empty((restarts, len(scan_values), len(data_dict)), dtype=object)
-        loglikes = np.empty((restarts, len(scan_values), num_iter), dtype=float64)
+        loglikes = np.empty((restarts, len(scan_values), num_iter), dtype=np.float64)
 
     data_dict = comm.bcast(data_dict,root=0)
 
@@ -162,7 +162,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
             # yeah it's ugly, sue me
 
             labels_to_save=np.empty(labels.shape[1:],dtype=object)
-            loglikes_to_save=np.empty(loglikes.shape[1:],dtype=object)
+            loglikes_to_save=np.empty(loglikes.shape[1:],dtype=np.float64)
 
             for i in xrange(len(loglikes)):
                 for j in xrange(len(loglikes[0])):
