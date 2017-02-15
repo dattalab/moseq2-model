@@ -118,7 +118,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
                     for label_itr,label in enumerate(tmp_labels):
                         labels[(worker_idx[0],worker_idx[1],label_itr)]=label
 
-                loglikes[worker_idx] = data['loglikes']
+                loglikes[worker_idx[0],worker_idx[1],:] = data['loglikes']
                 pbar.update(1)
 
             elif tag == tags.EXIT:
@@ -163,12 +163,10 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
             labels_to_save=np.empty(labels.shape[1:],dtype=object)
             loglikes_to_save=np.empty(loglikes.shape[1:],dtype=np.float64)
-
-            for i in xrange(len(loglikes)):
-                for j in xrange(len(loglikes[0])):
-                    max_loglikes=np.max(loglikes[i][j])
-
+	    max_loglikes=np.max(loglikes,axis=2)
             best_models=np.argmax(max_loglikes,axis=0)
+	    
+	    click.echo(best_models)
 
             for i in xrange(len(labels_to_save)):
                 loglikes_to_save[i,:]=loglikes[best_models[i],i,:]
