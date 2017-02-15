@@ -34,7 +34,7 @@ def _get_empirical_ar_params(train_datas, params):
 
 def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
         K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
-        affine=True, model_hypparams={}, obs_hypparams={}):
+        affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False):
 
     data_dim=data_dict.values()[0].shape[1]
 
@@ -74,10 +74,11 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
 
     # initialize ze states per SL's recommendation
 
-    for i in range(0,len(model.stateseqs)):
-        seqlen=len(model.stateseqs[i])
-        z_init=np.random.randint(max_states, size=seqlen//10).repeat(10)
-        z_init=np.append(z_init,np.random.randint(max_states, size=seqlen-len(z_init)))
-        model.stateseqs[i]=z_init.copy().astype('int32')
+    if sticky_init:
+        for i in range(0,len(model.stateseqs)):
+            seqlen=len(model.stateseqs[i])
+            z_init=np.random.randint(max_states, size=seqlen//10).repeat(10)
+            z_init=np.append(z_init,np.random.randint(max_states, size=seqlen-len(z_init)))
+            model.stateseqs[i]=z_init.copy().astype('int32')
 
     return model

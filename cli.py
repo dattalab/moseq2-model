@@ -75,7 +75,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
         labels = np.empty((restarts, len(scan_values), len(data_dict)), dtype=object)
-        loglikes = np.empty((restarts, len(scan_values)), dtype=object)
+        loglikes = np.empty((restarts, len(scan_values), num_iter), dtype=float64)
 
     data_dict = comm.bcast(data_dict,root=0)
 
@@ -155,8 +155,32 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
     if rank==0:
 
+        # only keep the best model from the restarts
+
+        if restarts>1:
+
+            # yeah it's ugly, sue me
+
+            labels_to_save=np.empty(labels.shape[1:],dtype=object)
+            loglikes_to_save=np.empty(loglikes.shape[1:],dtype=object)
+
+            for i in xrange(len(loglikes)):
+                for j in xrange(len(loglikes[0])):
+                    max_loglikes=np.max(loglikes[i][j])
+
+            best_models=np.argmax(max_loglikes,axis=0)
+
+            for i in xrange(len(labels_to_save)):
+                loglikes_to_save[i,:]=loglikes[best_models[i],i,:]
+                for j in xrange(len(labels_to_save[0])):
+                    labels_to_save[i][j]=labels[best_models[i]][i][j]
+        else:
+
+            labels_to_save=np.squeeze(labels)
+            loglikes_to_save=np.squeeze(loglikes)
+
         click.echo('Saving results to '+destfile)
-        export_dict=dict({'loglikes':loglikes, 'labels':labels},**scan_settings)
+        export_dict=dict({'loglikes':loglikes_to_save, 'labels':labels_to_save},**scan_settings)
         save_dict(filename=destfile,obj_to_save=export_dict)
 
 
@@ -232,7 +256,10 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
         heldout_ll=np.empty((restarts,nsplits,nparameters),np.float64)
-        labels=np.empty((restarts,nsplits,nparameters,len(data_dict)-1),dtype=object)
+
+        # skip the labels for now, don't need for cv
+
+        #labels=np.empty((restarts,nsplits,nparameters,len(data_dict)-1),dtype=object)
 
     data_dict = comm.bcast(data_dict,root=0)
 
@@ -266,13 +293,16 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
                 # sort out the data brutha
 
                 worker_idx=data['index']
-                tmp_labels=data['labels']
 
-                if type(tmp_labels) is float and np.isnan(tmp_labels):
-                    labels[worker_idx[0]][worker_idx[1]][worker_idx[2]][:]=np.nan
-                else:
-                    for label_itr,label in enumerate(tmp_labels):
-                        labels[(worker_idx[0],worker_idx[1],worker_idx[2],label_itr)]=label
+                # no need to export labels, requires way too much memory anyway
+
+                # tmp_labels=data['labels']
+                #
+                # if type(tmp_labels) is float and np.isnan(tmp_labels):
+                #     labels[worker_idx[0]][worker_idx[1]][worker_idx[2]][:]=np.nan
+                # else:
+                #     for label_itr,label in enumerate(tmp_labels):
+                #         labels[(worker_idx[0],worker_idx[1],worker_idx[2],label_itr)]=label
 
                 heldout_ll[worker_idx]=data['heldout_ll']
 
@@ -302,8 +332,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
                 arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)
                 heldout_ll = arhmm.log_likelihood(data_dict[worker_dict['test_key']])
-                comm.send({'index':worker_dict['index'],
-                    'heldout_ll':heldout_ll,'labels':labels}, dest=0, tag=tags.DONE)
+                comm.send({'index':worker_dict['index'],'heldout_ll':heldout_ll}, dest=0, tag=tags.DONE)
 
             elif tag == tags.EXIT:
 
@@ -316,7 +345,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
     if rank==0:
 
         click.echo('Saving results to '+destfile)
-        export_dict=dict({'heldout_ll':heldout_ll, 'labels':labels},**scan_settings)
+        export_dict=dict({'heldout_ll':heldout_ll},**scan_settings)
         save_dict(filename=destfile,obj_to_save=export_dict)
 
 
