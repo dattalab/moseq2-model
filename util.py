@@ -9,8 +9,7 @@ import copy
 import yaml
 from train.models import ARHMM
 from collections import OrderedDict
-from train.util import merge_dicts, train_model
-from tqdm import tqdm_notebook
+from train.util import merge_dicts, train_model, progressbar
 
 # stolen from MoSeq thanks @alexbw
 def enum(*sequential, **named):
@@ -31,7 +30,7 @@ def parameter_scan(data_dict, parameter, values, other_parameters=dict(),
     #models=[[[] for i in range(nparameters)] for j in range(restarts)]
     loglikes=np.empty((restarts,nparameters),dtype=object)
 
-    for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
+    for parameter_idx, parameter_value in enumerate(progressbar(values,leave=False)):
         for itr in xrange(restarts):
 
             tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
@@ -73,14 +72,14 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
 
     all_keys=data_dict.keys()
 
-    for data_idx, test_key in enumerate(tqdm_notebook(all_keys)):
+    for data_idx, test_key in enumerate(progressbar(all_keys)):
 
         # set up the split
 
         train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in test_key)
         test_data=OrderedDict([('1',data_dict[test_key])])
 
-        for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
+        for parameter_idx, parameter_value in enumerate(progressbar(values,leave=False)):
             for itr in xrange(restarts):
 
                 tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})

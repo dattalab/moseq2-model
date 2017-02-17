@@ -2,7 +2,7 @@ from __future__ import division
 import numpy as np
 from functools import partial
 from collections import OrderedDict
-from tqdm import tqdm_notebook
+from tqdm import tqdm, tqdm_notebook
 
 # TODO: simple function for cross-validation optimization of parameters
 #def cv_parameter_scan()
@@ -17,7 +17,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
     labels=[]
 
     try:
-        for itr in tqdm_notebook(range(num_iter),leave=False,disable=cli):
+        for itr in progressbar(range(num_iter),leave=False,disable=cli):
             model.resample_model(num_procs)
             log_likelihoods.append(model.log_likelihood())
             seq_list=[s.copy() for s in model.stateseqs]
@@ -59,3 +59,10 @@ def whiten_all(data_dict, center=True):
 # taken from moseq by @mattjj and @alexbw
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
+
+#
+def progressbar(*args, **kwargs):
+    try:
+        return tqdm_notebook(*args, **kwargs)
+    except:
+        return tqdm(*args, **kwargs)
