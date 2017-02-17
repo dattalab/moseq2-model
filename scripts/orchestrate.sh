@@ -28,7 +28,6 @@ QUEUE="mpi"
 LOG="job.out"
 NPROCS="20"
 OPTIONS=""
-BSUBOPTIONS="" # for selecting a transfer node
 DRYRUN=false
 
 OPTION_ARRAY=("WALLTIME" "DIR" "SUBCOMMAND" "CONFIG" "INPUT" "OUTPUT" "QUEUE" "LOG" "NPROCS" "OPTIONS" "DRYRUN")
@@ -81,9 +80,6 @@ case $key in
 		--dry-run)
 		DRYRUN=true
 		;;
-	-t|--transfer)
-		BSUBOPTIONS="-R \"select[transfer]\""
-		;;
     *)
             # unknown option
     ;;
@@ -117,7 +113,7 @@ LOG="$DIR"/$(basename "$LOG")
 
 # issue ze command
 
-echo "bsub -q $QUEUE $BSUBOPTIONS -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+echo "bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
 if [ "$DRYRUN" = false ]; then
-	bsub -q $QUEUE $BSUBOPTIONS -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS
+	bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS
 fi
