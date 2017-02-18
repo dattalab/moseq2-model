@@ -29,8 +29,9 @@ LOG="job.out"
 NPROCS="20"
 OPTIONS=""
 DRYRUN=false
+MEMUSAGE=2000
 
-OPTION_ARRAY=("WALLTIME" "DIR" "SUBCOMMAND" "CONFIG" "INPUT" "OUTPUT" "QUEUE" "LOG" "NPROCS" "OPTIONS" "DRYRUN")
+OPTION_ARRAY=("WALLTIME" "DIR" "SUBCOMMAND" "CONFIG" "INPUT" "OUTPUT" "QUEUE" "LOG" "NPROCS" "OPTIONS" "DRYRUN" "MEMUSAGE")
 
 while [[ $# -gt 0 ]]
 do
@@ -71,6 +72,9 @@ case $key in
 		;;
 		-c|--config)
 		CONFIG="$2"
+		shift
+    -m|--mem-usage)
+		MEMUSAGE="$2"
 		shift
 		;;
 		--options)
@@ -113,7 +117,7 @@ LOG="$DIR"/$(basename "$LOG")
 
 # issue ze command
 
-echo "bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+echo "bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
 if [ "$DRYRUN" = false ]; then
-	bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS
+	bsub -q $QUEUE -W $WALLTIME -R "rusage[mem=$MEMUSAGE]" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS
 fi
