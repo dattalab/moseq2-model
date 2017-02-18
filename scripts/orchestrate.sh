@@ -73,6 +73,7 @@ case $key in
 		-c|--config)
 		CONFIG="$2"
 		shift
+    ;;
     -m|--mem-usage)
 		MEMUSAGE="$2"
 		shift
