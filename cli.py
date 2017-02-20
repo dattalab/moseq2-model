@@ -48,10 +48,12 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
         else:
             raise Exception('Output file format not understood')
 
-        [scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
+        [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
-        click.echo('Will scan parameter '+scan_parameter)
-        click.echo('Scan values '+str(scan_values))
+        for param,values in zip(scan_parameter,scan_values)
+            click.echo('Will scan parameter '+param)
+            click.echo('Will scan value '+values)
+        #click.echo('Scan values '+str(scan_values))
 
         # get them pc's
 
@@ -65,17 +67,16 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
         worker_dicts=[]
 
-        for scan_idx, scan_value in enumerate(scan_values):
+        for scan_idx, use_dict in enumerate(scan_dicts):
             for restart_idx in xrange(restarts):
-                worker_dicts.append({'scan_parameter': scan_parameter,
-                    'scan_value': scan_value,
+                worker_dicts.append({'scan_dict': use_dict,
                     'index': (restart_idx, scan_idx),
                     'other_parameters': other_parameters})
 
         # each worker gets a dictionary, the tuple index points to where the data will end up
 
-        labels = np.empty((restarts, len(scan_values), len(data_dict)), dtype=object)
-        loglikes = np.empty((restarts, len(scan_values), num_iter), dtype=np.float64)
+        labels = np.empty((restarts, len(scan_dicts), len(data_dict)), dtype=object)
+        loglikes = np.empty((restarts, len(scan_dicts), num_iter), dtype=np.float64)
 
     data_dict = comm.bcast(data_dict,root=0)
 
@@ -139,7 +140,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
                 # if we get marching orders, fire up the task
                 tmp_parameters = merge_dicts(worker_dict['other_parameters'],
-                                            {worker_dict['scan_parameter']: worker_dict['scan_value']})
+                                            worker_dict['scan_dict'])
+                tqdm.write(worker_dict['scan_dict'])
                 arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)
                 comm.send({'index':worker_dict['index'],
@@ -163,9 +165,9 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
             labels_to_save=np.empty(labels.shape[1:],dtype=object)
             loglikes_to_save=np.empty(loglikes.shape[1:],dtype=np.float64)
-	    max_loglikes=np.max(loglikes,axis=2)
+            max_loglikes=np.max(loglikes,axis=2)
             best_models=np.argmax(max_loglikes,axis=0)
-	    
+
 	    click.echo(best_models)
 
             for i in xrange(len(labels_to_save)):
@@ -219,10 +221,11 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
         with open(paramfile, 'r') as f:
             config = yaml.load(f.read())
 
-        [scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
+        [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
-        click.echo('Will scan parameter '+scan_parameter)
-        click.echo('Scan values '+str(scan_values))
+        for param,values in zip(scan_parameter,scan_values)
+            click.echo('Will scan parameter '+param)
+            click.echo('Will scan value '+values
 
         # get them pc's
 
@@ -238,14 +241,13 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         all_keys=data_dict.keys()
         nsplits=len(data_dict)
-        nparameters=len(scan_values)
+        nparameters=len(scan_dicts)
 
         for cv_idx, test_key in enumerate(all_keys):
             train_keys = [key for key in all_keys if key not in test_key]
-            for scan_idx, scan_value in enumerate(scan_values):
+            for scan_idx, use_dict in enumerate(scan_dicts):
                 for restart_idx in xrange(restarts):
-                    worker_dicts.append({'scan_parameter': scan_parameter,
-                                        'scan_value':scan_value,
+                    worker_dicts.append({'scan_dict': use_dict,
                                         'index': (restart_idx,cv_idx,scan_idx),
                                         'train_keys': train_keys,
                                         'test_key': test_key,
@@ -325,7 +327,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
                 # if we get marching orders, fire up the task
 
-                tmp_parameters=merge_dicts(worker_dict['other_parameters'],{worker_dict['scan_parameter']:worker_dict['scan_value']})
+                tmp_parameters=merge_dicts(worker_dict['other_parameters'],worker_dict['scan_dict'])
                 train_data=OrderedDict((i,data_dict[i]) for i in worker_dict['train_keys'])
                 arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)

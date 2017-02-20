@@ -1,0 +1,13 @@
+scan_settings:
+  scan_parameter: [kappa, gamma]
+  scan_range: [[1,20,20],[1,20,20]]
+  scan_scale: [log,log]
+bash:
+  OUTPUT: kappa_scan.p.z
+  INPUT: export_pca_smooth.mat
+  QUEUE: mpi
+  NPROCS: 102
+  WALLTIME: 24:00
+  SUBCOMMAND: parameter_scan
+  OPTIONS: "--restarts 1 --num-iter 100"
+  LOG: kappa_scan.out

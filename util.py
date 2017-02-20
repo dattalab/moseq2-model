@@ -7,6 +7,7 @@ import gzip
 import scipy.io as sio
 import copy
 import yaml
+import itertools
 from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, progressbar
@@ -211,18 +212,41 @@ def read_cli_config(filename):
         config = yaml.load(f.read())
 
     scan_settings = config['scan_settings']
-    scan_parameter = scan_settings['scan_parameter']
-    scan_range =  scan_settings['scan_range']
-    scan_scale =  scan_settings['scan_scale']
+    scan_parameters = scan_settings['scan_parameter']
+    scan_ranges =  scan_settings['scan_range']
+    scan_scales =  scan_settings['scan_scale']
+    scan_values = []
+    worker_dicts= []
 
-    if scan_scale=='log':
-        scan_values=np.logspace(*scan_range)
-    elif scan_scale=='linear':
-        scan_values=np.linspace(*scan_range)
+    if type(scan_parameters) is list:
+        for use_parameter,use_range,use_scale in zip(scan_parameters,scan_ranges,scan_scales):
+            if use_scale=='log':
+                scan_values.append(np.logspace(*use_range))
+            elif use_scale=='linear':
+                scan_values.append(np.linspace(*use_range))
+
+        for itr_values in itertools.product(*scan_values):
+            new_dict = {}
+            for param,value in zip(scan_parameters,itr_values):
+                new_dict[param]=value
+            worker_dicts.append(new_dict)
+    else:
+        if scan_scales=='log':
+            scan_values.append(np.logspace(*scan_ranges))
+        elif scan_scales=='linear':
+            scan_values.append(np.linspace(*scan_ranges))
+
+        for value in scan_values[0]:
+            new_dict = {
+                scan_parameters: value
+            }
+            worker_dicts.append(new_dict)
+
+
 
     other_parameters={}
 
     if 'parameters' in config.keys():
         other_parameters=config['parameters']
 
-    return scan_parameter,scan_values,other_parameters,scan_settings
+    return worker_dicts,scan_parameters,scan_values,other_parameters,scan_settings
