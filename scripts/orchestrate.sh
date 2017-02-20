@@ -29,7 +29,7 @@ LOG="job.out"
 NPROCS="20"
 OPTIONS=""
 DRYRUN=false
-MEMUSAGE=2000
+MEMUSAGE=""
 
 OPTION_ARRAY=("WALLTIME" "DIR" "SUBCOMMAND" "CONFIG" "INPUT" "OUTPUT" "QUEUE" "LOG" "NPROCS" "OPTIONS" "DRYRUN" "MEMUSAGE")
 
@@ -118,7 +118,15 @@ LOG="$DIR"/$(basename "$LOG")
 
 # issue ze command
 
-echo "bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+if [ ! -z ${MEMUSAGE} ]; then
+  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+else
+  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+fi
+
+echo ${BSUB_COMMAND}
+
+#echo "bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
 if [ "$DRYRUN" = false ]; then
-	bsub -q $QUEUE -W $WALLTIME -R "rusage[mem=$MEMUSAGE]" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS
+  eval ${BSUB_COMMAND}
 fi
