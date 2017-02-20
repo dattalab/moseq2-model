@@ -66,6 +66,8 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
     obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
     model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
 
+    #print(model_hypparams)
+
     # add ze data
 
     for data_name, data in data_dict.items():

@@ -52,7 +52,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
         for param,values in zip(scan_parameter,scan_values):
             click.echo('Will scan parameter '+param)
-            click.echo('Will scan value '+values)
+            click.echo('Will scan value '+str(values))
         #click.echo('Scan values '+str(scan_values))
 
         # get them pc's
@@ -141,7 +141,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
                 # if we get marching orders, fire up the task
                 tmp_parameters = merge_dicts(worker_dict['other_parameters'],
                                             worker_dict['scan_dict'])
-                tqdm.write(worker_dict['scan_dict'])
+                #click.echo(worker_dict['scan_dict'])
+                #click.echo(tmp_parameters)
                 arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
                 [arhmm,loglikes,labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1, cli=True)
                 comm.send({'index':worker_dict['index'],
@@ -225,7 +226,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         for param,values in zip(scan_parameter,scan_values):
             click.echo('Will scan parameter '+param)
-            click.echo('Will scan value '+values)
+            click.echo('Will scan value '+str(values))
 
         # get them pc's
 
