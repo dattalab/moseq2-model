@@ -124,13 +124,11 @@ def save_dict(filename,obj_to_save):
     elif filename.endswith('.z'):
         # pickle it
         print('Saving compressed pickle...')
-        with open(filename, 'wb') as outfile:
-            joblib.dump(obj_to_save, outfile, compress=3)
+        joblib.dump(obj_to_save, filename, compress=3)
     elif filename.endswith('.pkl') | filename.endswith('.p'):
         # pickle it
         print('Saving pickle...')
-        with open(filename, 'wb') as outfile:
-            joblib.dump(obj_to_save, outfile, compress=0)
+        joblib.dump(obj_to_save, filename, compress=0)
     else:
         raise ValueError('Did understand filetype')
 

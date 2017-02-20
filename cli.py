@@ -181,9 +181,9 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
             loglikes_to_save=np.squeeze(loglikes)
 
         click.echo('Saving results to '+destfile)
-        export_dict=dict({'loglikes':loglikes_to_save, 'labels':labels_to_save,'scan_dicts':scan_dicts},**scan_settings)
+        export_dict=dict({'loglikes':loglikes_to_save, 'labels':labels_to_save,
+                          'scan_dicts':scan_dicts},**scan_settings)
         save_dict(filename=destfile,obj_to_save=export_dict)
-
 
 @cli.command()
 @click.argument("paramfile", type=click.Path(exists=True))
