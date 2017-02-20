@@ -225,7 +225,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         for param,values in zip(scan_parameter,scan_values):
             click.echo('Will scan parameter '+param)
-            click.echo('Will scan value '+values
+            click.echo('Will scan value '+values)
 
         # get them pc's
 
