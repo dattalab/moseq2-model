@@ -50,7 +50,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
 
         [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
-        for param,values in zip(scan_parameter,scan_values)
+        for param,values in zip(scan_parameter,scan_values):
             click.echo('Will scan parameter '+param)
             click.echo('Will scan value '+values)
         #click.echo('Scan values '+str(scan_values))
@@ -223,7 +223,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
-        for param,values in zip(scan_parameter,scan_values)
+        for param,values in zip(scan_parameter,scan_values):
             click.echo('Will scan parameter '+param)
             click.echo('Will scan value '+values
 
