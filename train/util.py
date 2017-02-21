@@ -33,8 +33,9 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
         for i in xrange(len(labels[0])):
             labels_cat[i]=np.array([tmp[i] for tmp in labels],dtype=np.int16)
 
-    except:
+    except Exception as e:
 
+        print(str(e))
         log_likelihoods = np.nan
         labels_cat = np.nan
 
