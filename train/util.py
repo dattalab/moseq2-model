@@ -16,7 +16,6 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
     try:
 
         log_likelihoods = []
-        labels_cat = []
         labels = []
 
         for itr in progressbar(range(num_iter),leave=False,disable=cli):
@@ -31,7 +30,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
         labels_cat=[]
 
         for i in xrange(len(labels[0])):
-            labels_cat[i]=np.array([tmp[i] for tmp in labels],dtype=np.int16)
+            labels_cat.append(np.array([tmp[i] for tmp in labels],dtype=np.int16))
 
     except Exception as e:
 
