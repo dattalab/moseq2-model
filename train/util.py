@@ -20,7 +20,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
 
         for itr in progressbar(range(num_iter),leave=False,disable=cli):
             model.resample_model(num_procs)
-            if np.mod(save_every,itr+1)==0:
+            if np.mod(itr+1,save_every)==0:
                 log_likelihoods.append(model.log_likelihood())
                 seq_list=[s.stateseq for s in model.states_list]
                 for seq_itr in xrange(len(seq_list)):

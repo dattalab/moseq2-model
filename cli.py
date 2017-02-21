@@ -355,6 +355,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
         export_dict=dict({'heldout_ll':heldout_ll,'scan_dicts':scan_dicts},**scan_settings)
         save_dict(filename=destfile,obj_to_save=export_dict)
 
+#TODO:  command line model training (w/ restarts, etc)
 
 
 if __name__ == '__main__':
