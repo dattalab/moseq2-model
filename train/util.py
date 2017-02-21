@@ -13,23 +13,28 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
 
-    log_likelihoods=[]
-    labels=[]
-
     try:
+
+        log_likelihoods = []
+        labels_cat = []
+        labels = []
+
         for itr in progressbar(range(num_iter),leave=False,disable=cli):
             model.resample_model(num_procs)
-            log_likelihoods.append(model.log_likelihood())
-            seq_list=[s.copy() for s in model.stateseqs]
-            for seq_itr in range(len(seq_list)):
-                seq_list[seq_itr]=np.append(np.repeat(-5,model.nlags),seq_list[seq_itr])
-            labels.append(seq_list)
+            if np.mod(save_every,itr+1)==0:
+                log_likelihoods.append(model.log_likelihood())
+                seq_list=[s.stateseq for s in model.states_list]
+                for seq_itr in xrange(len(seq_list)):
+                    seq_list[seq_itr]=np.append(np.repeat(-5,model.nlags),seq_list[seq_itr])
+                labels.append(seq_list)
 
         labels_cat=[]
 
         for i in xrange(len(labels[0])):
-            labels_cat.append(np.array([tmp[i] for tmp in labels],dtype=np.int32))
+            labels_cat[i]=np.array([tmp[i] for tmp in labels],dtype=np.int16)
+
     except:
+
         log_likelihoods = np.nan
         labels_cat = np.nan
 
