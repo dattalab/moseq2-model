@@ -28,10 +28,10 @@ QUEUE="mpi"
 LOG="job.out"
 NPROCS="20"
 OPTIONS=""
-BSUBOPTIONS="" # for selecting a transfer node
 DRYRUN=false
+MEMUSAGE=""
 
-OPTION_ARRAY=("WALLTIME" "DIR" "SUBCOMMAND" "CONFIG" "INPUT" "OUTPUT" "QUEUE" "LOG" "NPROCS" "OPTIONS" "DRYRUN")
+OPTION_ARRAY=("WALLTIME" "DIR" "SUBCOMMAND" "CONFIG" "INPUT" "OUTPUT" "QUEUE" "LOG" "NPROCS" "OPTIONS" "DRYRUN" "MEMUSAGE")
 
 while [[ $# -gt 0 ]]
 do
@@ -73,6 +73,10 @@ case $key in
 		-c|--config)
 		CONFIG="$2"
 		shift
+    ;;
+    -m|--mem-usage)
+		MEMUSAGE="$2"
+		shift
 		;;
 		--options)
 		OPTIONS="$2"
@@ -80,9 +84,6 @@ case $key in
 		;;
 		--dry-run)
 		DRYRUN=true
-		;;
-	-t|--transfer)
-		BSUBOPTIONS="-R \"select[transfer]\""
 		;;
     *)
             # unknown option
@@ -117,7 +118,15 @@ LOG="$DIR"/$(basename "$LOG")
 
 # issue ze command
 
-echo "bsub -q $QUEUE $BSUBOPTIONS -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+if [ ! -z ${MEMUSAGE} ]; then
+  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+else
+  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+fi
+
+echo ${BSUB_COMMAND}
+
+#echo "bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
 if [ "$DRYRUN" = false ]; then
-	bsub -q $QUEUE $BSUBOPTIONS -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS
+  eval ${BSUB_COMMAND}
 fi

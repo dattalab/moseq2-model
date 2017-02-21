@@ -7,10 +7,10 @@ import gzip
 import scipy.io as sio
 import copy
 import yaml
+import itertools
 from train.models import ARHMM
 from collections import OrderedDict
-from train.util import merge_dicts, train_model
-from tqdm import tqdm_notebook
+from train.util import merge_dicts, train_model, progressbar
 
 # stolen from MoSeq thanks @alexbw
 def enum(*sequential, **named):
@@ -31,7 +31,7 @@ def parameter_scan(data_dict, parameter, values, other_parameters=dict(),
     #models=[[[] for i in range(nparameters)] for j in range(restarts)]
     loglikes=np.empty((restarts,nparameters),dtype=object)
 
-    for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
+    for parameter_idx, parameter_value in enumerate(progressbar(values,leave=False)):
         for itr in xrange(restarts):
 
             tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
@@ -73,14 +73,14 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
 
     all_keys=data_dict.keys()
 
-    for data_idx, test_key in enumerate(tqdm_notebook(all_keys)):
+    for data_idx, test_key in enumerate(progressbar(all_keys)):
 
         # set up the split
 
         train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in test_key)
         test_data=OrderedDict([('1',data_dict[test_key])])
 
-        for parameter_idx, parameter_value in enumerate(tqdm_notebook(values,leave=False)):
+        for parameter_idx, parameter_value in enumerate(progressbar(values,leave=False)):
             for itr in xrange(restarts):
 
                 tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
@@ -124,13 +124,11 @@ def save_dict(filename,obj_to_save):
     elif filename.endswith('.z'):
         # pickle it
         print('Saving compressed pickle...')
-        with open(filename, 'wb') as outfile:
-            joblib.dump(obj_to_save, outfile, compress=3)
+        joblib.dump(obj_to_save, filename, compress=3)
     elif filename.endswith('.pkl') | filename.endswith('.p'):
         # pickle it
         print('Saving pickle...')
-        with open(filename, 'wb') as outfile:
-            joblib.dump(obj_to_save, outfile, compress=0)
+        joblib.dump(obj_to_save, filename, compress=0)
     else:
         raise ValueError('Did understand filetype')
 
@@ -212,18 +210,41 @@ def read_cli_config(filename):
         config = yaml.load(f.read())
 
     scan_settings = config['scan_settings']
-    scan_parameter = scan_settings['scan_parameter']
-    scan_range =  scan_settings['scan_range']
-    scan_scale =  scan_settings['scan_scale']
+    scan_parameters = scan_settings['scan_parameter']
+    scan_ranges =  scan_settings['scan_range']
+    scan_scales =  scan_settings['scan_scale']
+    scan_values = []
+    worker_dicts= []
 
-    if scan_scale=='log':
-        scan_values=np.logspace(*scan_range)
-    elif scan_scale=='linear':
-        scan_values=np.linspace(*scan_range)
+    if type(scan_parameters) is list:
+        for use_parameter,use_range,use_scale in zip(scan_parameters,scan_ranges,scan_scales):
+            if use_scale=='log':
+                scan_values.append(np.logspace(*use_range))
+            elif use_scale=='linear':
+                scan_values.append(np.linspace(*use_range))
+
+        for itr_values in itertools.product(*scan_values):
+            new_dict = {}
+            for param,value in zip(scan_parameters,itr_values):
+                new_dict[param]=value
+            worker_dicts.append(new_dict)
+    else:
+        if scan_scales=='log':
+            scan_values.append(np.logspace(*scan_ranges))
+        elif scan_scales=='linear':
+            scan_values.append(np.linspace(*scan_ranges))
+
+        for value in scan_values[0]:
+            new_dict = {
+                scan_parameters: value
+            }
+            worker_dicts.append(new_dict)
+
+
 
     other_parameters={}
 
     if 'parameters' in config.keys():
         other_parameters=config['parameters']
 
-    return scan_parameter,scan_values,other_parameters,scan_settings
+    return worker_dicts,scan_parameters,scan_values,other_parameters,scan_settings
