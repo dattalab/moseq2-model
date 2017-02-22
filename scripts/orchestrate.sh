@@ -28,7 +28,7 @@ CONFIG="config.yaml"
 INPUT="input.mat"
 OUTPUT="output.mat"
 QUEUE="mpi"
-LOG="job.out"
+LOG="job.log"
 NPROCS="20"
 OPTIONS=""
 DRYRUN=false
@@ -122,9 +122,9 @@ LOG=""$DIR"/$(basename "$LOG")"
 # issue ze command
 
 if [ ! -z ${MEMUSAGE} ]; then
-  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" --N -n $NPROCS \"mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS >>$LOG 2>&1\""
 else
-  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
+  BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -N -n $NPROCS \"mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS >>$LOG 2>&1\""
 fi
 
 echo "$BSUB_COMMAND"
