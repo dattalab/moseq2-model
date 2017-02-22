@@ -8,7 +8,7 @@ from tqdm import tqdm, tqdm_notebook
 #def cv_parameter_scan()
 
 # based on moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
+def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, position=0):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
@@ -18,7 +18,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False):
         log_likelihoods = []
         labels = []
 
-        for itr in progressbar(range(num_iter),leave=False,disable=cli):
+        for itr in progressbar(range(num_iter),leave=False,cli=cli,position=position):
             model.resample_model(num_procs)
             if np.mod(itr+1,save_every)==0:
                 log_likelihoods.append(model.log_likelihood())
@@ -67,7 +67,13 @@ def merge_dicts(base_dict, clobbering_dict):
 
 #
 def progressbar(*args, **kwargs):
-    try:
-        return tqdm_notebook(*args, **kwargs)
-    except:
+
+    cli=kwargs.pop('cli',False)
+
+    if cli==True:
         return tqdm(*args, **kwargs)
+    else:
+        try:
+            return tqdm_notebook(*args, **kwargs)
+        except:
+            return tqdm(*args, **kwargs)

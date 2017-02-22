@@ -6,7 +6,7 @@ parse_yaml() {
    local prefix=$2
    local s='[[:space:]]*' w='[a-zA-Z0-9_\_]*' fs=$(echo @|tr @ '\034')
    sed -ne "s|^\($s\)\($w\)$s:$s\"\(.*\)\"$s\$|\1$fs\2$fs\3|p" \
-        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  "$1" |
    awk -F$fs '{
       indent = length($1)/2;
       vname[indent] = $2;
@@ -18,6 +18,9 @@ parse_yaml() {
    }'
 }
 
+orchestrate() {
+
+#local IFS=$'\n'
 WALLTIME="24:00"
 DIR=$(pwd)
 SUBCOMMAND="cv_parameter_scan"
@@ -94,13 +97,13 @@ done
 
 # put it all together
 
-CONFIG="$DIR"/$(basename "$CONFIG")
+CONFIG=""$DIR"/$(basename "$CONFIG")"
 
 # read yaml file if it exists
 
-if [ -e $CONFIG ]; then
+if [ -e "$CONFIG" ]; then
 
-	eval $(parse_yaml $CONFIG "YAML_")
+	eval $(parse_yaml "$CONFIG" "YAML_")
 
 	for i in "${OPTION_ARRAY[@]}"; do
 		a="YAML_bash_$i"
@@ -112,9 +115,9 @@ if [ -e $CONFIG ]; then
 
 fi
 
-INPUT="$DIR"/$(basename "$INPUT")
-OUTPUT="$DIR"/$(basename "$OUTPUT")
-LOG="$DIR"/$(basename "$LOG")
+INPUT=""$DIR"/$(basename "$INPUT")"
+OUTPUT=""$DIR"/$(basename "$OUTPUT")"
+LOG=""$DIR"/$(basename "$LOG")"
 
 # issue ze command
 
@@ -124,9 +127,12 @@ else
   BSUB_COMMAND="bsub -q $QUEUE -W $WALLTIME -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
 fi
 
-echo ${BSUB_COMMAND}
+echo "$BSUB_COMMAND"
 
 #echo "bsub -q $QUEUE -W $WALLTIME -R \"rusage[mem=$MEMUSAGE]\" -o $LOG -N -n $NPROCS mpirun -n $NPROCS kinect_model $SUBCOMMAND $CONFIG $INPUT $OUTPUT $OPTIONS"
 if [ "$DRYRUN" = false ]; then
   eval ${BSUB_COMMAND}
 fi
+}
+
+orchestrate "$@"

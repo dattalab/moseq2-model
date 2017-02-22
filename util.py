@@ -172,7 +172,7 @@ def save_model_fit(filename, model, loglikes, labels):
         pickle.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels},
         outfile, protocol=-1)
 
-def export_model_to_matlab(filename, model, log_likelihoods, labels):
+def get_parameters_from_model(model):
 
     trans_dist=model.trans_distn
     init_obs_dist=model.init_emission_distn.hypparams
@@ -190,6 +190,13 @@ def export_model_to_matlab(filename, model, log_likelihoods, labels):
         'nlags':model.nlags,
         'mu_0':init_obs_dist['mu_0']
         }
+
+    return parameters
+
+
+def export_model_to_matlab(filename, model, log_likelihoods, labels):
+
+    parameters = get_parameters_from_model(model)
 
     # use savemat to save in a format convenient for dissecting in matlab
 
@@ -210,9 +217,11 @@ def read_cli_config(filename):
         config = yaml.load(f.read())
 
     scan_settings = config['scan_settings']
-    scan_parameters = scan_settings['scan_parameter']
+
     scan_ranges =  scan_settings['scan_range']
     scan_scales =  scan_settings['scan_scale']
+    scan_parameters = scan_settings['scan_parameter']
+
     scan_values = []
     worker_dicts= []
 
