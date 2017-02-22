@@ -8,7 +8,7 @@ from tqdm import tqdm, tqdm_notebook
 #def cv_parameter_scan()
 
 # based on moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, position=0):
+def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, disable=True, position=0):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
@@ -18,7 +18,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, posit
         log_likelihoods = []
         labels = []
 
-        for itr in progressbar(range(num_iter),leave=True,cli=cli,position=position):
+        for itr in progressbar(range(num_iter),leave=True,cli=cli,position=position, disable=disable):
             model.resample_model(num_procs)
             if np.mod(itr+1,save_every)==0:
                 log_likelihoods.append(model.log_likelihood())

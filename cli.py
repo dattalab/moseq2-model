@@ -22,7 +22,8 @@ def cli():
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option('--varname', type=str, default='features')
 @click.option('--save-every', "-s", type=int, default=1)
-def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every):
+@click.option('--model-progress',"-p",is_flag=True)
+def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every,model_progress):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -188,7 +189,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, 
                                                 num_iter=num_iter,
                                                 save_every=save_every,
                                                 cli=True,
-                                                position=rank)
+                                                position=rank,
+                                                disable=not model_progress)
                 comm.send({'index':worker_dict['index'],
                     'loglikes':loglikes,'labels':labels}, dest=0, tag=tags.DONE)
 
@@ -206,7 +208,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, 
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option('--varname', type=str, default='features')
-def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname):
+@click.option('--model-progress',"-p",is_flag=True)
+def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, model_progress):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -341,7 +344,8 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
                 [arhmm,loglikes,labels]=train_model(model=arhmm,
                                                     num_iter=num_iter,
                                                     cli=True,
-                                                    position=rank)
+                                                    position=rank,
+                                                    disable=not model_progress)
 
                 heldout_ll = arhmm.log_likelihood(data_dict[worker_dict['test_key']])
                 comm.send({'index':worker_dict['index'],'heldout_ll':heldout_ll}, dest=0, tag=tags.DONE)
@@ -371,7 +375,8 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option('--varname', type=str, default='features')
 @click.option('--save-every', "-s", type=int, default=1)
-def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every):
+@click.option('--model-progress',"-p",is_flag=True)
+def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every, model_progress):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -518,7 +523,8 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
                                                     num_iter=num_iter,
                                                     save_every=save_every,
                                                     cli=True,
-                                                    position=rank)
+                                                    position=rank,
+                                                    disable=not model_progress)
                 comm.send({'index':worker_dict['index'],
                     'loglikes':loglikes,'labels':labels,'model':copy_model(model)}, dest=0, tag=tags.DONE)
 
