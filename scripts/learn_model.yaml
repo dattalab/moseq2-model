@@ -1,0 +1,12 @@
+parameters:
+  kappa: 7.7076e6
+  gamma: 1e3
+bash:
+  OUTPUT: learn_model.p.z
+  INPUT: export_pca_smooth.mat
+  QUEUE: mpi
+  NPROCS: 6
+  WALLTIME: 24:00
+  SUBCOMMAND: learn_model
+  OPTIONS: "--restarts 5 --num-iter 500"
+  LOG: learn_model.out

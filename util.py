@@ -6,7 +6,7 @@ import joblib
 import gzip
 import scipy.io as sio
 import copy
-import yaml
+import ruamel.yaml as yaml
 import itertools
 from train.models import ARHMM
 from collections import OrderedDict
@@ -99,15 +99,14 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
 
 # grab matlab data
 
-def load_pcs(filename,varname,pcs=10):
+def load_pcs(filename,varname,npcs=10):
 
     # TODO: trim pickles down to right number of pcs
 
     if filename.endswith('.mat'):
-        data_dict=load_data_from_matlab(filename,varname,pcs)
+        data_dict=load_data_from_matlab(filename,varname,npcs)
     elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
-        with open(varname+"."+filename,"rb") as f:
-            data_dict=joblib.load(f)
+        data_dict=joblib.load(filename)
     elif filename.endswith('.h5'):
         from moseq.util import load_field_from_hdf
         data_dict = load_field_from_hdf(filename, 'data')
@@ -133,7 +132,7 @@ def save_dict(filename,obj_to_save):
         raise ValueError('Did understand filetype')
 
 
-def load_data_from_matlab(filename,varname="features",pcs=10):
+def load_data_from_matlab(filename,varname="features",npcs=10):
 
     f=h5.File(filename)
     score_tmp=f[varname]
@@ -142,7 +141,7 @@ def load_data_from_matlab(filename,varname="features",pcs=10):
     for i in xrange(0,len(score_tmp)):
         tmp=f[score_tmp[i][0]]
         score_to_add=tmp.value
-        data_dict[str(i+1)]=score_to_add[:pcs,:].T
+        data_dict[str(i+1)]=score_to_add[:npcs,:].T
 
     return data_dict
 
@@ -214,42 +213,46 @@ def export_model_to_matlab(filename, model, log_likelihoods, labels):
 def read_cli_config(filename):
 
     with open(filename, 'r') as f:
-        config = yaml.load(f.read())
+        config = yaml.load(f.read(), Loader=yaml.Loader)
 
-    scan_settings = config['scan_settings']
+    worker_dicts = None
+    scan_parameters = None
+    scan_values = None
+    scan_settings = None
 
-    scan_ranges =  scan_settings['scan_range']
-    scan_scales =  scan_settings['scan_scale']
-    scan_parameters = scan_settings['scan_parameter']
+    if 'scan_settings' in config:
 
-    scan_values = []
-    worker_dicts= []
+        scan_settings = config['scan_settings']
+        scan_ranges =  scan_settings['scan_range']
+        scan_scales =  scan_settings['scan_scale']
+        scan_parameters = scan_settings['scan_parameter']
 
-    if type(scan_parameters) is list:
-        for use_parameter,use_range,use_scale in zip(scan_parameters,scan_ranges,scan_scales):
-            if use_scale=='log':
-                scan_values.append(np.logspace(*use_range))
-            elif use_scale=='linear':
-                scan_values.append(np.linspace(*use_range))
+        scan_values = []
+        worker_dicts= []
 
-        for itr_values in itertools.product(*scan_values):
-            new_dict = {}
-            for param,value in zip(scan_parameters,itr_values):
-                new_dict[param]=value
-            worker_dicts.append(new_dict)
-    else:
-        if scan_scales=='log':
-            scan_values.append(np.logspace(*scan_ranges))
-        elif scan_scales=='linear':
-            scan_values.append(np.linspace(*scan_ranges))
+        if type(scan_parameters) is list:
+            for use_parameter,use_range,use_scale in zip(scan_parameters,scan_ranges,scan_scales):
+                if use_scale=='log':
+                    scan_values.append(np.logspace(*use_range))
+                elif use_scale=='linear':
+                    scan_values.append(np.linspace(*use_range))
 
-        for value in scan_values[0]:
-            new_dict = {
-                scan_parameters: value
-            }
-            worker_dicts.append(new_dict)
+            for itr_values in itertools.product(*scan_values):
+                new_dict = {}
+                for param,value in zip(scan_parameters,itr_values):
+                    new_dict[param]=value
+                worker_dicts.append(new_dict)
+        else:
+            if scan_scales=='log':
+                scan_values.append(np.logspace(*scan_ranges))
+            elif scan_scales=='linear':
+                scan_values.append(np.linspace(*scan_ranges))
 
-
+            for value in scan_values[0]:
+                new_dict = {
+                    scan_parameters: value
+                }
+                worker_dicts.append(new_dict)
 
     other_parameters={}
 

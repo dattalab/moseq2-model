@@ -23,7 +23,8 @@ def cli():
 @click.option('--varname', type=str, default='features')
 @click.option('--save-every', "-s", type=int, default=1)
 @click.option('--model-progress',"-p",is_flag=True)
-def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every,model_progress):
+@click.option('--npcs', type=int, default=10)
+def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every,model_progress,npcs):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -64,7 +65,7 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, 
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile, varname=varname, pcs=10)
+        data_dict=load_pcs(filename=inputfile, varname=varname, npcs=npcs)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -209,7 +210,8 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, 
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option('--varname', type=str, default='features')
 @click.option('--model-progress',"-p",is_flag=True)
-def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, model_progress):
+@click.option('--npcs', type=int, default=10)
+def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, model_progress, npcs):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -251,7 +253,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile,varname=varname,pcs=10)
+        data_dict=load_pcs(filename=inputfile,varname=varname,npcs=10)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -376,7 +378,8 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 @click.option('--varname', type=str, default='features')
 @click.option('--save-every', "-s", type=int, default=1)
 @click.option('--model-progress',"-p",is_flag=True)
-def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every, model_progress):
+@click.option('--npcs', type=int, default=10)
+def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, save_every, model_progress, npcs):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     tags = enum('READY','DONE','EXIT','START')
@@ -405,7 +408,7 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
 
         [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
-        data_dict=load_pcs(filename=inputfile, varname=varname, pcs=10)
+        data_dict=load_pcs(filename=inputfile, varname=varname, npcs=10)
 
         click.echo('Whitening the training data')
 
@@ -414,10 +417,13 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
         worker_dicts=[]
         nframes=[tmp.shape[0] for key,tmp in data_dict.iteritems()]
 
+        for key,value in other_parameters.iteritems():
+            click.echo('Setting '+key+' to '+str(value))
+
         # pre-initialize everything
 
-        labels = np.empty((restarts, len(scan_dicts), len(data_dict)), dtype=object)
-        loglikes = np.zeros((restarts, len(scan_dicts), np.floor(num_iter/save_every)), dtype=np.float64)
+        labels = np.empty((restarts, len(data_dict)), dtype=object)
+        loglikes = np.zeros((restarts, np.floor(num_iter/save_every)), dtype=np.float64)
         models = np.empty((restarts,),dtype=object)
 
         for restart_idx in xrange(restarts):
@@ -449,6 +455,7 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
             if tag == tags.READY:
 
                 if task_index < len(worker_dicts):
+                    worker_dicts[task_index]['bar_index']=np.mod(task_index,num_workers)+1
                     comm.send(worker_dicts[task_index], dest=source, tag=tags.START)
                     task_index += 1
                 else:
@@ -461,13 +468,13 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
                 worker_idx = data['index']
 
                 if type(data['labels']) is float and np.isnan(data['labels']):
-                    labels[worker_idx[0]][:]=np.nan
+                    labels[worker_idx][:]=np.nan
                 else:
                     for label_itr,label in enumerate(data['labels']):
-                        labels[(worker_idx[0],label_itr)]=label
+                        labels[(worker_idx,label_itr)]=label
 
-                loglikes[worker_idx[0],:] = data['loglikes']
-                models[worker_idx[0]] = data['model']
+                loglikes[worker_idx,:] = data['loglikes']
+                models[worker_idx] = data['model']
 
                 pbar.update(1)
 
@@ -523,8 +530,9 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
                                                     num_iter=num_iter,
                                                     save_every=save_every,
                                                     cli=True,
-                                                    position=rank,
+                                                    position=worker_dict['bar_index'],
                                                     disable=not model_progress)
+
                 comm.send({'index':worker_dict['index'],
                     'loglikes':loglikes,'labels':labels,'model':copy_model(model)}, dest=0, tag=tags.DONE)
 
