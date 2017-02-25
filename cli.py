@@ -143,26 +143,27 @@ def parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varname, 
 
         pbar.close()
 
-        if restarts>1:
-
-            # yeah it's ugly, sue me
-
-            labels_to_save=np.empty(labels.shape[1:],dtype=object)
-            loglikes_to_save=np.zeros(loglikes.shape[1:],dtype=np.float64)
-            max_loglikes=np.max(loglikes,axis=2)
-            best_models=np.argmax(max_loglikes,axis=0)
-
-            for i in xrange(len(labels_to_save)):
-                loglikes_to_save[i,:]=loglikes[best_models[i],i,:]
-                for j in xrange(len(labels_to_save[0])):
-                    labels_to_save[i][j]=labels[best_models[i]][i][j]
-        else:
-
-            labels_to_save=np.squeeze(labels)
-            loglikes_to_save=np.squeeze(loglikes)
+        # save everything dun dun dun
+        # if restarts>1:
+        #
+        #     # yeah it's ugly, sue me
+        #
+        #     labels_to_save=np.empty(labels.shape[1:],dtype=object)
+        #     loglikes_to_save=np.zeros(loglikes.shape[1:],dtype=np.float64)
+        #     max_loglikes=np.max(loglikes,axis=2)
+        #     best_models=np.argmax(max_loglikes,axis=0)
+        #
+        #     for i in xrange(len(labels_to_save)):
+        #         loglikes_to_save[i,:]=loglikes[best_models[i],i,:]
+        #         for j in xrange(len(labels_to_save[0])):
+        #             labels_to_save[i][j]=labels[best_models[i]][i][j]
+        # else:
+        #
+        #     labels_to_save=np.squeeze(labels)
+        #     loglikes_to_save=np.squeeze(loglikes)
 
         click.echo('Saving results to '+destfile)
-        export_dict=dict({'loglikes':loglikes_to_save, 'labels':labels_to_save,
+        export_dict=dict({'loglikes':loglikes, 'labels':labels,
                           'scan_dicts':scan_dicts},**scan_settings)
         save_dict(filename=destfile,obj_to_save=export_dict)
 
@@ -253,7 +254,7 @@ def cv_parameter_scan(paramfile, inputfile, destfile, num_iter, restarts, varnam
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile,varname=varname,npcs=10)
+        data_dict=load_pcs(filename=inputfile,varname=varname,npcs=npcs)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -408,7 +409,7 @@ def learn_model(paramfile, inputfile, destfile, num_iter, restarts, varname, sav
 
         [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
 
-        data_dict=load_pcs(filename=inputfile, varname=varname, npcs=10)
+        data_dict=load_pcs(filename=inputfile, varname=varname, npcs=npcs)
 
         click.echo('Whitening the training data')
 
