@@ -1,9 +1,7 @@
 from __future__ import division
 import numpy as np
 import h5py as h5
-#import cPickle as pickle
 import joblib
-import gzip
 import scipy.io as sio
 import copy
 import ruamel.yaml as yaml
@@ -116,18 +114,31 @@ def load_pcs(filename,varname,npcs=10):
     return data_dict
 
 
-def save_dict(filename,obj_to_save):
+def save_dict(filename,obj_to_save=None,print_message=False):
+
+    # we gotta switch to lists here my friend, create a file with multiple
+    # pickles, only load as we need them
+
     if filename.endswith('.mat'):
-        print('Saving MAT-file...')
-        sio.savemat(filename,mdict=obj_to_save)
+        if not print_message:
+            print('Saving MAT file '+filename)
+            sio.savemat(filename,mdict=obj_to_save)
+        else:
+            print('Will save MAT file '+filename)
     elif filename.endswith('.z'):
         # pickle it
-        print('Saving compressed pickle...')
-        joblib.dump(obj_to_save, filename, compress=3)
+        if not print_message:
+            print('Saving compressed pickle '+filename)
+            joblib.dump(obj_to_save, filename, compress=3)
+        else:
+            printctivity('Will save compressed pickle '+filename)
     elif filename.endswith('.pkl') | filename.endswith('.p'):
         # pickle it
-        print('Saving pickle...')
-        joblib.dump(obj_to_save, filename, compress=0)
+        if not print_message:
+            print('Saving pickle '+filename)
+            joblib.dump(obj_to_save, filename, compress=0)
+        else:
+            print('Will save piclke '+filename)
     else:
         raise ValueError('Did understand filetype')
 
@@ -166,10 +177,7 @@ def copy_model(self):
     return cp
 
 def save_model_fit(filename, model, loglikes, labels):
-
-    with gzip.open(filename, 'w') as outfile:
-        pickle.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels},
-        outfile, protocol=-1)
+    joblib.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels})
 
 def get_parameters_from_model(model):
 
@@ -193,23 +201,7 @@ def get_parameters_from_model(model):
     return parameters
 
 
-def export_model_to_matlab(filename, model, log_likelihoods, labels):
-
-    parameters = get_parameters_from_model(model)
-
-    # use savemat to save in a format convenient for dissecting in matlab
-
-    # prepend labels with -1 to account for lags, also put into Dict to convert to a cell array
-
-    labels=[np.hstack((np.full((label.shape[0],model.nlags),-1),label)) for label in labels]
-    labels_export=np.empty(len(labels),dtype=object)
-
-    for i in xrange(len(labels)):
-        labels_export[i]=labels[i]
-
-    sio.savemat(filename,mdict={'labels':labels_export,'parameters':parameters,'log_likelihoods':log_likelihoods})
-
-
+# read in user yml file for mpi jobs
 def read_cli_config(filename):
 
     with open(filename, 'r') as f:
@@ -259,4 +251,21 @@ def read_cli_config(filename):
     if 'parameters' in config.keys():
         other_parameters=config['parameters']
 
+    if type(scan_parameters) is list:
+        for param,values in zip(scan_parameters,scan_values):
+            print('Will scan parameter '+param)
+            print('Will scan value '+str(values))
+    else:
+        print('Will scan parameter '+scan_parameters)
+        print('Will scan value '+str(scan_values[0]))
+
     return worker_dicts,scan_parameters,scan_values,other_parameters,scan_settings
+
+# credit to http://stackoverflow.com/questions/14000893/specifying-styles-for-portions-of-a-pyyaml-dump
+class blockseq( dict ): pass
+def blockseq_rep(dumper, data):
+    return dumper.represent_mapping( u'tag:yaml.org,2002:map', data, flow_style=False )
+
+class flowmap( dict ): pass
+def flowmap_rep(dumper, data):
+    return dumper.represent_mapping( u'tag:yaml.org,2002:map', data, flow_style=True )
