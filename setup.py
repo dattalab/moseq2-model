@@ -8,7 +8,8 @@ setup(
     license='Crapl',
     packages=find_packages(exclude='docs'),
     platforms='any',
-    install_requires=['scipy', 'h5py', 'numpy == 1.11.0', 
-        'click', 'pybasicbayes', 'pyhsmm', 'autoregressive', 'joblib', 'hdf5storage', 'ruamel.yaml','tqdm'],
+    install_requires=['h5py', 'numpy == 1.11.0',
+        'click', 'pybasicbayes', 'pyhsmm', 'autoregressive', 'joblib',
+         'hdf5storage', 'ruamel.yaml','tqdm'],
     entry_points={'console_scripts': ['kinect_model = cli:cli']},
 )

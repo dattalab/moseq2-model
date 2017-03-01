@@ -207,59 +207,57 @@ def read_cli_config(filename):
     with open(filename, 'r') as f:
         config = yaml.load(f.read(), Loader=yaml.Loader)
 
-    worker_dicts = None
-    scan_parameters = None
-    scan_values = None
-    scan_settings = None
+    cfg={
+        'worker_dicts':None,
+        'scan_parameter':None,
+        'scan_value':None,
+        'other_parameters':{}
+    }
 
     if 'scan_settings' in config:
 
-        scan_settings = config['scan_settings']
-        scan_ranges =  scan_settings['scan_range']
-        scan_scales =  scan_settings['scan_scale']
-        scan_parameters = scan_settings['scan_parameter']
+        cfg=merge_dicts(cfg,config['scan_settings'])
+        cfg['scan_values'] = []
+        cfg['worker_dicts']= []
 
-        scan_values = []
-        worker_dicts= []
-
-        if type(scan_parameters) is list:
-            for use_parameter,use_range,use_scale in zip(scan_parameters,scan_ranges,scan_scales):
+        if type(cfg['scan_parameter']) is list:
+            for use_parameter,use_range,use_scale in zip(cfg['scan_parameters'],cfg['scan_range'],cfgp['scan_scale']):
                 if use_scale=='log':
-                    scan_values.append(np.logspace(*use_range))
+                    cfg['scan_values'].append(np.logspace(*use_range))
                 elif use_scale=='linear':
-                    scan_values.append(np.linspace(*use_range))
+                    cfg['scan_values'].append(np.linspace(*use_range))
 
-            for itr_values in itertools.product(*scan_values):
+            for itr_values in itertools.product(*cfg['scan_values']):
                 new_dict = {}
-                for param,value in zip(scan_parameters,itr_values):
+                for param,value in zip(cfg['scan_parameter'],itr_values):
                     new_dict[param]=value
-                worker_dicts.append(new_dict)
+                cfg['worker_dicts'].append(new_dict)
         else:
-            if scan_scales=='log':
-                scan_values.append(np.logspace(*scan_ranges))
-            elif scan_scales=='linear':
-                scan_values.append(np.linspace(*scan_ranges))
+            if cfg['scan_scale']=='log':
+                cfg['scan_values'].append(np.logspace(*cfg['scan_range']))
+            elif cfg['scan_scale']=='linear':
+                cfg['scan_values'].append(np.linspace(*cfg['scan_range']))
 
-            for value in scan_values[0]:
+            for value in cfg['scan_values'][0]:
                 new_dict = {
-                    scan_parameters: value
+                    cfg['scan_parameter']: value
                 }
-                worker_dicts.append(new_dict)
+                cfg['worker_dicts'].append(new_dict)
 
     other_parameters={}
-
+    print(cfg)
     if 'parameters' in config.keys():
-        other_parameters=config['parameters']
+        cfg['other_parameters']=config['parameters']
 
-    if type(scan_parameters) is list:
-        for param,values in zip(scan_parameters,scan_values):
+    if type(cfg['scan_parameter']) is list:
+        for param,values in zip(cfg['scan_parameter'],cfg['scan_values']):
             print('Will scan parameter '+param)
             print('Will scan value '+str(values))
     else:
-        print('Will scan parameter '+scan_parameters)
-        print('Will scan value '+str(scan_values[0]))
+        print('Will scan parameter '+cfg['scan_parameter'])
+        print('Will scan value '+str(cfg['scan_values'][0]))
 
-    return worker_dicts,scan_parameters,scan_values,other_parameters,scan_settings
+    return cfg
 
 # credit to http://stackoverflow.com/questions/14000893/specifying-styles-for-portions-of-a-pyyaml-dump
 class blockseq( dict ): pass

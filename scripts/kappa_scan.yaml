@@ -2,6 +2,8 @@ scan_settings:
   scan_parameter: kappa
   scan_range: [1,20,20]
   scan_scale: log
+  input_file: export_pca_smooth.mat
+  job_name: kappa_scan
 bash:
   OUTPUT: kappa_scan.p.z
   INPUT: export_pca_smooth.mat

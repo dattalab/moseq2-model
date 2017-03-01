@@ -1,5 +1,6 @@
 from __future__ import division
 import click
+import os.path
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
@@ -228,14 +229,13 @@ def parameter_scan_kube(paramfile, destfile, cross_validate,
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
 
-    [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
-
-    njobs=len(scan_dicts)
+    cfg=read_cli_config(paramfile)
+    njobs=len(cfg['worker_dicts'])
     job_dict=[{'apiVersion':'batch/v1','kind':'Job'}]*njobs
 
     bash_commands=['sh','-c','kinect_model','learn_model']
 
-    for itr,job in enumerate(scan_dicts):
+    for itr,job in enumerate(cfg['worker_dicts']):
 
         # need some unique stuff to specify what this job is, do some good bookkeeping for once
 
@@ -245,7 +245,7 @@ def parameter_scan_kube(paramfile, destfile, cross_validate,
         # scan parameters are commands, along with any other specified parameters
         # build up the list for what we're going to pass to the command line
 
-        all_parameters=merge_dicts(other_parameters,scan_dicts[itr])
+        all_parameters=merge_dicts(cfg['other_parameters'],cfg['worker_dicts'][itr])
         issue_command=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
 
         for param,value in all_parameters.iteritems():
@@ -295,6 +295,8 @@ def parameter_scan_kube(paramfile, destfile, cross_validate,
 @click.option("--gamma","-g",type=float, default=1e3)
 def learn_model(inputfile, destfile, cross_validate, num_iter, varname, save_every,
     save_model, model_progress, npcs, kappa, gamma):
+
+
 
     pass
 
