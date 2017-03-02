@@ -219,7 +219,7 @@ def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
 @click.option("--whiten","-w", is_flag=True)
-@click.option("--image","-i",type=str, default="kinect_modeling")
+@click.option("--image","-i",type=str, default="kinect-modeling")
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--submit-job", is_flag=True)
 @click.option("--output-dir", type=str, default="")
@@ -288,7 +288,7 @@ def parameter_scan_kube(param_file, cross_validate,
 
         job_dict[itr]['spec'] = {'template':
             {'metadata':{'name':'example','labels':{'jobgroup':'example'}},
-            'spec':{'containers':[{'name':'test','image':'busybox',
+            'spec':{'containers':[{'name':'test','image':image,
             'command':issue_command}]},
             'restartPolicy':restart_policy}}
 
@@ -300,14 +300,6 @@ def parameter_scan_kube(param_file, cross_validate,
             # or we can simply pipe the yaml output to kubectl
 
             raise NotImplementedError
-
-    #print(yaml.dump_all(job_dict,Dumper=yaml.RoundTripDumper))
-
-    # metadata (job name etc.)
-
-    # need a storage directory for each job too (store in Docker and retrieve or something?)
-
-    # automagically call kubectl if the user wants to?
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
