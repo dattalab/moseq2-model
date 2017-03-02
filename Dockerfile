@@ -1,5 +1,6 @@
 FROM continuumio/anaconda
 
+# all credit to @alexbw for most of this
 # Make sure we can see everything in conda before local install
 ENV PATH /opt/conda/lib:/opt/conda/include:$PATH
 #ENV PATH $PATH:/opt/conda/lib:/opt/conda/include
