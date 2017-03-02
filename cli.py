@@ -218,79 +218,94 @@ def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
-@click.option("--whiten","-w", is_flag=True)
+@click.option("--whiten","-w", type=bool, default=True)
 @click.option("--image","-i",type=str, default="kinect-modeling")
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--submit-job", is_flag=True)
 @click.option("--output-dir", type=str, default="")
 @click.option("--ext","-e",type=str, default=".p.z")
-@click.option("--mount-point", type=str, default="/mnt/modeling-bucket")
+@click.option("--mount-point", type=str, default="/mnt/modeling_bucket")
+@click.option("--bucket","-b",type=str, default="modeling-bucket")
 @click.option("--restart-policy", type=str, default="Never")
+@click.option("--ncpus", type=int, default=4)
 def parameter_scan_kube(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
-    image, job_name, output_dir, ext, submit_job, mount_point, restart_policy):
+    image, job_name, output_dir, ext, submit_job, mount_point, bucket, restart_policy, ncpus):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
 
-    cfg=read_cli_config(param_file)
+    cfg=read_cli_config(param_file,suppress_output=True)
 
     if 'npcs' in cfg:
-        click.echo('Setting npcs to '+str(npcs))
         npcs=cfg['npcs']
 
+    if 'num-iter' in cfg:
+        num_iter=cfg['num-iter']
+
     njobs=len(cfg['worker_dicts'])
-    job_dict=[{'apiVersion':'batch/v1','kind':'Job'}]*njobs
+    job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
 
     if not output_dir:
-        output_dir=job_name+' {:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+        output_dir=job_name+'_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
 
     output_dir=os.path.join(mount_point,output_dir)
 
-    bash_commands=['sh','-c','kinect_model','learn_model',cfg['input_file']]
-    param_commands=['--npcs',npcs,'--save-every',str(save_every),
-                    '--save-model',str(save_model),
-                    '--num-iter',num_iter,
-                    '--restarts',restarts,
-                    '--var_name',var_name,]
+    bash_commands=['/bin/bash','-c']
+    bash_arguments='kinect_model learn_model '+os.path.join(mount_point,cfg['input_file'])
+    gcs_options='-o allow_other --file-mode=777 --dir-mode=777'
+    mount_arguments='mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
+    dir_arguments='mkdir -p '+output_dir
+    param_commands=('--npcs '+str(npcs)+' --save-every '+str(save_every)+
+                    ' --num-iter '+str(num_iter)+
+                    ' --restarts '+str(restarts)+
+                    ' --var-name '+var_name+
+                    ' --save-every '+str(save_every))
+
+    bash_commands=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
 
     if cross_validate:
-        param_commands.append('--cross-validate')
+        param_commands=param_commands+' --cross-validate'
 
     if model_progress:
-        param_commands.append('--model-progress')
+        param_commands=param_commands+' --model-progress'
 
     if whiten:
-        param_commands.append('--whiten')
+        param_commands=param_commands+' --whiten'
+
+    if save_model:
+        param_commands=param_commands+' --save-model'
+
+
+    # TODO: repeats and cross-validation
 
     for itr,job in enumerate(cfg['worker_dicts']):
 
         # need some unique stuff to specify what this job is, do some good bookkeeping for once
 
-        job_dict[itr]['metadata'] = {'name':job_name+'-'+str(itr),
+        job_dict[itr]['metadata'] = {'name':job_name+'-{:d}'.format(itr),
             'labels':{'jobgroup':job_name}}
 
         # scan parameters are commands, along with any other specified parameters
         # build up the list for what we're going to pass to the command line
 
         all_parameters=merge_dicts(cfg['other_parameters'],cfg['worker_dicts'][itr])
-        issue_command=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
-        issue_command.append(yaml.scalarstring.DoubleQuotedScalarString(os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))))
-        [issue_command.append(yaml.scalarstring.DoubleQuotedScalarString(cmd)) for cmd in param_commands]
+
+        output_dir_string=os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))
+        issue_command=mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
+        issue_command=issue_command+' '+param_commands
 
         for param,value in all_parameters.iteritems():
             param_name=yaml.scalarstring.DoubleQuotedScalarString('--'+param)
             param_value=yaml.scalarstring.DoubleQuotedScalarString(str(value))
-            issue_command.append(param_name)
-            issue_command.append(param_value)
+            issue_command=issue_command+' '+param_name
+            issue_command=issue_command+' '+param_value
 
         # TODO: cross-validation
 
-        job_dict[itr]['spec'] = {'template':
-            {'metadata':{'name':'example','labels':{'jobgroup':'example'}},
-            'spec':{'containers':[{'name':'test','image':image,
-            'command':issue_command}]},
-            'restartPolicy':restart_policy}}
+        job_dict[itr]['spec'] = {'containers':[{'name':'test','image':image,'command':bash_commands,
+            'args':[yaml.scalarstring.DoubleQuotedScalarString(issue_command)],
+            'securityContext':{'privileged': True},'resources':{'requests':{'cpu': '{:d}m'.format(int(ncpus*.6*1e3)) }}}],'restartPolicy':restart_policy}
 
         print(yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
         print('---')

@@ -204,7 +204,7 @@ def get_parameters_from_model(model,save_ar=True):
 
 
 # read in user yml file for mpi jobs
-def read_cli_config(filename):
+def read_cli_config(filename,suppress_output=False):
 
     with open(filename, 'r') as f:
         config = yaml.load(f.read(), Loader=yaml.Loader)
@@ -247,17 +247,18 @@ def read_cli_config(filename):
                 cfg['worker_dicts'].append(new_dict)
 
     other_parameters={}
-    print(cfg)
+
     if 'parameters' in config.keys():
         cfg['other_parameters']=config['parameters']
 
-    if type(cfg['scan_parameter']) is list:
-        for param,values in zip(cfg['scan_parameter'],cfg['scan_values']):
-            print('Will scan parameter '+param)
-            print('Will scan value '+str(values))
-    else:
-        print('Will scan parameter '+cfg['scan_parameter'])
-        print('Will scan value '+str(cfg['scan_values'][0]))
+    if not suppress_output:
+        if type(cfg['scan_parameter']) is list:
+            for param,values in zip(cfg['scan_parameter'],cfg['scan_values']):
+                print('Will scan parameter '+param)
+                print('Will scan value '+str(values))
+        else:
+            print('Will scan parameter '+cfg['scan_parameter'])
+            print('Will scan value '+str(cfg['scan_values'][0]))
 
     return cfg
 
