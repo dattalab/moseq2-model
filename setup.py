@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 
+#testing w/o 'scikit-learn == 0.16.1','scikit-image',works okay but leaving here for reference
 setup(
     name='kinect_modeling',
     version='0.0.1',
@@ -8,8 +9,8 @@ setup(
     license='Crapl',
     packages=find_packages(exclude='docs'),
     platforms='any',
-    install_requires=['h5py', 'numpy == 1.11.0',
-        'click', 'pybasicbayes', 'pyhsmm', 'autoregressive', 'joblib',
+    install_requires=['h5py',
+        'click', 'pybasicbayes', 'pyhsmm', 'autoregressive', 'joblib', 'numpy == 1.11.3',
          'hdf5storage', 'ruamel.yaml','tqdm'],
     entry_points={'console_scripts': ['kinect_model = cli:cli']},
 )

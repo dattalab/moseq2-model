@@ -97,12 +97,12 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
 
 # grab matlab data
 
-def load_pcs(filename,varname,npcs=10):
+def load_pcs(filename,var_name,npcs=10):
 
     # TODO: trim pickles down to right number of pcs
 
     if filename.endswith('.mat'):
-        data_dict=load_data_from_matlab(filename,varname,npcs)
+        data_dict=load_data_from_matlab(filename,var_name,npcs)
     elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
         data_dict=joblib.load(filename)
     elif filename.endswith('.h5'):
@@ -143,10 +143,10 @@ def save_dict(filename,obj_to_save=None,print_message=False):
         raise ValueError('Did understand filetype')
 
 
-def load_data_from_matlab(filename,varname="features",npcs=10):
+def load_data_from_matlab(filename,var_name="features",npcs=10):
 
     f=h5.File(filename)
-    score_tmp=f[varname]
+    score_tmp=f[var_name]
     data_dict=OrderedDict()
 
     for i in xrange(0,len(score_tmp)):
@@ -179,14 +179,12 @@ def copy_model(self):
 def save_model_fit(filename, model, loglikes, labels):
     joblib.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels})
 
-def get_parameters_from_model(model):
+def get_parameters_from_model(model,save_ar=True):
 
     trans_dist=model.trans_distn
     init_obs_dist=model.init_emission_distn.hypparams
 
     parameters= {
-        'ar_mat':[obs.A for obs in model.obs_distns],
-        'sig':[obs.sigma for obs in model.obs_distns],
         'kappa':trans_dist.kappa,
         'gamma':trans_dist.gamma,
         'alpha':trans_dist.alpha,
@@ -197,6 +195,10 @@ def get_parameters_from_model(model):
         'nlags':model.nlags,
         'mu_0':init_obs_dist['mu_0']
         }
+
+    if save_ar:
+        parameters['ar_mat']=[obs.A for obs in model.obs_distns]
+        parameters['sig']=[obs.sigma for obs in model.obs_distns]
 
     return parameters
 
@@ -221,7 +223,7 @@ def read_cli_config(filename):
         cfg['worker_dicts']= []
 
         if type(cfg['scan_parameter']) is list:
-            for use_parameter,use_range,use_scale in zip(cfg['scan_parameters'],cfg['scan_range'],cfgp['scan_scale']):
+            for use_parameter,use_range,use_scale in zip(cfg['scan_parameter'],cfg['scan_range'],cfg['scan_scale']):
                 if use_scale=='log':
                     cfg['scan_values'].append(np.logspace(*use_range))
                 elif use_scale=='linear':

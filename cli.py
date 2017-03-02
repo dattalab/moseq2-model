@@ -1,12 +1,13 @@
 from __future__ import division
 import click
 import os.path
+import datetime
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import enum, save_dict, load_pcs, read_cli_config, copy_model, flowmap, blockseq, flowmap_rep, blockseq_rep
+from util import enum, save_dict, load_pcs, read_cli_config, copy_model, get_parameters_from_model
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -16,19 +17,19 @@ def cli():
     pass
 
 @cli.command()
-@click.argument("paramfile", type=click.Path(exists=True))
-@click.argument("inputfile", type=click.Path(exists=True))
-@click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
+@click.argument("param_file", type=click.Path(exists=True))
+@click.argument("input_file", type=click.Path(exists=True))
+@click.argument("dest_file", type=click.Path(dir_okay=True,writable=True))
 @click.option("--cross-validate","-c",is_flag=True)
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-@click.option("--varname", type=str, default='features')
+@click.option("--var_name", type=str, default='features')
 @click.option("--save-every", "-s", type=int, default=1)
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
-def parameter_scan_mpi(paramfile, inputfile, destfile, cross_validate,
-    num_iter, restarts, varname, save_every, save_model, model_progress,npcs):
+def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
+    num_iter, restarts, var_name, save_every, save_model, model_progress,npcs):
 
     tags = enum('READY','DONE','EXIT','START')
 
@@ -43,12 +44,12 @@ def parameter_scan_mpi(paramfile, inputfile, destfile, cross_validate,
 
     if rank==0:
 
-        save_dict(filename=destfile,print_message=True)
-        [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(paramfile)
+        save_dict(filename=dest_file,print_message=True)
+        [scan_dicts,scan_parameter,scan_values,other_parameters,scan_settings]=read_cli_config(param_file)
 
         # get them pc's
 
-        data_dict=load_pcs(filename=inputfile, varname=varname, npcs=npcs)
+        data_dict=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
 
         # use a list of dicts, with everything formatted ready to go
 
@@ -149,10 +150,10 @@ def parameter_scan_mpi(paramfile, inputfile, destfile, cross_validate,
                 closed_workers += 1
         pbar.close()
 
-        click.echo('Saving results to '+destfile)
+        click.echo('Saving results to '+dest_file)
         export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
                           'scan_dicts':scan_dicts},**scan_settings)
-        save_dict(filename=destfile,obj_to_save=export_dict)
+        save_dict(filename=dest_file,obj_to_save=export_dict)
 
     else:
 
@@ -208,32 +209,59 @@ def parameter_scan_mpi(paramfile, inputfile, destfile, cross_validate,
 
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command()
-@click.argument("paramfile", type=click.Path(exists=True))
-@click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
+@click.argument("param_file", type=click.Path(exists=True))
 @click.option("--cross-validate","-c",is_flag=True)
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
-@click.option("--varname", type=str, default='features')
+@click.option("--var_name", type=str, default='features')
 @click.option("--save-every", "-s", type=int, default=1)
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
+@click.option("--whiten","-w", is_flag=True)
 @click.option("--image","-i",type=str, default="kinect_modeling")
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--submit-job", is_flag=True)
+@click.option("--output-dir", type=str, default="")
+@click.option("--ext","-e",type=str, default=".p.z")
+@click.option("--mount-point", type=str, default="/mnt/modeling-bucket")
 @click.option("--restart-policy", type=str, default="Never")
-def parameter_scan_kube(paramfile, destfile, cross_validate,
-    num_iter, restarts, varname, save_every, save_model, model_progress,npcs,
-    image, job_name, submit_job,restart_policy):
+def parameter_scan_kube(param_file, cross_validate,
+    num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
+    image, job_name, output_dir, ext, submit_job, mount_point, restart_policy):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
 
-    cfg=read_cli_config(paramfile)
+    cfg=read_cli_config(param_file)
+
+    if 'npcs' in cfg:
+        click.echo('Setting npcs to '+str(npcs))
+        npcs=cfg['npcs']
+
     njobs=len(cfg['worker_dicts'])
     job_dict=[{'apiVersion':'batch/v1','kind':'Job'}]*njobs
 
-    bash_commands=['sh','-c','kinect_model','learn_model']
+    if not output_dir:
+        output_dir=job_name+' {:%Y-%m-%d %H:%M:%S}'.format(datetime.datetime.now())
+
+    output_dir=os.path.join(mount_point,output_dir)
+
+    bash_commands=['sh','-c','kinect_model','learn_model',cfg['input_file']]
+    param_commands=['--npcs',npcs,'--save-every',str(save_every),
+                    '--save-model',str(save_model),
+                    '--num-iter',num_iter,
+                    '--restarts',restarts,
+                    '--var_name',var_name,]
+
+    if cross_validate:
+        param_commands.append('--cross-validate')
+
+    if model_progress:
+        param_commands.append('--model-progress')
+
+    if whiten:
+        param_commands.append('--whiten')
 
     for itr,job in enumerate(cfg['worker_dicts']):
 
@@ -247,6 +275,8 @@ def parameter_scan_kube(paramfile, destfile, cross_validate,
 
         all_parameters=merge_dicts(cfg['other_parameters'],cfg['worker_dicts'][itr])
         issue_command=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
+        issue_command.append(yaml.scalarstring.DoubleQuotedScalarString(os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))))
+        [issue_command.append(yaml.scalarstring.DoubleQuotedScalarString(cmd)) for cmd in param_commands]
 
         for param,value in all_parameters.iteritems():
             param_name=yaml.scalarstring.DoubleQuotedScalarString('--'+param)
@@ -282,31 +312,66 @@ def parameter_scan_kube(paramfile, destfile, cross_validate,
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
 @cli.command()
-@click.argument("inputfile", type=click.Path(exists=True))
-@click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
+@click.argument("input_file", type=click.Path(exists=True))
+@click.argument("dest_file", type=click.Path(dir_okay=True,writable=True))
 @click.option("--hold-out","-h", type=int, default=-1)
 @click.option("--num-iter", "-n", type=int, default=100)
-@click.option("--varname", type=str, default='features')
+@click.option("--restarts","-r",type=int,default=1)
+@click.option("--var-name", type=str, default='features')
 @click.option("--save-every", "-s", type=int, default=1)
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p", is_flag=True)
 @click.option("--npcs", type=int, default=10)
+@click.option("--whiten", is_flag=True)
 @click.option("--kappa","-k", type=float, default=1e8)
 @click.option("--gamma","-g",type=float, default=1e3)
-def learn_model(inputfile, destfile, cross_validate, num_iter, varname, save_every,
-    save_model, model_progress, npcs, kappa, gamma):
+@click.option("--nlags",type=int, default=3)
+def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
+    save_model, model_progress, npcs, whiten, kappa, gamma, nlags):
 
+    data_dict=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
 
+    # use a list of dicts, with everything formatted ready to go
 
-    pass
+    model_parameters={
+        'gamma':gamma,
+        'kappa':kappa,
+        'nlags':nlags
+    }
 
+    if whiten:
 
-# whiten the data, either append file or save to a new file
+        click.echo('Whitening the training data')
+        data_dict=whiten_all(data_dict)
+
+    all_keys=data_dict.keys()
+
+    if hold_out>=0:
+        train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in all_keys[hold_out])
+        test_data=data_dict[all_keys[hold_out]]
+    else:
+        train_data=data_dict
+
+    arhmm=ARHMM(data_dict=train_data, **model_parameters)
+    [arhmm,loglikes,labels]=train_model(model=arhmm,
+                                    num_iter=num_iter,
+                                    cli=True,
+                                    disable=not model_progress)
+
+    if hold_out>=0:
+        heldout_ll=arhmm.log_likelihood(data_dict[all_keys[hold_out]])
+    else:
+        heldout_ll=None
+
+    export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
+                      'model_parameters':get_parameters_from_model(arhmm)})
+    save_dict(filename=dest_file,obj_to_save=export_dict)
+
 
 # @cli.command()
-# @click.argument("inputfile", type=click.Path(exists=True))
-# @click.argument("destfile", type=click.Path(dir_okay=True,writable=True))
+# @click.argument("input_file", type=click.Path(exists=True))
+# @click.argument("dest_file", type=click.Path(dir_okay=True,writable=True))
 # @click.argument("--each","-e", is_flag=True)
-# @click.argument("--varname","-v",type=str, default="features")
-# def whiten(inputfile,destfile,each,varname):
+# @click.argument("--var_name","-v",type=str, default="features")
+# def whiten(input_file,dest_file,each,var_name):
 #     pass

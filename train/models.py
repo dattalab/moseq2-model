@@ -2,6 +2,7 @@ import numpy as np
 from autoregressive.distributions import AutoRegression
 from autoregressive.models import FastARWeakLimitStickyHDPHMM
 from util import merge_dicts
+import warnings
 
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):
@@ -36,6 +37,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
         K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
         affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False):
 
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     data_dim=data_dict.values()[0].shape[1]
 
     default_obs_hypparams = {

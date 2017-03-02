@@ -14,7 +14,6 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, disab
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
 
-    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
 
     try:
