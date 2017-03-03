@@ -1,13 +1,13 @@
 from __future__ import division
 import click
-import os.path
+import os
 import datetime
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import enum, save_dict, load_pcs, read_cli_config, copy_model, get_parameters_from_model
+from util import enum, save_dict, load_pcs, read_cli_config, copy_model, get_parameters_from_model, make_kube_yaml
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -221,19 +221,22 @@ def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
 @click.option("--whiten","-w", type=bool, default=True)
 @click.option("--image","-i",type=str, default="kinect-modeling")
 @click.option("--job-name", type=str, default="kubejob")
-@click.option("--submit-job", is_flag=True)
 @click.option("--output-dir", type=str, default="")
 @click.option("--ext","-e",type=str, default=".p.z")
 @click.option("--mount-point", type=str, default="/mnt/modeling_bucket")
 @click.option("--bucket","-b",type=str, default="modeling-bucket")
 @click.option("--restart-policy", type=str, default="Never")
 @click.option("--ncpus", type=int, default=4)
+@click.option("--input-file", type=click.Path(exists=True))
 def parameter_scan_kube(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
-    image, job_name, output_dir, ext, submit_job, mount_point, bucket, restart_policy, ncpus):
+    image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
+    ncpus, input_file):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
+
+    # okay use busybox to print out a configuration file that specifies the job
 
     cfg=read_cli_config(param_file,suppress_output=True)
 
@@ -243,78 +246,37 @@ def parameter_scan_kube(param_file, cross_validate,
     if 'num-iter' in cfg:
         num_iter=cfg['num-iter']
 
-    njobs=len(cfg['worker_dicts'])
-    job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
+    if 'input_file' in cfg:
+        input_file=cfg['input_file']
+
+    if "KINECT_MODEL_IMAGE" in os.environ:
+        image=os.environ['KINECT_MODEL_IMAGE']
+
+    if "KINECT_MODEL_BUCKET" in os.environ:
+        bucket=os.environ['KINECT_MODEL_BUCKET']
+
+    if "KINECT_MODEL_NCPUS" in os.environ:
+        ncpus=int(os.environ['KINECT_MODEL_NCPUS'])
 
     if not output_dir:
         output_dir=job_name+'_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
 
     output_dir=os.path.join(mount_point,output_dir)
 
-    bash_commands=['/bin/bash','-c']
-    bash_arguments='kinect_model learn_model '+os.path.join(mount_point,cfg['input_file'])
-    gcs_options='-o allow_other --file-mode=777 --dir-mode=777'
-    mount_arguments='mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
-    dir_arguments='mkdir -p '+output_dir
-    param_commands=('--npcs '+str(npcs)+' --save-every '+str(save_every)+
-                    ' --num-iter '+str(num_iter)+
-                    ' --restarts '+str(restarts)+
-                    ' --var-name '+var_name+
-                    ' --save-every '+str(save_every))
+    # use the first job to do something with job spec!
 
-    bash_commands=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
+    print(cfg['worker_dicts'])
 
-    if cross_validate:
-        param_commands=param_commands+' --cross-validate'
+    job_spec=locals()
+    job_spec.pop('param_file',None)
+    job_spec['worker_dicts']=cfg['worker_dicts']
+    job_spec['other_parameters']=cfg['other_parameters']
+    job_spec.pop('cfg',None)
+    print(job_spec)
 
-    if model_progress:
-        param_commands=param_commands+' --model-progress'
+    yaml_out=make_kube_yaml(**job_spec)
 
-    if whiten:
-        param_commands=param_commands+' --whiten'
-
-    if save_model:
-        param_commands=param_commands+' --save-model'
-
-
-    # TODO: repeats and cross-validation
-
-    for itr,job in enumerate(cfg['worker_dicts']):
-
-        # need some unique stuff to specify what this job is, do some good bookkeeping for once
-
-        job_dict[itr]['metadata'] = {'name':job_name+'-{:d}'.format(itr),
-            'labels':{'jobgroup':job_name}}
-
-        # scan parameters are commands, along with any other specified parameters
-        # build up the list for what we're going to pass to the command line
-
-        all_parameters=merge_dicts(cfg['other_parameters'],cfg['worker_dicts'][itr])
-
-        output_dir_string=os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))
-        issue_command=mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
-        issue_command=issue_command+' '+param_commands
-
-        for param,value in all_parameters.iteritems():
-            param_name=yaml.scalarstring.DoubleQuotedScalarString('--'+param)
-            param_value=yaml.scalarstring.DoubleQuotedScalarString(str(value))
-            issue_command=issue_command+' '+param_name
-            issue_command=issue_command+' '+param_value
-
-        # TODO: cross-validation
-
-        job_dict[itr]['spec'] = {'containers':[{'name':'test','image':image,'command':bash_commands,
-            'args':[yaml.scalarstring.DoubleQuotedScalarString(issue_command)],
-            'securityContext':{'privileged': True},'resources':{'requests':{'cpu': '{:d}m'.format(int(ncpus*.6*1e3)) }}}],'restartPolicy':restart_policy}
-
-        print(yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
-        print('---')
-
-        if submit_job:
-            # either we can dump into a file and deal with kubectl on our own
-            # or we can simply pipe the yaml output to kubectl
-
-            raise NotImplementedError
+    print(yaml_out)
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
@@ -333,8 +295,9 @@ def parameter_scan_kube(param_file, cross_validate,
 @click.option("--kappa","-k", type=float, default=1e8)
 @click.option("--gamma","-g",type=float, default=1e3)
 @click.option("--nlags",type=int, default=3)
+@click.option("--save-ar",is_flag=True)
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
-    save_model, model_progress, npcs, whiten, kappa, gamma, nlags):
+    save_model, model_progress, npcs, whiten, kappa, gamma, nlags,save_ar):
 
     data_dict=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
 
@@ -371,7 +334,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         heldout_ll=None
 
     export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
-                      'model_parameters':get_parameters_from_model(arhmm)})
+                      'model_parameters':get_parameters_from_model(arhmm,save_ar)})
     save_dict(filename=dest_file,obj_to_save=export_dict)
 
 
