@@ -7,7 +7,7 @@ from train.models import ARHMM
 import ruamel.yaml as yaml
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import enum, save_dict, load_pcs, read_cli_config, copy_model, get_parameters_from_model, make_kube_yaml
+from util import enum, save_dict, load_pcs, read_cli_config, copy_model, get_parameters_from_model, make_kube_yaml, represent_ordereddict
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -243,8 +243,8 @@ def parameter_scan_kube(param_file, cross_validate,
     if 'npcs' in cfg:
         npcs=cfg['npcs']
 
-    if 'num-iter' in cfg:
-        num_iter=cfg['num-iter']
+    if 'num_iter' in cfg:
+        num_iter=cfg['num_iter']
 
     if 'input_file' in cfg:
         input_file=cfg['input_file']
@@ -258,25 +258,48 @@ def parameter_scan_kube(param_file, cross_validate,
     if "KINECT_MODEL_NCPUS" in os.environ:
         ncpus=int(os.environ['KINECT_MODEL_NCPUS'])
 
+    # SSH-fuse for mounting Orchestra and Neurobio crap
+
+    # TODO: repeats and cross-validation
+    # TODO: pull in a notes field!
+    # TODO: specify nodes as well?
+    # TODO: use stdout instead of stderr for TQDM???
+
+    suffix='_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
+
     if not output_dir:
-        output_dir=job_name+'_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
+        output_dir=job_name+suffix
 
     output_dir=os.path.join(mount_point,output_dir)
 
     # use the first job to do something with job spec!
 
-    print(cfg['worker_dicts'])
-
     job_spec=locals()
     job_spec.pop('param_file',None)
+    job_spec.pop('suffix',None)
+
     job_spec['worker_dicts']=cfg['worker_dicts']
     job_spec['other_parameters']=cfg['other_parameters']
     job_spec.pop('cfg',None)
-    print(job_spec)
 
     yaml_out=make_kube_yaml(**job_spec)
 
+    # save the job spec to
     print(yaml_out)
+
+    represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
+    yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
+
+    job_spec=merge_dicts(job_spec,cfg)
+    job_spec=OrderedDict((str(key),str(value)) for key,value in sorted(job_spec.iteritems()))
+
+    if "KINECT_MODEL_LOG_PATH" in os.environ:
+        log_path=os.environ['KINECT_MODEL_LOG_PATH']
+    else:
+        log_path=os.getcwd()
+
+    with open(os.path.join(log_path,job_name+'_'+suffix+'.yaml'),'w') as f:
+        yaml.dump(job_spec,f,Dumper=yaml.RoundTripDumper)
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over

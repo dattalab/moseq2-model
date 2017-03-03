@@ -213,7 +213,7 @@ def read_cli_config(filename,suppress_output=False):
     cfg={
         'worker_dicts':None,
         'scan_parameter':None,
-        'scan_value':None,
+        'scan_values':None,
         'other_parameters':{}
     }
 
@@ -296,8 +296,8 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
     if restarts>1:
         worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
 
-        njobs=len(worker_dicts)
-        job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
+    njobs=len(worker_dicts)
+    job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
 
     yaml_string=''
 
@@ -342,3 +342,16 @@ def blockseq_rep(dumper, data):
 class flowmap( dict ): pass
 def flowmap_rep(dumper, data):
     return dumper.represent_mapping( u'tag:yaml.org,2002:map', data, flow_style=True )
+
+
+# from http://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
+def represent_ordereddict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
