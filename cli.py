@@ -278,6 +278,8 @@ def parameter_scan_kube(param_file, cross_validate,
 
 
     # TODO: repeats and cross-validation
+    # TODO: pull in a notes field!
+    # TODO: specify nodes as well?
 
     for itr,job in enumerate(cfg['worker_dicts']):
 
