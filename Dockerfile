@@ -6,9 +6,11 @@ FROM continuumio/anaconda
 # Make sure we can see everything in conda before local install
 ENV PATH /opt/conda/lib:/opt/conda/include:$PATH
 
-# Get a newer build toolchain
+# Get a newer build toolchain, sshfs, other stuff
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential && apt-get install -y lsb-release
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential\
+ && apt-get install -y lsb-release\
+ && apt-get install -y sshfs
 
 RUN DEBIAN_FRONTEND=noninteractive export GCSFUSE_REPO=gcsfuse-`lsb_release -c -s` \
 	&& echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list\
