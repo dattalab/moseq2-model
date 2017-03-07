@@ -210,14 +210,15 @@ def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
 
 
 @cli.command()
-@click.argument("cluster_name")
+@click.argument("cluster_name", type=str, envvar='KINECT_GKE_CLUSTER_NAME')
 def kube_print_cluster_info(cluster_name):
-    # get some sweet yaml describing out cluster
+    # get some sweet yaml describing our cluster
 
     cluster_info=kube_info(cluster_name)
 
+    click.echo(cluster_info)
     click.echo("cluster name="+cluster_info['cluster_name'])
-    click.echo("ncpus="+cluster_info['ncpus'])
+    click.echo("ncpus="+str(cluster_info['ncpus']))
     click.echo(cluster_info['images'])
 
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
@@ -232,20 +233,21 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
 @click.option("--whiten","-w", type=bool, default=True)
-@click.option("--image","-i",type=str, default="kinect-modeling")
+@click.option("--image","-i",type=str, envvar='KINECT_GKE_MODEL_IMAGE', default='model-image')
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--output-dir", type=str, default="")
 @click.option("--ext","-e",type=str, default=".p.z")
-@click.option("--mount-point", type=str, default="/mnt/modeling_bucket")
-@click.option("--bucket","-b",type=str, default="modeling-bucket")
+@click.option("--mount-point", type=str, envvar='KINECT_GKE_MOUNT_POINT', default='/mnt/modeling')
+@click.option("--bucket","-b",type=str, envvar='KINECT_GKE_MODEL_BUCKET', default='bucket')
 @click.option("--restart-policy", type=str, default="Never")
-@click.option("--ncpus", type=int, default=4)
-@click.option("--input-file", type=click.Path(exists=True))
-@click.option("--check-cluster", type=str, default="")
+@click.option("--ncpus", type=int, envvar='KINECT_GKE_MODEL_NCPUS', default=4)
+@click.option("--input-file", type=str, default="use_data.mat")
+@click.option("--check-cluster", type=str, envvar='KINECT_GKE_CLUSTER_NAME')
+@click.option("--log-path", type=click.Path(exists=True), envvar='KINECT_GKE_LOG_PATH')
 def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
-    ncpus, input_file, check_cluster):
+    ncpus, input_file, check_cluster, log_path):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
@@ -263,35 +265,15 @@ def kube_parameter_scan(param_file, cross_validate,
     if 'input_file' in cfg:
         input_file=cfg['input_file']
 
-    if "KINECT_GKE_MOUNT_POINT" in os.environ:
-        mount_point=os.environ['KINECT_GKE_MOUNT_POINT']
-
-    if "KINECT_GKE_MODEL_IMAGE" in os.environ:
-        image=os.environ['KINECT_GKE_MODEL_IMAGE']
-
-    if "KINECT_GKE_MODEL_BUCKET" in os.environ:
-        bucket=os.environ['KINECT_GKE_MODEL_BUCKET']
-
-    if "KINECT_GKE_MODEL_NCPUS" in os.environ:
-        ncpus=int(os.environ['KINECT_GKE_MODEL_NCPUS'])
-
-    if "KINECT_GKE_CLUSTER_NAME" in os.environ:
-        check_cluster=os.environ['KINECT_GKE_CLUSTER_NAME']
-
     suffix='_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
-
-    if not output_dir:
-        output_dir=job_name+suffix
-
-    output_dir=os.path.join(mount_point,output_dir)
+    output_dir=os.path.join(mount_point,output_dir,job_name+suffix)
 
     job_spec=locals()
-    job_spec.pop('param_file',None)
-    job_spec.pop('suffix',None)
-    job_spec.pop('check_cluster',None)
+
+    exclude=['param_file','suffix','check_cluster','log_path','cfg']
     job_spec['worker_dicts']=cfg['worker_dicts']
     job_spec['other_parameters']=cfg['other_parameters']
-    job_spec.pop('cfg',None)
+    [job_spec.pop(tmp,None) for tmp in exclude]
 
     if len(check_cluster)>0:
         cluster_info=kube_info(check_cluster)
@@ -302,18 +284,18 @@ def kube_parameter_scan(param_file, cross_validate,
         if image not in cluster_info['images']:
             raise NameError("User-defined image {} not available, available images are {}".format(image,cluster_info['images']))
 
+        if 'https://www.googleapis.com/auth/devstorage.full_control' not in cluster_info['scopes']:
+            raise NameError("Scope storage-full not found in current cluster {}".format(check_cluster))
 
-
-    # SSH-fuse for mounting Orchestra and Neurobio crap
-
+    # TODO: SSH-fuse for mounting Orchestra and Neurobio crap
+    # TODO: test the mount-point, use sub-process to make sure the file system is Kosher beforehand
     # TODO: repeats and cross-validation
-    # TODO: check the user's configuration to make sure it matches the current
-    # cluster configuration
     # TODO: use stdout instead of stderr for TQDM???
 
     yaml_out=make_kube_yaml(**job_spec)
 
     # save the job spec to
+
     print(yaml_out)
 
     represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
@@ -322,12 +304,10 @@ def kube_parameter_scan(param_file, cross_validate,
     job_spec=merge_dicts(job_spec,cfg)
     job_spec=OrderedDict((str(key),str(value)) for key,value in sorted(job_spec.iteritems()))
 
-    if "KINECT_MODEL_LOG_PATH" in os.environ:
-        log_path=os.environ['KINECT_MODEL_LOG_PATH']
-    else:
+    if log_path==None:
         log_path=os.getcwd()
 
-    with open(os.path.join(log_path,job_name+'_'+suffix+'.yaml'),'w') as f:
+    with open(os.path.join(log_path,job_name+suffix+'.yaml'),'w') as f:
         yaml.dump(job_spec,f,Dumper=yaml.RoundTripDumper)
 
 # this is the entry point for learning models over Kubernetes, expose all

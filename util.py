@@ -351,7 +351,6 @@ def kube_info(cluster_name):
         print "Error trying to call gcloud:\n", e.output
 
     parsed_output=yaml.load(test, Loader=yaml.Loader)
-
     machine=parsed_output['nodeConfig']['machineType']
     re_machine=re.split('\-',machine)
 
@@ -361,6 +360,7 @@ def kube_info(cluster_name):
         cluster_info['ncpus']=int(re_machine[2])
 
     cluster_info['cluster_name']=parsed_output['name']
+    cluster_info['scopes']=parsed_output['nodeConfig']['oauthScopes']
     del images[-1]
 
     cluster_info['images']=images
