@@ -6,9 +6,10 @@ from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
 from collections import OrderedDict
-from train.util import merge_dicts, train_model, whiten_all
+from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
- get_parameters_from_model, make_kube_yaml, represent_ordereddict, kube_info
+ get_parameters_from_model, represent_ordereddict, merge_dicts
+from kube.util import make_kube_yaml, kube_info
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -29,7 +30,7 @@ def cli():
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
-def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
+def mpi_parameter_scan(param_file, input_file, dest_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs):
 
     tags = enum('READY','DONE','EXIT','START')
@@ -244,36 +245,31 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--input-file", type=str, default="use_data.mat")
 @click.option("--check-cluster", type=str, envvar='KINECT_GKE_CLUSTER_NAME')
 @click.option("--log-path", type=click.Path(exists=True), envvar='KINECT_GKE_LOG_PATH')
+@click.option("--ssh-key", type=str, envvar='KINECT_GKE_SSH_KEY', default=None)
+@click.option("--ssh-user", type=str, envvar='KINECT_GKE_SSH_USER', default=None)
+@click.option("--ssh-remote-server", type=str, envvar='KINECT_GKE_SSH_REMOTE_SERVER', default=None)
+@click.option("--ssh-remote-dir", type=str, envvar='KINECT_GKE_SSH_REMOTE_DIR', default=None)
+@click.option("--ssh-mount-point",type=str, envvar='KINECT_GKE_SSH_MOUNT_POINT', default=None)
 def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
-    ncpus, input_file, check_cluster, log_path):
+    ncpus, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
+    ssh_remote_dir, ssh_mount_point):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
 
-    # okay use busybox to print out a configuration file that specifies the job
-
     cfg=read_cli_config(param_file,suppress_output=True)
 
-    if 'npcs' in cfg:
-        npcs=cfg['npcs']
-
-    if 'num_iter' in cfg:
-        num_iter=cfg['num_iter']
-
-    if 'input_file' in cfg:
-        input_file=cfg['input_file']
-
     suffix='_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
-    output_dir=os.path.join(mount_point,output_dir,job_name+suffix)
+
+    if ssh_key and ssh_user and ssh_remote_dir and ssh_mount_point and ssh_remote_server:
+        output_dir=os.path.join(ssh_mount_point,output_dir,job_name+suffix)
+    else:
+        output_dir=os.path.join(mount_point,output_dir,job_name+suffix)
 
     job_spec=locals()
-
-    exclude=['param_file','suffix','check_cluster','log_path','cfg']
-    job_spec['worker_dicts']=cfg['worker_dicts']
-    job_spec['other_parameters']=cfg['other_parameters']
-    [job_spec.pop(tmp,None) for tmp in exclude]
+    job_spec=merge_dicts(job_spec,cfg)
 
     if len(check_cluster)>0:
         cluster_info=kube_info(check_cluster)
@@ -287,16 +283,16 @@ def kube_parameter_scan(param_file, cross_validate,
         if 'https://www.googleapis.com/auth/devstorage.full_control' not in cluster_info['scopes']:
             raise NameError("Scope storage-full not found in current cluster {}".format(check_cluster))
 
-    # TODO: SSH-fuse for mounting Orchestra and Neurobio crap
     # TODO: test the mount-point, use sub-process to make sure the file system is Kosher beforehand
-    # TODO: repeats and cross-validation
+    #       not sure this is gonna happen honestly
+    # TODO: cross-validation
     # TODO: use stdout instead of stderr for TQDM???
 
     yaml_out=make_kube_yaml(**job_spec)
 
-    # save the job spec to
+    # send the yaml to stdout
 
-    print(yaml_out)
+    click.echo(yaml_out)
 
     represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
     yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
@@ -306,6 +302,8 @@ def kube_parameter_scan(param_file, cross_validate,
 
     if log_path==None:
         log_path=os.getcwd()
+
+    # copy yaml file to log directory as well
 
     with open(os.path.join(log_path,job_name+suffix+'.yaml'),'w') as f:
         yaml.dump(job_spec,f,Dumper=yaml.RoundTripDumper)

@@ -1,7 +1,7 @@
 import numpy as np
 from autoregressive.distributions import AutoRegression
 from autoregressive.models import FastARWeakLimitStickyHDPHMM
-from util import merge_dicts
+from kinect_modeling.util import merge_dicts
 import warnings
 
 # Empirical bayes estimate of S_0 (from MoSeq)

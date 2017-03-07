@@ -9,9 +9,7 @@ import itertools
 import os
 import subprocess
 import re
-from train.models import ARHMM
 from collections import OrderedDict
-from train.util import merge_dicts, train_model, progressbar
 
 # stolen from MoSeq thanks @alexbw
 def enum(*sequential, **named):
@@ -21,82 +19,6 @@ def enum(*sequential, **named):
     enums = dict(zip(sequential, range(len(sequential))), **named)
     return type('Enum', (), enums)
 
-
-def parameter_scan(data_dict, parameter, values, other_parameters=dict(),
-                   num_iter=100, restarts=5, use_min=True):
-
-    nparameters=len(values)
-    print('User passed '+str(nparameters)+' parameter values for '+parameter)
-
-    labels=np.empty((restarts,nparameters,len(data_dict)),dtype=object)
-    #models=[[[] for i in range(nparameters)] for j in range(restarts)]
-    loglikes=np.empty((restarts,nparameters),dtype=object)
-
-    for parameter_idx, parameter_value in enumerate(progressbar(values,leave=False)):
-        for itr in xrange(restarts):
-
-            tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
-            arhmm=ARHMM(data_dict=data_dict, **tmp_parameters)
-            [arhmm,tmp_loglikes,tmp_labels]=train_model(model=arhmm,num_iter=num_iter, num_procs=1)
-            loglikes[itr][parameter_idx] = tmp_loglikes
-
-            for label_itr,tmp_label in enumerate(tmp_labels):
-                labels[itr,parameter_idx,label_itr]=tmp_label
-
-            #models[itr][parameter_idx]=copy_model(arhmm)
-
-    return loglikes, labels
-
-
-def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
-                      num_iter=100, restarts=5, use_min=False):
-
-    nsplits = len(data_dict)
-    nparameters = len(values)
-
-    print 'Will use '+str(nsplits)+' splits'
-    print 'User passed '+str(nparameters)+' parameter values for '+parameter
-
-    # by default use all the data
-
-    if use_min:
-        lens=[len(item) for item in data_dict.values()]
-        use_frames=min(lens)
-        print('Only using '+str(use_frames)+' per split')
-        for key, item in data_dict.iteritems():
-            data_dict[key]=item[:use_frames,:]
-
-    # return the heldout likelihood, model object and labels
-
-    heldout_ll=np.empty((restarts,nsplits,nparameters), np.float64)
-    labels=np.empty((restarts,nsplits,nparameters,len(data_dict)),dtype=object)
-    #models=[[[] for i in range(nparameters)] for j in range(nsplits*restarts)]
-
-    all_keys=data_dict.keys()
-
-    for data_idx, test_key in enumerate(progressbar(all_keys)):
-
-        # set up the split
-
-        train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in test_key)
-        test_data=OrderedDict([('1',data_dict[test_key])])
-
-        for parameter_idx, parameter_value in enumerate(progressbar(values,leave=False)):
-            for itr in xrange(restarts):
-
-                tmp_parameters=merge_dicts(other_parameters,{parameter: parameter_value})
-                arhmm=ARHMM(data_dict=train_data, **tmp_parameters)
-                [arhmm, _, tmp_labels]=train_model(model=arhmm, num_iter=num_iter, num_procs=1)
-                heldout_ll[itr,data_idx,parameter_idx] = arhmm.log_likelihood(test_data['1'])
-
-                for label_itr,tmp_label in enumerate(tmp_labels):
-                    labels[itr, data_idx, parameter_idx, label_itr] = tmp_label
-
-
-                #labels[itr+data_idx*(restarts)][parameter_idx]=tmp_labels
-                #models[itr+data_idx*(restarts)][parameter_idx]=copy_model(arhmm)
-
-    return heldout_ll, labels
 
 # grab matlab data
 
@@ -265,109 +187,6 @@ def read_cli_config(filename,suppress_output=False):
 
     return cfg
 
-def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
-                   cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
-                   other_parameters,ext,job_name,image,ncpus,restart_policy):
-
-    bash_commands=['/bin/bash','-c']
-    bash_arguments='kinect_model learn_model '+os.path.join(mount_point,input_file)
-    gcs_options='-o allow_other --file-mode=777 --dir-mode=777'
-    mount_arguments='mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
-    dir_arguments='mkdir -p '+output_dir
-    param_commands=('--npcs '+str(npcs)+
-                    ' --num-iter '+str(num_iter)+
-                    ' --var-name '+var_name+
-                    ' --save-every '+str(save_every))
-
-    bash_commands=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
-
-    if cross_validate:
-        param_commands=param_commands+' --cross-validate'
-
-    if model_progress:
-        param_commands=param_commands+' --model-progress'
-
-    if whiten:
-        param_commands=param_commands+' --whiten'
-
-    if save_model:
-        param_commands=param_commands+' --save-model'
-
-    # TODO cross-validation
-
-    if restarts>1:
-        worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
-
-    njobs=len(worker_dicts)
-    job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
-
-    yaml_string=''
-
-    for itr,job in enumerate(worker_dicts):
-
-        # need some unique stuff to specify what this job is, do some good bookkeeping for once
-
-        job_dict[itr]['metadata'] = {'name':job_name+'-{:d}'.format(itr),
-            'labels':{'jobgroup':job_name}}
-
-        # scan parameters are commands, along with any other specified parameters
-        # build up the list for what we're going to pass to the command line
-
-        all_parameters=merge_dicts(other_parameters,worker_dicts[itr])
-
-        output_dir_string=os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))
-        issue_command=mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
-        issue_command=issue_command+' '+param_commands
-
-        for param,value in all_parameters.iteritems():
-            param_name=yaml.scalarstring.DoubleQuotedScalarString('--'+param)
-            param_value=yaml.scalarstring.DoubleQuotedScalarString(str(value))
-            issue_command=issue_command+' '+param_name
-            issue_command=issue_command+' '+param_value
-
-        # TODO: cross-validation
-
-        job_dict[itr]['spec'] = {'containers':[{'name':'kinect-modeling','image':image,'command':bash_commands,
-            'args':[yaml.scalarstring.DoubleQuotedScalarString(issue_command)],
-            'securityContext':{'privileged': True},
-            'resources':{'requests':{'cpu': '{:d}m'.format(int(ncpus*.6*1e3)) }}}],'restartPolicy':restart_policy}
-
-        yaml_string='{}\n{}\n---'.format(yaml_string,yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
-
-    return yaml_string
-
-def kube_info(cluster_name):
-
-    cluster_info={}
-
-    try:
-        test=subprocess.check_output(["gcloud", "container", "clusters", "describe", cluster_name])
-    except subprocess.CalledProcessError, e:
-        print "Error trying to call gcloud:\n", e.output
-
-    try:
-        images=subprocess.check_output("gcloud beta container images list | awk '{if(NR>1)print}'",shell=True).split('\n')
-    except subprocess.CalledProcessError, e:
-        print "Error trying to call gcloud:\n", e.output
-
-    parsed_output=yaml.load(test, Loader=yaml.Loader)
-    machine=parsed_output['nodeConfig']['machineType']
-    re_machine=re.split('\-',machine)
-
-    if re_machine[0]=='custom':
-        cluster_info['ncpus']=int(re_machine[1])
-    else:
-        cluster_info['ncpus']=int(re_machine[2])
-
-    cluster_info['cluster_name']=parsed_output['name']
-    cluster_info['scopes']=parsed_output['nodeConfig']['oauthScopes']
-    del images[-1]
-
-    cluster_info['images']=images
-
-    return cluster_info
-
-
 # credit to http://stackoverflow.com/questions/14000893/specifying-styles-for-portions-of-a-pyyaml-dump
 class blockseq( dict ): pass
 def blockseq_rep(dumper, data):
@@ -376,7 +195,6 @@ def blockseq_rep(dumper, data):
 class flowmap( dict ): pass
 def flowmap_rep(dumper, data):
     return dumper.represent_mapping( u'tag:yaml.org,2002:map', data, flow_style=True )
-
 
 # from http://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
 def represent_ordereddict(dumper, data):
@@ -389,3 +207,19 @@ def represent_ordereddict(dumper, data):
         value.append((node_key, node_value))
 
     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+# taken from moseq by @mattjj and @alexbw
+def merge_dicts(base_dict, clobbering_dict):
+    return dict(base_dict, **clobbering_dict)
+
+def progressbar(*args, **kwargs):
+
+    cli=kwargs.pop('cli',False)
+
+    if cli==True:
+        return tqdm(*args, **kwargs)
+    else:
+        try:
+            return tqdm_notebook(*args, **kwargs)
+        except:
+            return tqdm(*args, **kwargs)

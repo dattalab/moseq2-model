@@ -43,4 +43,8 @@ COMMAND="gcloud container clusters delete ${CLUSTERNAME}"
 echo $COMMAND
 eval $COMMAND
 
-# TODO: check for kubectl proxy and kill it
+PROXY_PID=$(pgrep -f "kubectl proxy")
+if [ ! -z $PROXY_PID ]; then
+	echo "Killing proxy PID $PROXY_PID"
+	kill $PROXY_PID
+fi
