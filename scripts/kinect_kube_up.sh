@@ -3,41 +3,41 @@
 
 hash gcloud 2>/dev/null || { echo >&2 "gcloud not installed.  Aborting."; exit 1; }
 
-if [ -z "${KINECT_CLUSTER_NAME}" ]; then
+if [ -z "${KINECT_GKE_CLUSTER_NAME}" ]; then
 	CLUSTERNAME="test-cluster"
 else
-	echo "Setting cluster name to ${KINECT_CLUSTER_NAME}"
-	CLUSTERNAME="${KINECT_CLUSTER_NAME}"
+	echo "Setting cluster name to ${KINECT_GKE_CLUSTER_NAME}"
+	CLUSTERNAME="${KINECT_GKE_CLUSTER_NAME}"
 fi
 
-if [ -z "${KINECT_MACHINE_TYPE}" ]; then
+if [ -z "${KINECT_GKE_MACHINE_TYPE}" ]; then
 	MACHINETYPE="n1-standard-2"
 else
-	echo "Setting machine type to ${KINECT_MACHINE_TYPE}"
-	MACHINETYPE=${KINECT_MACHINE_TYPE}
+	echo "Setting machine type to ${KINECT_GKE_MACHINE_TYPE}"
+	MACHINETYPE=${KINECT_GKE_MACHINE_TYPE}
 fi
 
-if [ -z "${KINECT_NUM_NODES}" ]; then
+if [ -z "${KINECT_GKE_NUM_NODES}" ]; then
 	NUMNODES="3"
 else
-	echo "Setting number of nodes to ${KINECT_NUM_NODES}"
-	NUMNODES=${KINECT_NUM_NODES}
+	echo "Setting number of nodes to ${KINECT_GKE_NUM_NODES}"
+	NUMNODES=${KINECT_GKE_NUM_NODES}
 fi
 
-if [ -z "${KINECT_SCOPES}" ]; then
+if [ -z "${KINECT_GKE_SCOPES}" ]; then
 	SCOPES="storage-full"
 else
-	echo "Setting scopes to ${KINECT_SCOPES}"
-	SCOPES=${KINECT_SCOPES}
+	echo "Setting scopes to ${KINECT_GKE_SCOPES}"
+	SCOPES=${KINECT_GKE_SCOPES}
 fi
 
 AUTHORIZE=false
 
-if [ -z "${KINECT_PREEMPTIBLE}" ]; then
+if [ -z "${KINECT_GKE_PREEMPTIBLE}" ]; then
 	PREEMPTIBLE=false
 else
-	echo "Setting preemptible to ${KINECT_PREEMPTIBLE}"
-	PREEMPTIBLE=${KINECT_PREEMPTIBLE}
+	echo "Setting preemptible to ${KINECT_GKE_PREEMPTIBLE}"
+	PREEMPTIBLE=${KINECT_GKE_PREEMPTIBLE}
 fi
 
 while [[ $# -gt 0 ]]
@@ -92,9 +92,9 @@ CREDENTIALS="gcloud container clusters get-credentials ${CLUSTERNAME}"
 echo $COMMAND
 echo $CREDENTIALS
 
-#gcloud container clusters create test-cluster --scopes storage-full --machine-type n1-highcpu-8 --num-nodes 3
-#gcloud container clusters get-credentials test-cluster
+eval $COMMAND
+eval $CREDENTIALS
 
 # tear down with gcloud container clusters delete test-cluster
 
-#gcloud container clusters delete test-cluster
+# TODO: fire up kubectl proxy and open browser window at appropriate place

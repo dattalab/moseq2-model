@@ -7,6 +7,8 @@ import copy
 import ruamel.yaml as yaml
 import itertools
 import os
+import subprocess
+import re
 from train.models import ARHMM
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, progressbar
@@ -333,6 +335,38 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
         yaml_string='{}\n{}\n---'.format(yaml_string,yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
 
     return yaml_string
+
+def kube_info(cluster_name):
+
+    cluster_info={}
+
+    try:
+        test=subprocess.check_output(["gcloud", "container", "clusters", "describe", cluster_name])
+    except subprocess.CalledProcessError, e:
+        print "Error trying to call gcloud:\n", e.output
+
+    try:
+        images=subprocess.check_output("gcloud beta container images list | awk '{if(NR>1)print}'",shell=True).split('\n')
+    except subprocess.CalledProcessError, e:
+        print "Error trying to call gcloud:\n", e.output
+
+    parsed_output=yaml.load(test, Loader=yaml.Loader)
+
+    machine=parsed_output['nodeConfig']['machineType']
+    re_machine=re.split('\-',machine)
+
+    if re_machine[0]=='custom':
+        cluster_info['ncpus']=int(re_machine[1])
+    else:
+        cluster_info['ncpus']=int(re_machine[2])
+
+    cluster_info['cluster_name']=parsed_output['name']
+    del images[-1]
+
+    cluster_info['images']=images
+
+    return cluster_info
+
 
 # credit to http://stackoverflow.com/questions/14000893/specifying-styles-for-portions-of-a-pyyaml-dump
 class blockseq( dict ): pass

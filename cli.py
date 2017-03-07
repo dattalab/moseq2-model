@@ -7,7 +7,8 @@ from train.models import ARHMM
 import ruamel.yaml as yaml
 from collections import OrderedDict
 from train.util import merge_dicts, train_model, whiten_all
-from util import enum, save_dict, load_pcs, read_cli_config, copy_model, get_parameters_from_model, make_kube_yaml, represent_ordereddict
+from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
+ get_parameters_from_model, make_kube_yaml, represent_ordereddict, kube_info
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -207,6 +208,18 @@ def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
 
         comm.send(None, dest=0, tag=tags.EXIT)
 
+
+@cli.command()
+@click.argument("cluster_name")
+def kube_print_cluster_info(cluster_name):
+    # get some sweet yaml describing out cluster
+
+    cluster_info=kube_info(cluster_name)
+
+    click.echo("cluster name="+cluster_info['cluster_name'])
+    click.echo("ncpus="+cluster_info['ncpus'])
+    click.echo(cluster_info['images'])
+
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command()
 @click.argument("param_file", type=click.Path(exists=True))
@@ -228,10 +241,11 @@ def parameter_scan_mpi(param_file, input_file, dest_file, cross_validate,
 @click.option("--restart-policy", type=str, default="Never")
 @click.option("--ncpus", type=int, default=4)
 @click.option("--input-file", type=click.Path(exists=True))
-def parameter_scan_kube(param_file, cross_validate,
+@click.option("--check-cluster", type=str, default="")
+def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
-    ncpus, input_file):
+    ncpus, input_file, check_cluster):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
@@ -249,21 +263,20 @@ def parameter_scan_kube(param_file, cross_validate,
     if 'input_file' in cfg:
         input_file=cfg['input_file']
 
-    if "KINECT_MODEL_IMAGE" in os.environ:
-        image=os.environ['KINECT_MODEL_IMAGE']
+    if "KINECT_GKE_MOUNT_POINT" in os.environ:
+        mount_point=os.environ['KINECT_GKE_MOUNT_POINT']
 
-    if "KINECT_MODEL_BUCKET" in os.environ:
-        bucket=os.environ['KINECT_MODEL_BUCKET']
+    if "KINECT_GKE_MODEL_IMAGE" in os.environ:
+        image=os.environ['KINECT_GKE_MODEL_IMAGE']
 
-    if "KINECT_MODEL_NCPUS" in os.environ:
-        ncpus=int(os.environ['KINECT_MODEL_NCPUS'])
+    if "KINECT_GKE_MODEL_BUCKET" in os.environ:
+        bucket=os.environ['KINECT_GKE_MODEL_BUCKET']
 
-    # SSH-fuse for mounting Orchestra and Neurobio crap
+    if "KINECT_GKE_MODEL_NCPUS" in os.environ:
+        ncpus=int(os.environ['KINECT_GKE_MODEL_NCPUS'])
 
-    # TODO: repeats and cross-validation
-    # TODO: pull in a notes field!
-    # TODO: specify nodes as well?
-    # TODO: use stdout instead of stderr for TQDM???
+    if "KINECT_GKE_CLUSTER_NAME" in os.environ:
+        check_cluster=os.environ['KINECT_GKE_CLUSTER_NAME']
 
     suffix='_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
 
@@ -272,15 +285,31 @@ def parameter_scan_kube(param_file, cross_validate,
 
     output_dir=os.path.join(mount_point,output_dir)
 
-    # use the first job to do something with job spec!
-
     job_spec=locals()
     job_spec.pop('param_file',None)
     job_spec.pop('suffix',None)
-
+    job_spec.pop('check_cluster',None)
     job_spec['worker_dicts']=cfg['worker_dicts']
     job_spec['other_parameters']=cfg['other_parameters']
     job_spec.pop('cfg',None)
+
+    if len(check_cluster)>0:
+        cluster_info=kube_info(check_cluster)
+
+        if ncpus!=cluster_info['ncpus']:
+            raise NameError("User setting ncpus {:d} not equal to number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
+
+        if image not in cluster_info['images']:
+            raise NameError("User-defined image {} not available, available images are {}".format(image,cluster_info['images']))
+
+
+
+    # SSH-fuse for mounting Orchestra and Neurobio crap
+
+    # TODO: repeats and cross-validation
+    # TODO: check the user's configuration to make sure it matches the current
+    # cluster configuration
+    # TODO: use stdout instead of stderr for TQDM???
 
     yaml_out=make_kube_yaml(**job_spec)
 
