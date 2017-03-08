@@ -277,15 +277,13 @@ def kube_parameter_scan(param_file, cross_validate,
     if len(check_cluster)>0:
         cluster_info=kube_cluster_check(check_cluster,ncpus=ncpus,image=image,preflight=preflight)
 
-    # TODO: test the mount-point, use sub-process to make sure the file system is Kosher beforehand
-    #       not sure this is gonna happen honestly
     # TODO: cross-validation
     # TODO: use stdout instead of stderr for TQDM???
 
     if preflight:
         kube_check_mount(**job_spec)
         return None
-        
+
     yaml_out=make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
