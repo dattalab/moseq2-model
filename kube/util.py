@@ -4,18 +4,20 @@ import itertools
 import os
 import re
 import subprocess
+import tempfile
+import shutil
 from collections import OrderedDict
 from kinect_modeling.util import merge_dicts
+from sys import platform
 
 def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
                    cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
-                   other_parameters,ext,job_name,image,ncpus,restart_policy,
+                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options,
                    ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,**kwargs):
 
     use_ssh=False
     bash_commands=['/bin/bash','-c']
     bash_arguments='kinect_model learn_model '+os.path.join(mount_point,input_file)
-    gcs_options='-o allow_other --file-mode=777 --dir-mode=777'
     mount_arguments='mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
     dir_arguments='mkdir -p '+output_dir
     param_commands=('--npcs '+str(npcs)+
@@ -26,7 +28,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
     # if we're using ssh need a whole new ****-load of parameters
 
     if ssh_key and ssh_user and ssh_remote_dir and ssh_mount_point and ssh_remote_server:
-        mount_arguments=mount_arguments+'; '+kube_ssh_command(ssh_key=ssh_key,
+        mount_arguments=mount_arguments+'; '+kube_ssh_command(ssh_key=os.path.join(mount_point,ssh_key),
                                                               ssh_user=ssh_user,
                                                               ssh_remote_dir=ssh_remote_dir,
                                                               ssh_remote_server=ssh_remote_server,
@@ -129,5 +131,109 @@ def kube_ssh_command(ssh_key=None, ssh_user=None, ssh_remote_server=None, ssh_re
 
     return mount_ssh
 
-def kube_check_mount(gcs_options,bucket,ssh_key=None,ssh_user=None,ssh_remote_server=None,ssh_remote_dir=None):
-    
+def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_user=None,
+                     ssh_remote_server=None,ssh_remote_dir=None,preflight=False, **kwargs):
+
+    # where the eff to mount this crap?
+    # TODO: test for existence of input file
+    # TODO: clean this shit up
+
+    PASS=True
+
+    try:
+
+        gcs_tmp=os.path.join(os.path.expanduser("~"),'gcs_test')
+        if not os.path.isdir(gcs_tmp):
+            os.mkdir(gcs_tmp)
+
+        try:
+            if gcs_options:
+                test_gcs_mount=subprocess.check_output("gcsfuse "+gcs_options+' '+bucket+' '+gcs_tmp,shell=True, stderr=subprocess.STDOUT)
+            else:
+                test_gcs_mount=subprocess.check_output("gcsfuse "+bucket+' '+gcs_tmp,shell=True, stderr=subprocess.STDOUT)
+        except ValueError as e:
+            print "Error when mounting gcs bucket:\n", e.output
+
+        if os.access(gcs_tmp,os.W_OK | os.X_OK) and preflight:
+            print('GCS bucket access...PASS')
+            print("GCS...PASS")
+        elif preflight:
+            PASS=False
+            print('GCS bucket access...FAIL')
+        elif not os.access(gcs_tmp,os.W_OK | os.X_OK):
+            raise ValueError("GCS bucket is not writeable, look at gcs_options")
+
+        # check for existence of the input file
+
+        if ssh_key and ssh_user and ssh_remote_server and ssh_remote_dir:
+
+            try:
+
+                ssh_tmp=os.path.join(os.path.expanduser("~"),'ssh_test')
+                if not os.path.isdir(ssh_tmp):
+                    os.mkdir(ssh_tmp)
+
+                tmp_copy=make_temporary_copy(os.path.join(gcs_tmp,ssh_key,'id_rsa'))
+                os.chmod(tmp_copy,0o400)
+
+                try:
+                    test_ssh_mount=subprocess.check_output(
+                        "sshfs -o allow_other -o StrictHostKeyChecking=no -o IdentityFile="+\
+                        tmp_copy+' '+ssh_user+'@'+ssh_remote_server+':'+ssh_remote_dir+' '+ssh_tmp,shell=True)
+                    os.remove(tmp_copy)
+                except ValueError as e:
+                    print "Error when mounting ssh directory:\n", e.output
+
+                if os.access(ssh_tmp,os.W_OK | os.X_OK) and preflight:
+                    print('ssh directory access...PASS')
+                elif preflight:
+                    PASS=False
+                    print('ssh directory access...FAIL')
+                elif not (ssh_tmp,os.W_OK | os.X_OK):
+                    raise ValueError("ssh directory is not writeable")
+
+                #use_file=os.path.join(ssh_tmp,input_file)
+                # if not os.path.isfile(use_file):
+                #     raise ValueError("input file does not exist at {}".format(use_file))
+
+            finally:
+
+                try:
+                    if platform=='linux' or platform=='linux2':
+                        test_ssh_umount=subprocess.check_output(["fusermount","-uz",ssh_tmp])
+                    elif platform=='darwin':
+                        test_ssh_umount=subprocess.check_output(["umount",ssh_tmp])
+                except ValueError as e:
+                    print "Error when unmounting ssh directory:\n", e.output
+
+                if preflight:
+                    print('sshfs...PASS')
+
+        else:
+
+            pass
+            #use_file=os.path.join(gcs_tmp,input_file)
+            # if not os.path.isfile(use_file):
+            #     raise ValueError("input file does not exist at {}".format(use_file))
+
+    finally:
+
+        try:
+            if platform=='linux' or platform=='linux2':
+                test_gcs_umount=subprocess.check_output(["fusermount","-uz",gcs_tmp])
+            elif platform=='darwin':
+                test_gcs_umount=subprocess.check_output(["umount",gcs_tmp])
+        except ValueError as e:
+            print "Error when unmounting gcs bucket:\n", e.output
+
+    if preflight and PASS:
+        print('ALL SYSTEMS GO')
+
+
+def make_temporary_copy(path):
+
+    tmp_dir=tempfile.mkdtemp()
+    use_file=os.path.join(tmp_dir,'tmp_file')
+    shutil.copy2(path,use_file)
+
+    return use_file

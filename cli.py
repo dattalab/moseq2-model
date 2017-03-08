@@ -9,7 +9,7 @@ from collections import OrderedDict
 from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
  get_parameters_from_model, represent_ordereddict, merge_dicts
-from kube.util import make_kube_yaml, kube_info
+from kube.util import make_kube_yaml, kube_info, kube_check_mount
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -250,11 +250,12 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--ssh-remote-server", type=str, envvar='KINECT_GKE_SSH_REMOTE_SERVER', default=None)
 @click.option("--ssh-remote-dir", type=str, envvar='KINECT_GKE_SSH_REMOTE_DIR', default=None)
 @click.option("--ssh-mount-point",type=str, envvar='KINECT_GKE_SSH_MOUNT_POINT', default=None)
+@click.option("--preflight",is_flag=True)
 def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
     ncpus, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
-    ssh_remote_dir, ssh_mount_point):
+    ssh_remote_dir, ssh_mount_point, preflight):
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
@@ -268,6 +269,8 @@ def kube_parameter_scan(param_file, cross_validate,
     else:
         output_dir=os.path.join(mount_point,output_dir,job_name+suffix)
 
+    gcs_options='-o allow_other --file-mode=777 --dir-mode=777'
+
     job_spec=locals()
     job_spec=merge_dicts(job_spec,cfg)
 
@@ -276,18 +279,27 @@ def kube_parameter_scan(param_file, cross_validate,
 
         if ncpus!=cluster_info['ncpus']:
             raise NameError("User setting ncpus {:d} not equal to number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
+        elif preflight:
+            print("NCPUS...PASS")
 
         if image not in cluster_info['images']:
             raise NameError("User-defined image {} not available, available images are {}".format(image,cluster_info['images']))
+        elif preflight:
+            print("Docker image...PASS")
 
         if 'https://www.googleapis.com/auth/devstorage.full_control' not in cluster_info['scopes']:
             raise NameError("Scope storage-full not found in current cluster {}".format(check_cluster))
+        elif preflight:
+            print("Cluster permissions...PASS")
 
     # TODO: test the mount-point, use sub-process to make sure the file system is Kosher beforehand
     #       not sure this is gonna happen honestly
     # TODO: cross-validation
     # TODO: use stdout instead of stderr for TQDM???
 
+    if preflight:
+        kube_check_mount(**job_spec)
+        return None
     yaml_out=make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
