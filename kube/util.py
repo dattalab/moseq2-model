@@ -92,7 +92,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     return yaml_string
 
-def kube_info(cluster_name):
+def kube_cluster_check(cluster_name,ncpus,image,preflight=False):
 
     cluster_info={}
 
@@ -120,6 +120,19 @@ def kube_info(cluster_name):
     del images[-1]
 
     cluster_info['images']=images
+
+    preflight_check(flag=ncpus==cluster_info['ncpus'],preflight=preflight,
+        msg='NCPUS',
+        err_msg="User setting ncpus {:d} not equal to number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
+
+    preflight_check(flag=image in cluster_info['images'],preflight=preflight,
+        msg='Docker image',
+        err_msg="User-defined image {} not available, available images are {}".format(image,cluster_info['images']))
+
+    preflight_check(flag='https://www.googleapis.com/auth/devstorage.full_control' in cluster_info['scopes'],
+        preflight=preflight,
+        msg="Cluster scope",
+        err_msg="Scope storage-full not found in current cluster {}".format(cluster_name))
 
     return cluster_info
 
@@ -154,14 +167,9 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
         except ValueError as e:
             print "Error when mounting gcs bucket:\n", e.output
 
-        if os.access(gcs_tmp,os.W_OK | os.X_OK) and preflight:
-            print('GCS bucket access...PASS')
-            print("GCS...PASS")
-        elif preflight:
-            PASS=False
-            print('GCS bucket access...FAIL')
-        elif not os.access(gcs_tmp,os.W_OK | os.X_OK):
-            raise ValueError("GCS bucket is not writeable, look at gcs_options")
+        PASS=preflight_check(flag=os.access(gcs_tmp,os.W_OK| os.X_OK),preflight=preflight,
+            msg='GCS Bucket access',
+            err_msg="GCS bucket is not writeable, look at gcs_options")
 
         # check for existence of the input file
 
@@ -184,13 +192,9 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
                 except ValueError as e:
                     print "Error when mounting ssh directory:\n", e.output
 
-                if os.access(ssh_tmp,os.W_OK | os.X_OK) and preflight:
-                    print('ssh directory access...PASS')
-                elif preflight:
-                    PASS=False
-                    print('ssh directory access...FAIL')
-                elif not (ssh_tmp,os.W_OK | os.X_OK):
-                    raise ValueError("ssh directory is not writeable")
+                PASS=preflight_check(flag=os.access(ssh_tmp,os.W_OK| os.X_OK),preflight=preflight,
+                    msg='ssh access',
+                    err_msg="ssh directory not writeable")
 
                 #use_file=os.path.join(ssh_tmp,input_file)
                 # if not os.path.isfile(use_file):
@@ -216,6 +220,9 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
             # if not os.path.isfile(use_file):
             #     raise ValueError("input file does not exist at {}".format(use_file))
 
+    except Exception as e:
+        print str(e)
+
     finally:
 
         try:
@@ -237,3 +244,19 @@ def make_temporary_copy(path):
     shutil.copy2(path,use_file)
 
     return use_file
+
+def preflight_check(flag,preflight,msg='Variable check',err_msg='Error'):
+
+    chk=True
+
+    if not flag and not preflight:
+        raise ValueError(err_msg)
+    elif not flag:
+        print(msg+'...FAIL')
+        chk=False
+    elif preflight:
+        print(msg+'...PASS')
+    else:
+        pass
+
+    return chk
