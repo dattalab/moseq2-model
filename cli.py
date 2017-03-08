@@ -300,6 +300,7 @@ def kube_parameter_scan(param_file, cross_validate,
     if preflight:
         kube_check_mount(**job_spec)
         return None
+        
     yaml_out=make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
