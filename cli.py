@@ -9,7 +9,7 @@ from collections import OrderedDict
 from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
  get_parameters_from_model, represent_ordereddict, merge_dicts
-from kube.util import make_kube_yaml, kube_info, kube_check_mount
+from kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -275,22 +275,7 @@ def kube_parameter_scan(param_file, cross_validate,
     job_spec=merge_dicts(job_spec,cfg)
 
     if len(check_cluster)>0:
-        cluster_info=kube_info(check_cluster)
-
-        if ncpus!=cluster_info['ncpus']:
-            raise NameError("User setting ncpus {:d} not equal to number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
-        elif preflight:
-            print("NCPUS...PASS")
-
-        if image not in cluster_info['images']:
-            raise NameError("User-defined image {} not available, available images are {}".format(image,cluster_info['images']))
-        elif preflight:
-            print("Docker image...PASS")
-
-        if 'https://www.googleapis.com/auth/devstorage.full_control' not in cluster_info['scopes']:
-            raise NameError("Scope storage-full not found in current cluster {}".format(check_cluster))
-        elif preflight:
-            print("Cluster permissions...PASS")
+        cluster_info=kube_cluster_check(check_cluster,ncpus=ncpus,image=image,preflight=preflight)
 
     # TODO: test the mount-point, use sub-process to make sure the file system is Kosher beforehand
     #       not sure this is gonna happen honestly
@@ -300,6 +285,7 @@ def kube_parameter_scan(param_file, cross_validate,
     if preflight:
         kube_check_mount(**job_spec)
         return None
+        
     yaml_out=make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
