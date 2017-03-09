@@ -11,6 +11,8 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
                    other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options, suffix, kind,
                    nmem, ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,**kwargs):
 
+    # TODO: better safeguards against user stupidity
+
     if ssh_key and ssh_user and ssh_remote_dir and ssh_mount_point and ssh_remote_server:
         bucket_dir=None
         output_dir=os.path.join(ssh_mount_point,output_dir,job_name+suffix)
