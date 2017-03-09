@@ -1,7 +1,5 @@
 from __future__ import division
-import click
-import os
-import datetime
+import click, os, datetime, subprocess
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
@@ -238,10 +236,11 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--output-dir", type=str, default="")
 @click.option("--ext","-e",type=str, default=".p.z")
-@click.option("--mount-point", type=str, envvar='KINECT_GKE_MOUNT_POINT', default='/mnt/modeling')
+@click.option("--mount-point", type=str, envvar='KINECT_GKE_MOUNT_POINT', default='/mnt/user_gcs_bucket')
 @click.option("--bucket","-b",type=str, envvar='KINECT_GKE_MODEL_BUCKET', default='bucket')
 @click.option("--restart-policy", type=str, default="Never")
 @click.option("--ncpus", type=int, envvar='KINECT_GKE_MODEL_NCPUS', default=4)
+@click.option("--nmem", type=int, envvar='KINECT_GKE_MODEL_NMEM', default=3000)
 @click.option("--input-file", type=str, default="use_data.mat")
 @click.option("--check-cluster", type=str, envvar='KINECT_GKE_CLUSTER_NAME')
 @click.option("--log-path", type=click.Path(exists=True), envvar='KINECT_GKE_LOG_PATH')
@@ -250,12 +249,16 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--ssh-remote-server", type=str, envvar='KINECT_GKE_SSH_REMOTE_SERVER', default=None)
 @click.option("--ssh-remote-dir", type=str, envvar='KINECT_GKE_SSH_REMOTE_DIR', default=None)
 @click.option("--ssh-mount-point",type=str, envvar='KINECT_GKE_SSH_MOUNT_POINT', default=None)
+@click.option("--kind",type=str, envvar='KINECT_GKE_MODEL_KIND', default='Pod')
 @click.option("--preflight",is_flag=True)
+@click.option("--copy-log",is_flag=True)
 def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
-    ncpus, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
-    ssh_remote_dir, ssh_mount_point, preflight):
+    ncpus, nmem, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
+    ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log):
+
+    # TODO:  need to pass all arguments through a series of checks to make sure we're GKE-kosher
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
@@ -263,11 +266,6 @@ def kube_parameter_scan(param_file, cross_validate,
     cfg=read_cli_config(param_file,suppress_output=True)
 
     suffix='_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
-
-    if ssh_key and ssh_user and ssh_remote_dir and ssh_mount_point and ssh_remote_server:
-        output_dir=os.path.join(ssh_mount_point,output_dir,job_name+suffix)
-    else:
-        output_dir=os.path.join(mount_point,output_dir,job_name+suffix)
 
     gcs_options='-o allow_other --file-mode=777 --dir-mode=777'
 
@@ -284,16 +282,15 @@ def kube_parameter_scan(param_file, cross_validate,
         kube_check_mount(**job_spec)
         return None
 
-    yaml_out=make_kube_yaml(**job_spec)
+    yaml_out,worker_dicts,output_dir,bucket_dir=make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
 
     click.echo(yaml_out)
-
+    job_spec.pop('cfg',None)
     represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
     yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
 
-    job_spec=merge_dicts(job_spec,cfg)
     job_spec=OrderedDict((str(key),str(value)) for key,value in sorted(job_spec.iteritems()))
 
     if log_path==None:
@@ -301,8 +298,14 @@ def kube_parameter_scan(param_file, cross_validate,
 
     # copy yaml file to log directory as well
 
-    with open(os.path.join(log_path,job_name+suffix+'.yaml'),'w') as f:
+    log_store_path=os.path.join(log_path,job_name+suffix+'.yaml')
+    with open(log_store_path,'w') as f:
         yaml.dump(job_spec,f,Dumper=yaml.RoundTripDumper)
+
+    # is user specifies copy this ish to the output directory as well for solid(!) bookkeeping
+
+    if copy_log and bucket_dir:
+        subprocess.check_output("gsutil cp "+log_store_path+" gs://"+os.path.join(bucket_dir,'job_manifest.yaml'),shell=True)
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
@@ -324,6 +327,8 @@ def kube_parameter_scan(param_file, cross_validate,
 @click.option("--save-ar",is_flag=True)
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
     save_model, model_progress, npcs, whiten, kappa, gamma, nlags,save_ar):
+
+    click.echo("Entering modeling training")
 
     data_dict=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
 

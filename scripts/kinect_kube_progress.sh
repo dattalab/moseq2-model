@@ -41,13 +41,30 @@ fi
 # note that wc -l  will return an extra line
 loop () {
 
+# just convert to a spinner with n/nn jobs completed
+
+COMPLETED=0
 while true; do
-	kubectl get pods -a | grep Completed | tqdm --total $(kubectl get pods -a | wc -l) --unit files >> /dev/null
-	sleep $INTERVAL
+
+	COUNTER=0
+	PRINTCOUNTER=0
+
+	while IFS='' read -r line; do
+		(( COUNTER+=1 ))
+		if [[ "$COUNTER" -gt "$COMPLETED" ]]; then
+			printf "%s\n" "$line"
+		fi
+	done < <(kubectl get pods -a | grep Completed)
+
+	(( COMPLETED += COUNTER ))
+	sleep ${INTERVAL}s
+
 done
+
 
 }
 
 #USE_FILE=$(mktemp)
-loop
+loop | tqdm --unit files --delim '\0' > /dev/null
+#loop
 #tail -f ${USE_FILE} > $(mktemp

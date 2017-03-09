@@ -1,19 +1,22 @@
 from __future__ import division
 import ruamel.yaml as yaml
-import itertools
-import os
-import re
-import subprocess
-import tempfile
-import shutil
+import itertools, os, re, subprocess, tempfile, shutil
 from collections import OrderedDict
 from kinect_modeling.util import merge_dicts
 from sys import platform
 
+# wow how did you get so parameters
 def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
                    cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
-                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options,
-                   ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,**kwargs):
+                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options, suffix, kind,
+                   nmem, ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,**kwargs):
+
+    if ssh_key and ssh_user and ssh_remote_dir and ssh_mount_point and ssh_remote_server:
+        bucket_dir=None
+        output_dir=os.path.join(ssh_mount_point,output_dir,job_name+suffix)
+    else:
+        bucket_dir=os.path.join(bucket,output_dir,job_name+suffix)
+        output_dir=os.path.join(mount_point,output_dir,job_name+suffix)
 
     use_ssh=False
     bash_commands=['/bin/bash','-c']
@@ -55,7 +58,11 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
         worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
 
     njobs=len(worker_dicts)
-    job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
+
+    if kind=='Pod':
+        job_dict=[{'apiVersion':'v1','kind':'Pod'}]*njobs
+    elif kind=='Job':
+        job_dict=[{'apiVersion':'batch/v1','kind':'Job'}]*njobs
 
     yaml_string=''
 
@@ -83,14 +90,21 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
         # TODO: cross-validation
 
-        job_dict[itr]['spec'] = {'containers':[{'name':'kinect-modeling','image':image,'command':bash_commands,
+        container_dict = {'containers':[{'name':'kinect-modeling','image':image,'command':bash_commands,
             'args':[yaml.scalarstring.DoubleQuotedScalarString(issue_command)],
             'securityContext':{'privileged': True},
-            'resources':{'requests':{'cpu': '{:d}m'.format(int(ncpus*.6*1e3)) }}}],'restartPolicy':restart_policy}
+            'resources':{'requests':{'cpu': '{:d}m'.format(int(.9*ncpus*1e3)),
+                                     'memory': '{:d}Mi'.format(int(nmem))}}}],'restartPolicy':restart_policy}
 
+        if kind=='Pod':
+            job_dict[itr]['spec'] = container_dict
+        elif kind=='Job':
+            job_dict[itr]['spec']={'template':{'metadata':{'name':job_name},'spec':container_dict}}
+
+        worker_dicts[itr]['filename']=output_dir_string
         yaml_string='{}\n{}\n---'.format(yaml_string,yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
 
-    return yaml_string
+    return yaml_string, worker_dicts, output_dir, bucket_dir
 
 def kube_cluster_check(cluster_name,ncpus,image,preflight=False):
 
@@ -121,9 +135,9 @@ def kube_cluster_check(cluster_name,ncpus,image,preflight=False):
 
     cluster_info['images']=images
 
-    preflight_check(flag=ncpus==cluster_info['ncpus'],preflight=preflight,
+    preflight_check(flag=ncpus<=cluster_info['ncpus']*.9,preflight=preflight,
         msg='NCPUS',
-        err_msg="User setting ncpus {:d} not equal to number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
+        err_msg="User setting ncpus {:d} than 90% number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
 
     preflight_check(flag=image in cluster_info['images'],preflight=preflight,
         msg='Docker image',

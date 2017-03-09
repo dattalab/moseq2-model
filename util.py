@@ -7,6 +7,7 @@ import copy
 import ruamel.yaml as yaml
 import itertools
 import os
+import sys
 import subprocess
 import re
 from collections import OrderedDict
@@ -212,12 +213,12 @@ def represent_ordereddict(dumper, data):
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
 
-def progressbar(*args, **kwargs):
+def progressbar(file=sys.stdout,*args, **kwargs):
 
     cli=kwargs.pop('cli',False)
 
     if cli==True:
-        return tqdm(*args, **kwargs)
+        return tqdm(file, *args, **kwargs)
     else:
         try:
             return tqdm_notebook(*args, **kwargs)

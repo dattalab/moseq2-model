@@ -40,6 +40,8 @@ else
 	PREEMPTIBLE=${KINECT_GKE_PREEMPTIBLE}
 fi
 
+DRYRUN=false
+
 while [[ $# -gt 0 ]]
 do
 key="$1"
@@ -68,6 +70,9 @@ case $key in
 		-p|--preemptible)
 		PREEMPTIBLE=true
 		;;
+		-d|--dry-run)
+		DRYRUN=true
+		;;
 		*)
             # unknown option
     ;;
@@ -90,26 +95,26 @@ fi
 CREDENTIALS="gcloud container clusters get-credentials ${CLUSTERNAME}"
 
 echo $COMMAND
-eval $COMMAND
-
 echo $CREDENTIALS
-eval $CREDENTIALS
 
-# mos def gotta kill kubectl proxy if it exists
+if [ "${DRYRUN}" = false ]; then
 
-PROXY_PID=$(pgrep -f "kubectl proxy")
-if [ ! -z $PROXY_PID ]; then
-	echo "Killing proxy PID $PROXY_PID"
-	kill $PROXY_PID
+	eval $COMMAND
+	eval $CREDENTIALS
+	# mos def gotta kill kubectl proxy if it exists
+
+	PROXY_PID=$(pgrep -f "kubectl proxy")
+	if [ ! -z $PROXY_PID ]; then
+		echo "Killing proxy PID $PROXY_PID"
+		kill $PROXY_PID
+	fi
+
+	kubectl proxy >/dev/null 2>&1 &
+
+	# copy the proxy pid
+
+	sleep 10
+	echo "Opening browser window for monitoring cluster"
+	open http://localhost:8001/ui
+
 fi
-
-kubectl proxy >/dev/null 2>&1 &
-
-# copy the proxy pid
-
-echo "Opening browser window for monitoring cluster"
-open http://localhost:8001/ui
-
-# tear down with gcloud container clusters delete test-cluster
-
-# TODO: fire up kubectl proxy and open browser window at appropriate place

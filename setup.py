@@ -12,5 +12,5 @@ setup(
     install_requires=['h5py',
         'click', 'pybasicbayes', 'pyhsmm', 'autoregressive', 'joblib', 'numpy == 1.11.3',
          'hdf5storage', 'ruamel.yaml','tqdm'],
-    entry_points={'console_scripts': ['kinect_model = cli:cli']},
+    entry_points={'console_scripts': ['MoDel = cli:cli']},
 )
