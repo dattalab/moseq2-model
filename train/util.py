@@ -10,7 +10,7 @@ from kinect_modeling.util import progressbar
 #def cv_parameter_scan()
 
 # based on moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, disable=False, position=0):
+def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwargs):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
@@ -20,7 +20,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, disab
         log_likelihoods = []
         labels = []
 
-        for itr in progressbar(range(num_iter),leave=False,cli=cli,position=position, disable=disable):
+        for itr in progressbar(range(num_iter),cli=cli,**kwargs):
             model.resample_model(num_procs)
             if np.mod(itr+1,save_every)==0:
                 log_likelihoods.append(model.log_likelihood())

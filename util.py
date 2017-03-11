@@ -10,6 +10,7 @@ import os
 import sys
 import subprocess
 import re
+from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 
 # stolen from MoSeq thanks @alexbw
@@ -213,12 +214,12 @@ def represent_ordereddict(dumper, data):
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
 
-def progressbar(file=sys.stdout,*args, **kwargs):
+def progressbar(*args, **kwargs):
 
     cli=kwargs.pop('cli',False)
 
     if cli==True:
-        return tqdm(file, *args, **kwargs)
+        return tqdm(*args, **kwargs)
     else:
         try:
             return tqdm_notebook(*args, **kwargs)

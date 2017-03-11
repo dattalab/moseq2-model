@@ -1,12 +1,13 @@
 from __future__ import division
-import click, os, datetime, subprocess
+import click, os, datetime, subprocess, ast, joblib, gzip
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
+import numpy as np
 from collections import OrderedDict
 from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
- get_parameters_from_model, represent_ordereddict, merge_dicts
+ get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar
 from kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 from mpi4py import MPI
 
@@ -252,13 +253,15 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--kind",type=str, envvar='KINECT_GKE_MODEL_KIND', default='Pod')
 @click.option("--preflight",is_flag=True)
 @click.option("--copy-log",is_flag=True)
+@click.option("--skip-checks", is_flag=True)
 def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
     ncpus, nmem, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
-    ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log):
+    ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log, skip_checks):
 
-    # TODO:  need to pass all arguments through a series of checks to make sure we're GKE-kosher
+    # TODO: need to pass all arguments through a series of checks to make sure we're GKE-kosher
+    # TODO: automatic copy of the input file to the appropriate location before the modeling
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
@@ -272,22 +275,24 @@ def kube_parameter_scan(param_file, cross_validate,
     job_spec=locals()
     job_spec=merge_dicts(job_spec,cfg)
 
-    if len(check_cluster)>0:
+    if len(check_cluster)>0 and not skip_checks:
         cluster_info=kube_cluster_check(check_cluster,ncpus=ncpus,image=image,preflight=preflight)
 
     # TODO: cross-validation
     # TODO: use stdout instead of stderr for TQDM???
 
-    if preflight:
+    if preflight and not skip_checks:
         kube_check_mount(**job_spec)
         return None
 
-    yaml_out,worker_dicts,output_dir,bucket_dir=make_kube_yaml(**job_spec)
+    yaml_out,output_dicts,output_dir,bucket_dir=make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
 
     click.echo(yaml_out)
     job_spec.pop('cfg',None)
+    job_spec.pop('worker_dicts',None)
+    job_spec['worker_dicts']=output_dicts
     represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
     yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
 
@@ -330,6 +335,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
 
     click.echo("Entering modeling training")
 
+    run_parameters=locals()
     data_dict=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
 
     # use a list of dicts, with everything formatted ready to go
@@ -353,20 +359,76 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     else:
         train_data=data_dict
 
-    arhmm=ARHMM(data_dict=train_data, **model_parameters)
-    [arhmm,loglikes,labels]=train_model(model=arhmm,
-                                    num_iter=num_iter,
-                                    cli=True,
-                                    disable=not model_progress)
+        loglikes = []
+        labels = []
+        heldout_ll = []
+        save_parameters = []
 
-    if hold_out>=0:
-        heldout_ll=arhmm.log_likelihood(data_dict[all_keys[hold_out]])
-    else:
-        heldout_ll=None
+    for i in xrange(restarts):
+        arhmm=ARHMM(data_dict=train_data, **model_parameters)
+        [arhmm,loglikes_sample,labels_sample]=train_model(model=arhmm,
+                                        num_iter=num_iter,
+                                        cli=True,
+                                        leave=False,
+                                        disable=not model_progress,
+                                        total=num_iter*restarts,
+                                        initial=i*num_iter)
+
+        if hold_out>=0:
+            heldout_ll.append(arhmm.log_likelihood(data_dict[all_keys[hold_out]]))
+        else:
+            heldout_ll.append(None)
+
+        loglikes.append(loglikes_sample)
+        labels.append(labels_sample)
+        save_parameters.append(get_parameters_from_model(arhmm))
 
     export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
-                      'model_parameters':get_parameters_from_model(arhmm,save_ar)})
+                      'model_parameters':save_parameters,'run_parameters':run_parameters})
     save_dict(filename=dest_file,obj_to_save=export_dict)
+
+
+@cli.command()
+@click.argument("input_dir", type=click.Path(exists=True))
+@click.argument("job_manifest", type=click.Path(exists=True,readable=True))
+@click.argument("dest_file","-j", type=click.Path(dir_okay=True,writable=True))
+def export_results(input_dir, job_manifest, dest_file):
+
+    # TODO:  check files against manifest (do we want to md5 up in this???)
+
+    with open(job_manifest,'r') as f:
+        manifest=yaml.load(f.read(),Loader=yaml.Loader)
+
+    parse_dicts=ast.literal_eval(manifest['worker_dicts'])
+
+    test_load=joblib.load(os.path.join(input_dir,os.path.basename(parse_dicts[0]['filename'])))
+    nfiles=len(parse_dicts)
+    nsets=len(test_load['labels'])
+
+    save_array=np.empty((nfiles,nsets),dtype=object)
+    all_parameters=np.empty((nfiles,),dtype=object)
+
+    for i,use_dict in enumerate(progressbar(parse_dicts, cli=True)):
+
+        use_data=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
+        all_parameters[i]=use_data['model_parameters']
+
+        try:
+            for j in xrange(nsets):
+                save_array[i][j]=np.array(use_data['labels'][j][-1],dtype=np.int16)
+                #test.append(np.int16(use_data['labels'][j][-1]))
+        except:
+            for j in xrange(nsets):
+                save_array[i][j]=np.nan
+
+        #del use_data
+
+    # export labels, parameter, bookkeeping stuff
+
+    export_dict=dict({'scan_dicts':parse_dicts,'labels':save_array,'parameters':all_parameters})
+    save_dict(filename=dest_file,obj_to_save=export_dict)
+
+
 
 
 # @cli.command()

@@ -4,6 +4,7 @@ import itertools, os, re, subprocess, tempfile, shutil
 from collections import OrderedDict
 from kinect_modeling.util import merge_dicts
 from sys import platform
+from copy import deepcopy
 
 # wow how did you get so parameters
 def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
@@ -59,6 +60,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
     if restarts>1:
         worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
 
+    output_dicts=deepcopy(worker_dicts)
     njobs=len(worker_dicts)
 
     if kind=='Pod':
@@ -95,7 +97,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
         container_dict = {'containers':[{'name':'kinect-modeling','image':image,'command':bash_commands,
             'args':[yaml.scalarstring.DoubleQuotedScalarString(issue_command)],
             'securityContext':{'privileged': True},
-            'resources':{'requests':{'cpu': '{:d}m'.format(int(.9*ncpus*1e3)),
+            'resources':{'requests':{'cpu': '{:d}m'.format(int(ncpus*.9*1e3)),
                                      'memory': '{:d}Mi'.format(int(nmem))}}}],'restartPolicy':restart_policy}
 
         if kind=='Pod':
@@ -103,10 +105,10 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
         elif kind=='Job':
             job_dict[itr]['spec']={'template':{'metadata':{'name':job_name},'spec':container_dict}}
 
-        worker_dicts[itr]['filename']=output_dir_string
+        output_dicts[itr]['filename']=output_dir_string
         yaml_string='{}\n{}\n---'.format(yaml_string,yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
 
-    return yaml_string, worker_dicts, output_dir, bucket_dir
+    return yaml_string, output_dicts, output_dir, bucket_dir
 
 def kube_cluster_check(cluster_name,ncpus,image,preflight=False):
 
@@ -137,9 +139,9 @@ def kube_cluster_check(cluster_name,ncpus,image,preflight=False):
 
     cluster_info['images']=images
 
-    preflight_check(flag=ncpus<=cluster_info['ncpus']*.9,preflight=preflight,
+    preflight_check(flag=ncpus*.9<=cluster_info['ncpus']*.9,preflight=preflight,
         msg='NCPUS',
-        err_msg="User setting ncpus {:d} than 90% number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
+        err_msg="User setting ncpus {:d} more than 90% number of cpus in cluster {:d}".format(ncpus,cluster_info['ncpus']))
 
     preflight_check(flag=image in cluster_info['images'],preflight=preflight,
         msg='Docker image',
