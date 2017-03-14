@@ -20,6 +20,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y gcsfuse
 
 # Build a little home for our code
 ENV SRC /src
+ENV PYTHONPATH /src
 RUN mkdir -p $SRC
 
 # Get our Python requirements (needed to build pyhsmm and pybasicbayes)

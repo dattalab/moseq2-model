@@ -2,7 +2,7 @@ from __future__ import division
 import ruamel.yaml as yaml
 import itertools, os, re, subprocess, tempfile, shutil
 from collections import OrderedDict
-from kinect_modeling.util import merge_dicts
+from kinect_modeling.util import merge_dicts, load_pcs, load_pcs
 from sys import platform
 from copy import deepcopy
 
@@ -10,7 +10,8 @@ from copy import deepcopy
 def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
                    cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
                    other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options, suffix, kind,
-                   nmem, ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,**kwargs):
+                   nmem, ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,
+                   nfolds=None,**kwargs):
 
     # TODO: better safeguards against user stupidity
 
@@ -23,7 +24,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     use_ssh=False
     bash_commands=['/bin/bash','-c']
-    bash_arguments='kinect_model learn_model '+os.path.join(mount_point,input_file)
+    bash_arguments='MoDel learn_model '+os.path.join(mount_point,input_file)
     mount_arguments='mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
     dir_arguments='mkdir -p '+output_dir
     param_commands=('--npcs '+str(npcs)+
@@ -43,9 +44,6 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     bash_commands=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
 
-    if cross_validate:
-        param_commands=param_commands+' --cross-validate'
-
     if model_progress:
         param_commands=param_commands+' --model-progress'
 
@@ -57,8 +55,27 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     # TODO cross-validation
 
+    if cross_validate and nfolds:
+        new_dicts=[]
+        for i in xrange(len(worker_dicts)):
+            for j in xrange(nfolds):
+                worker_dicts[i]['hold-out']=j
+                new_dicts.append(worker_dicts[i].copy())
+
+        worker_dicts=new_dicts
+
+    # allow for internal loop restarts too?
+
     if restarts>1:
-        worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
+        new_dicts=[]
+        for i in xrange(len(worker_dicts)):
+            for j in xrange(restarts):
+                worker_dicts[i]['restart']=j
+                new_dicts.append(worker_dicts[i].copy())
+
+        worker_dicts=new_dicts
+
+    #worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
 
     output_dicts=deepcopy(worker_dicts)
     njobs=len(worker_dicts)
@@ -80,6 +97,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
         # scan parameters are commands, along with any other specified parameters
         # build up the list for what we're going to pass to the command line
 
+        restart_idx=worker_dicts[itr].pop('restart',0)    
         all_parameters=merge_dicts(other_parameters,worker_dicts[itr])
 
         output_dir_string=os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))
@@ -106,6 +124,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
             job_dict[itr]['spec']={'template':{'metadata':{'name':job_name},'spec':container_dict}}
 
         output_dicts[itr]['filename']=output_dir_string
+
         yaml_string='{}\n{}\n---'.format(yaml_string,yaml.dump(job_dict[itr],Dumper=yaml.RoundTripDumper))
 
     return yaml_string, output_dicts, output_dir, bucket_dir
@@ -163,13 +182,13 @@ def kube_ssh_command(ssh_key=None, ssh_user=None, ssh_remote_server=None, ssh_re
     return mount_ssh
 
 def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_user=None,
-                     ssh_remote_server=None,ssh_remote_dir=None,preflight=False, **kwargs):
+                     ssh_remote_server=None,ssh_remote_dir=None,preflight=False, var_name=None, npcs=None, **kwargs):
 
-    # where the eff to mount this crap?
     # TODO: test for existence of input file
     # TODO: clean this shit up
 
     PASS=True
+    data_len=None
 
     try:
 
@@ -218,6 +237,12 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
                 # if not os.path.isfile(use_file):
                 #     raise ValueError("input file does not exist at {}".format(use_file))
 
+                try:
+                    data_dict=load_pcs(filename=os.path.join(ssh_tmp,input_file), var_name=var_name, npcs=npcs)
+                    data_len=len(data_dict)
+                except ValueError as e:
+                    print "Error when loading data:\n", e.output
+
             finally:
 
                 try:
@@ -233,10 +258,11 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
 
         else:
 
-            pass
-            #use_file=os.path.join(gcs_tmp,input_file)
-            # if not os.path.isfile(use_file):
-            #     raise ValueError("input file does not exist at {}".format(use_file))
+            try:
+                data_dict=load_pcs(filename=os.path.join(gcs_tmp,input_file), var_name=var_name, npcs=npcs)
+                data_len=len(data_dict)
+            except ValueError as e:
+                print "Error when loading data:\n", e.output
 
     except Exception as e:
         print str(e)
@@ -253,6 +279,8 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
 
     if preflight and PASS:
         print('ALL SYSTEMS GO')
+
+    return PASS,data_len
 
 
 def make_temporary_copy(path):

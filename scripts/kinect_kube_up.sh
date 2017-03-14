@@ -40,6 +40,13 @@ else
 	PREEMPTIBLE=${KINECT_GKE_PREEMPTIBLE}
 fi
 
+if [ -z "${KINECT_GKE_AUTOSCALE}" ]; then
+	AUTOSCALE=false
+else
+	echo "Setting autoscale to ${KINECT_GKE_AUTOSCALE}"
+	AUTOSCALE=${KINECT_GKE_AUTOSCALE}
+fi
+
 DRYRUN=false
 
 while [[ $# -gt 0 ]]
@@ -73,6 +80,9 @@ case $key in
 		-d|--dry-run)
 		DRYRUN=true
 		;;
+		--auto-scale)
+		AUTOSCALE=true
+		;;
 		*)
             # unknown option
     ;;
@@ -90,6 +100,10 @@ COMMAND="gcloud container clusters create ${CLUSTERNAME} --scopes ${SCOPES} --ma
 
 if [ "${PREEMPTIBLE}" = true ]; then
 	COMMAND+=" --preemptible"
+fi
+
+if [ "${AUTOSCALE}" = true ]; then
+	COMMAND+=" --enable-autoscaling --min-nodes 1 --max-nodes ${NUMNODES}"
 fi
 
 CREDENTIALS="gcloud container clusters get-credentials ${CLUSTERNAME}"

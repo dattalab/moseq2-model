@@ -225,3 +225,13 @@ def progressbar(*args, **kwargs):
             return tqdm_notebook(*args, **kwargs)
         except:
             return tqdm(*args, **kwargs)
+
+def list_rank(chk_list):
+    rank=0
+    flag=True
+    while flag is True:
+        flag=eval("type(chk_list"+'[0]'*rank+") is list")
+        if flag:
+            rank+=1
+
+    return rank

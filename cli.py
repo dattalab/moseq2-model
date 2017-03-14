@@ -1,5 +1,5 @@
 from __future__ import division
-import click, os, datetime, subprocess, ast, joblib, gzip
+import click, os, datetime, subprocess, ast, joblib, gzip, sys
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
@@ -7,7 +7,7 @@ import numpy as np
 from collections import OrderedDict
 from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
- get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar
+ get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank
 from kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 from mpi4py import MPI
 
@@ -239,7 +239,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--ext","-e",type=str, default=".p.z")
 @click.option("--mount-point", type=str, envvar='KINECT_GKE_MOUNT_POINT', default='/mnt/user_gcs_bucket')
 @click.option("--bucket","-b",type=str, envvar='KINECT_GKE_MODEL_BUCKET', default='bucket')
-@click.option("--restart-policy", type=str, default="Never")
+@click.option("--restart-policy", type=str, default="OnFailure")
 @click.option("--ncpus", type=int, envvar='KINECT_GKE_MODEL_NCPUS', default=4)
 @click.option("--nmem", type=int, envvar='KINECT_GKE_MODEL_NMEM', default=3000)
 @click.option("--input-file", type=str, default="use_data.mat")
@@ -250,7 +250,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--ssh-remote-server", type=str, envvar='KINECT_GKE_SSH_REMOTE_SERVER', default=None)
 @click.option("--ssh-remote-dir", type=str, envvar='KINECT_GKE_SSH_REMOTE_DIR', default=None)
 @click.option("--ssh-mount-point",type=str, envvar='KINECT_GKE_SSH_MOUNT_POINT', default=None)
-@click.option("--kind",type=str, envvar='KINECT_GKE_MODEL_KIND', default='Pod')
+@click.option("--kind",type=str, envvar='KINECT_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight",is_flag=True)
 @click.option("--copy-log",is_flag=True)
 @click.option("--skip-checks", is_flag=True)
@@ -260,8 +260,8 @@ def kube_parameter_scan(param_file, cross_validate,
     ncpus, nmem, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
     ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log, skip_checks):
 
-    # TODO: need to pass all arguments through a series of checks to make sure we're GKE-kosher
     # TODO: automatic copy of the input file to the appropriate location before the modeling
+    # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
@@ -278,12 +278,13 @@ def kube_parameter_scan(param_file, cross_validate,
     if len(check_cluster)>0 and not skip_checks:
         cluster_info=kube_cluster_check(check_cluster,ncpus=ncpus,image=image,preflight=preflight)
 
-    # TODO: cross-validation
     # TODO: use stdout instead of stderr for TQDM???
 
-    if preflight and not skip_checks:
-        kube_check_mount(**job_spec)
-        return None
+    if preflight and not skip_checks or cross_validate:
+        pass_flag,nfolds=kube_check_mount(**job_spec)
+        job_spec['nfolds']=nfolds
+        if preflight:
+            return None
 
     yaml_out,output_dicts,output_dir,bucket_dir=make_kube_yaml(**job_spec)
 
@@ -312,6 +313,7 @@ def kube_parameter_scan(param_file, cross_validate,
     if copy_log and bucket_dir:
         subprocess.check_output("gsutil cp "+log_store_path+" gs://"+os.path.join(bucket_dir,'job_manifest.yaml'),shell=True)
 
+
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
 @cli.command()
@@ -333,6 +335,9 @@ def kube_parameter_scan(param_file, cross_validate,
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
     save_model, model_progress, npcs, whiten, kappa, gamma, nlags,save_ar):
 
+    # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
+    # an extra option, just flag it to the user and ignore
+
     click.echo("Entering modeling training")
 
     run_parameters=locals()
@@ -347,7 +352,6 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     }
 
     if whiten:
-
         click.echo('Whitening the training data')
         data_dict=whiten_all(data_dict)
 
@@ -355,14 +359,13 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
 
     if hold_out>=0:
         train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in all_keys[hold_out])
-        test_data=data_dict[all_keys[hold_out]]
     else:
         train_data=data_dict
 
-        loglikes = []
-        labels = []
-        heldout_ll = []
-        save_parameters = []
+    loglikes = []
+    labels = []
+    heldout_ll = []
+    save_parameters = []
 
     for i in xrange(restarts):
         arhmm=ARHMM(data_dict=train_data, **model_parameters)
@@ -372,7 +375,8 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
                                         leave=False,
                                         disable=not model_progress,
                                         total=num_iter*restarts,
-                                        initial=i*num_iter)
+                                        initial=i*num_iter,
+                                        file=sys.stdout)
 
         if hold_out>=0:
             heldout_ll.append(arhmm.log_likelihood(data_dict[all_keys[hold_out]]))
@@ -394,7 +398,8 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
 @click.argument("dest_file","-j", type=click.Path(dir_okay=True,writable=True))
 def export_results(input_dir, job_manifest, dest_file):
 
-    # TODO:  check files against manifest (do we want to md5 up in this???)
+    # TODO: smart detection of restarts (use worker_dicts or job manifest)
+    # TODO: include other stuff we may want, e.g. log-likes
 
     with open(job_manifest,'r') as f:
         manifest=yaml.load(f.read(),Loader=yaml.Loader)
@@ -403,38 +408,59 @@ def export_results(input_dir, job_manifest, dest_file):
 
     test_load=joblib.load(os.path.join(input_dir,os.path.basename(parse_dicts[0]['filename'])))
     nfiles=len(parse_dicts)
-    nsets=len(test_load['labels'])
 
-    save_array=np.empty((nfiles,nsets),dtype=object)
-    all_parameters=np.empty((nfiles,),dtype=object)
+    rank=list_rank(test_load['labels'])
+
+    if rank==3:
+        restart_list=True
+        nrestarts=len(test_load['labels'])
+        nsets=len(test_load['labels'][0])
+    elif rank<3:
+        restart_list=False
+        nsets=len(test_load['labels'])
+        nrestarts=1
+    else:
+        raise ValueError("Cannot interpret labels")
+
+    save_array=np.empty((nfiles,nsets,nrestarts),dtype=object)
+    all_parameters=np.empty((nfiles,nrestarts,),dtype=object)
+    heldout_ll=np.empty((nfiles,nrestarts),dtype=np.float64)
 
     for i,use_dict in enumerate(progressbar(parse_dicts, cli=True)):
 
         use_data=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
-        all_parameters[i]=use_data['model_parameters']
 
-        try:
-            for j in xrange(nsets):
-                save_array[i][j]=np.array(use_data['labels'][j][-1],dtype=np.int16)
-                #test.append(np.int16(use_data['labels'][j][-1]))
-        except:
-            for j in xrange(nsets):
-                save_array[i][j]=np.nan
+        if restart_list:
+            for j in xrange(nrestarts):
+                all_parameters[i][j]=use_data['model_parameters'][j]
 
-        #del use_data
+                try:
+                    for k in xrange(nsets):
+                        save_array[i][k][j]=np.array(use_data['labels'][j][k][-1],dtype=np.int16)
+                except:
+                    for k in xrange(nsets):
+                        save_array[i][k][j]=np.nan
+
+                heldout_ll[i][j]=use_data['heldout_ll'][j]
+
+        else:
+
+            all_parameters[i][0]=use_data['model_parameters']
+
+            try:
+                for j in xrange(nsets):
+                    save_array[i][j][0]=np.array(use_data['labels'][j][-1],dtype=np.int16)
+            except:
+                for j in xrange(nsets):
+                    save_array[i][j][0]=np.nan
+
+            heldout_ll[i][0]=use_data['heldout_ll']
 
     # export labels, parameter, bookkeeping stuff
 
-    export_dict=dict({'scan_dicts':parse_dicts,'labels':save_array,'parameters':all_parameters})
+    export_dict=dict({'scan_dicts':parse_dicts,
+                      'labels':save_array,
+                      'parameters':all_parameters,
+                      'heldout_ll':heldout_ll})
+
     save_dict(filename=dest_file,obj_to_save=export_dict)
-
-
-
-
-# @cli.command()
-# @click.argument("input_file", type=click.Path(exists=True))
-# @click.argument("dest_file", type=click.Path(dir_okay=True,writable=True))
-# @click.argument("--each","-e", is_flag=True)
-# @click.argument("--var_name","-v",type=str, default="features")
-# def whiten(input_file,dest_file,each,var_name):
-#     pass
