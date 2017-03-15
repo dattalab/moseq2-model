@@ -398,7 +398,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
 @click.argument("dest_file","-j", type=click.Path(dir_okay=True,writable=True))
 def export_results(input_dir, job_manifest, dest_file):
 
-    # TODO: smart detection of restarts (use worker_dicts or job manifest)
+    # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
     # TODO: include other stuff we may want, e.g. log-likes
 
     with open(job_manifest,'r') as f:
@@ -410,12 +410,12 @@ def export_results(input_dir, job_manifest, dest_file):
     nfiles=len(parse_dicts)
 
     rank=list_rank(test_load['labels'])
-
-    if rank==3:
+    click.echo(str(rank))
+    if rank==2:
         restart_list=True
         nrestarts=len(test_load['labels'])
         nsets=len(test_load['labels'][0])
-    elif rank<3:
+    elif rank<2:
         restart_list=False
         nsets=len(test_load['labels'])
         nrestarts=1
