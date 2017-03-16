@@ -425,6 +425,7 @@ def export_results(input_dir, job_manifest, dest_file):
     save_array=np.empty((nfiles,nsets,nrestarts),dtype=object)
     all_parameters=np.empty((nfiles,nrestarts,),dtype=object)
     heldout_ll=np.empty((nfiles,nrestarts),dtype=np.float64)
+    loglikes=np.empty((nfiles,nrestarts),dtype=np.float64)
 
     for i,use_dict in enumerate(progressbar(parse_dicts, cli=True)):
 
@@ -441,7 +442,15 @@ def export_results(input_dir, job_manifest, dest_file):
                     for k in xrange(nsets):
                         save_array[i][k][j]=np.nan
 
-                heldout_ll[i][j]=use_data['heldout_ll'][j]
+                try:
+                    heldout_ll[i][j]=use_data['heldout_ll'][j]
+                except:
+                    heldout_ll[i][j]=np.nan
+
+                try:
+                    loglikes[i][j]=use_data['loglikes'][j][-1]
+                except:
+                    loglikes[i][j]=np.nan
 
         else:
 
@@ -453,14 +462,22 @@ def export_results(input_dir, job_manifest, dest_file):
             except:
                 for j in xrange(nsets):
                     save_array[i][j][0]=np.nan
+            try:
+                heldout_ll[i][0]=use_data['heldout_ll']
+            except:
+                heldout_ll[i][0]=np.nan
 
-            heldout_ll[i][0]=use_data['heldout_ll']
+            try:
+                loglikes[i][0]=use_data['loglikes'][-1]
+            except:
+                loglikes[i][0]=np.nan
 
     # export labels, parameter, bookkeeping stuff
 
     export_dict=dict({'scan_dicts':parse_dicts,
                       'labels':save_array,
                       'parameters':all_parameters,
-                      'heldout_ll':heldout_ll})
+                      'heldout_ll':heldout_ll,
+                      'loglikes':loglikes})
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
