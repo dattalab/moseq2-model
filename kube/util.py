@@ -11,7 +11,7 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
                    cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
                    other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options, suffix, kind,
                    nmem, ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,
-                   nfolds=None,**kwargs):
+                   nfolds=None,start_num=None, **kwargs):
 
     # TODO: better safeguards against user stupidity
 
@@ -91,13 +91,13 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
         # need some unique stuff to specify what this job is, do some good bookkeeping for once
 
-        job_dict[itr]['metadata'] = {'name':job_name+'-{:d}'.format(itr),
+        job_dict[itr]['metadata'] = {'name':job_name+'-{:d}'.format(itr+start_num),
             'labels':{'jobgroup':job_name}}
 
         # scan parameters are commands, along with any other specified parameters
         # build up the list for what we're going to pass to the command line
 
-        restart_idx=worker_dicts[itr].pop('restart',0)    
+        restart_idx=worker_dicts[itr].pop('restart',0)
         all_parameters=merge_dicts(other_parameters,worker_dicts[itr])
 
         output_dir_string=os.path.join(output_dir,'job_{:06d}{}'.format(itr,ext))

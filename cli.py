@@ -254,11 +254,12 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--preflight",is_flag=True)
 @click.option("--copy-log",is_flag=True)
 @click.option("--skip-checks", is_flag=True)
+@click.option("--start-num", type=int, default=0)
 def kube_parameter_scan(param_file, cross_validate,
     num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
     ncpus, nmem, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
-    ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log, skip_checks):
+    ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log, skip_checks, start_num):
 
     # TODO: automatic copy of the input file to the appropriate location before the modeling
     # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
@@ -406,6 +407,11 @@ def export_results(input_dir, job_manifest, dest_file):
 
     parse_dicts=ast.literal_eval(manifest['worker_dicts'])
 
+
+    if 'hold-out' in parse_dicts[0].keys():
+        for i in xrange(len(parse_dicts)):
+            parse_dicts[i]['hold_out']=parse_dicts[i].pop('hold-out')
+
     test_load=joblib.load(os.path.join(input_dir,os.path.basename(parse_dicts[0]['filename'])))
     nfiles=len(parse_dicts)
 
@@ -429,7 +435,27 @@ def export_results(input_dir, job_manifest, dest_file):
 
     for i,use_dict in enumerate(progressbar(parse_dicts, cli=True)):
 
-        use_data=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
+        try:
+            use_data=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
+        except:
+
+            if restart_list:
+                for j in xrange(nrestarts):
+                    all_parameters[i][j]=np.nan
+
+                    for k in xrange(nsets):
+                        save_array[i][k][j]=np.nan
+
+                    heldout_ll[i][j]=np.nan
+                    loglikes[i][j]=np.nan
+            else:
+                all_parameters[i][0]=np.nan
+                for j in xrange(nsets):
+                    save_array[i][j][0]=np.nan
+                heldout_ll[i][0]=np.nan
+                loglikes[i][0]=np.nan
+
+            continue
 
         if restart_list:
             for j in xrange(nrestarts):
