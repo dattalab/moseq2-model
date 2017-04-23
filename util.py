@@ -28,8 +28,11 @@ def load_pcs(filename,var_name,npcs=10):
 
     # TODO: trim pickles down to right number of pcs
 
+    metadata=dict({})
+
     if filename.endswith('.mat'):
         data_dict=load_data_from_matlab(filename,var_name,npcs)
+        metadata['uuids']=load_cell_string_from_matlab(filename,"uuids")
     elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
         data_dict=joblib.load(filename)
     elif filename.endswith('.h5'):
@@ -38,7 +41,7 @@ def load_pcs(filename,var_name,npcs=10):
     else:
         raise ValueError('Did understand filetype')
 
-    return data_dict
+    return data_dict,metadata
 
 
 def save_dict(filename,obj_to_save=None,print_message=False):
@@ -73,15 +76,32 @@ def save_dict(filename,obj_to_save=None,print_message=False):
 def load_data_from_matlab(filename,var_name="features",npcs=10):
 
     f=h5.File(filename)
-    score_tmp=f[var_name]
     data_dict=OrderedDict()
 
-    for i in xrange(0,len(score_tmp)):
-        tmp=f[score_tmp[i][0]]
-        score_to_add=tmp.value
-        data_dict[str(i+1)]=score_to_add[:npcs,:].T
+    if var_name in f.keys():
+        score_tmp=f[var_name]
+        for i in xrange(0,len(score_tmp)):
+            tmp=f[score_tmp[i][0]]
+            score_to_add=tmp.value
+            data_dict[str(i+1)]=score_to_add[:npcs,:].T
 
     return data_dict
+
+def load_cell_string_from_matlab(filename,var_name="uuids"):
+
+    f=h5.File(filename)
+    return_list=[]
+
+    if var_name in f.keys():
+
+        tmp=f[var_name]
+
+        for i in xrange(len(tmp)):
+            tmp2=f[tmp[i][0]]
+            uni_list=[''.join(unichr(c)) for c in tmp2]
+            return_list.append(''.join(uni_list))
+
+    return return_list
 
 # per Scott's suggestion
 

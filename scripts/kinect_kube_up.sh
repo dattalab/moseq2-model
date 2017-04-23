@@ -76,9 +76,11 @@ case $key in
 		;;
 		-p|--preemptible)
 		PREEMPTIBLE=true
+		shift
 		;;
 		-d|--dry-run)
 		DRYRUN=true
+		shift
 		;;
 		--auto-scale)
 		AUTOSCALE=true

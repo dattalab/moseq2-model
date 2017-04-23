@@ -7,7 +7,8 @@ import numpy as np
 from collections import OrderedDict
 from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
- get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank
+ get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank,\
+ load_cell_string_from_matlab
 from kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 from mpi4py import MPI
 
@@ -342,7 +343,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     click.echo("Entering modeling training")
 
     run_parameters=locals()
-    data_dict=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
+    data_dict,data_metadata=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
 
     # use a list of dicts, with everything formatted ready to go
 
@@ -389,14 +390,57 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         save_parameters.append(get_parameters_from_model(arhmm))
 
     export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
-                      'model_parameters':save_parameters,'run_parameters':run_parameters})
+                      'model_parameters':save_parameters,'run_parameters':run_parameters,'metadata':data_metadata})
+    save_dict(filename=dest_file,obj_to_save=export_dict)
+
+@cli.command()
+@click.argument("input_file",type=click.Path(exists=True))
+@click.argument("dest_file",type=click.Path(dir_okay=True,writable=True))
+def convert_results(input_file, dest_file):
+
+    click.echo('Loading data...')
+    input_data=joblib.load(input_file)
+    rank=list_rank(input_data['labels'])
+
+    if rank==2:
+        nrestarts=len(input_data['labels'])
+        nsets=len(input_data['labels'][0])
+    elif rank<2:
+        nsets=len(input_data['labels'])
+        nrestarts=1
+    else:
+        raise ValueError("Cannot interpret labels")
+
+    save_labels=np.empty((nsets,nrestarts),dtype=object)
+    loglikes=np.empty((nrestarts,),dtype=object)
+
+    click.echo('Sorting data...')
+    pbar = progressbar(total=nsets*nrestarts,cli=True)
+
+    for i in xrange(nrestarts):
+        loglikes[i]=np.array(input_data['loglikes'][i],dtype=np.float64)
+        for j in xrange(nsets):
+            save_labels[j][i]=input_data['labels'][i][j]
+            pbar.update(1)
+
+    pbar.close()
+
+    #input_data['labels']=save_labels
+    export_dict=dict({
+        'labels':save_labels,
+        'parameters':input_data['model_parameters'],
+        'loglikes':loglikes
+    })
+
     save_dict(filename=dest_file,obj_to_save=export_dict)
 
 
+
+
 @cli.command()
-@click.argument("input_dir", type=click.Path(exists=True))
-@click.argument("job_manifest", type=click.Path(exists=True,readable=True))
-@click.argument("dest_file","-j", type=click.Path(dir_okay=True,writable=True))
+@click.option("--input-dir", "-i", type=click.Path(exists=True), default=os.getcwd())
+@click.option("--job-manifest", "-j", type=click.Path(exists=True,readable=True), default=os.path.join(os.getcwd(),'job_manifest.yaml'))
+@click.option("--dest-file","-j", type=click.Path(dir_okay=True,writable=True), default=os.path.join(os.getcwd(),'export_results.mat'))
 def export_results(input_dir, job_manifest, dest_file):
 
     # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
@@ -406,7 +450,6 @@ def export_results(input_dir, job_manifest, dest_file):
         manifest=yaml.load(f.read(),Loader=yaml.Loader)
 
     parse_dicts=ast.literal_eval(manifest['worker_dicts'])
-
 
     if 'hold-out' in parse_dicts[0].keys():
         for i in xrange(len(parse_dicts)):

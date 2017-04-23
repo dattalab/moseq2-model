@@ -36,7 +36,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwa
 
     except Exception as e:
 
-        print(str(e))
+        print e
         log_likelihoods = np.nan
         labels_cat = np.nan
 

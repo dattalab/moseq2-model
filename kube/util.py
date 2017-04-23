@@ -237,6 +237,8 @@ def kube_check_mount(bucket,gcs_options="",input_file=None, ssh_key=None,ssh_use
                 # if not os.path.isfile(use_file):
                 #     raise ValueError("input file does not exist at {}".format(use_file))
 
+                # thar be dragons here, make sure the directory is explicit, otherwise gcsfuse gets con[hehe]fused
+
                 try:
                     data_dict=load_pcs(filename=os.path.join(ssh_tmp,input_file), var_name=var_name, npcs=npcs)
                     data_len=len(data_dict)
