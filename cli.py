@@ -329,7 +329,7 @@ def kube_parameter_scan(param_file, cross_validate,
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p", is_flag=True)
 @click.option("--npcs", type=int, default=10)
-@click.option("--whiten", is_flag=True)
+@click.option("--whiten","-w", is_flag=True)
 @click.option("--kappa","-k", type=float, default=1e8)
 @click.option("--gamma","-g",type=float, default=1e3)
 @click.option("--nlags",type=int, default=3)
@@ -391,6 +391,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
 
     export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
                       'model_parameters':save_parameters,'run_parameters':run_parameters,'metadata':data_metadata})
+    
     save_dict(filename=dest_file,obj_to_save=export_dict)
 
 @cli.command()
@@ -433,8 +434,6 @@ def convert_results(input_file, dest_file):
     })
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
-
-
 
 
 @cli.command()

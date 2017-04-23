@@ -32,6 +32,7 @@ def load_pcs(filename,var_name,npcs=10):
 
     if filename.endswith('.mat'):
         data_dict=load_data_from_matlab(filename,var_name,npcs)
+        # convert the uuid list to something that will export easily...
         metadata['uuids']=load_cell_string_from_matlab(filename,"uuids")
     elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
         data_dict=joblib.load(filename)
