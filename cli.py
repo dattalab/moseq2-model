@@ -391,7 +391,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
 
     export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
                       'model_parameters':save_parameters,'run_parameters':run_parameters,'metadata':data_metadata})
-    
+
     save_dict(filename=dest_file,obj_to_save=export_dict)
 
 @cli.command()
@@ -470,6 +470,11 @@ def export_results(input_dir, job_manifest, dest_file):
     else:
         raise ValueError("Cannot interpret labels")
 
+    if 'metadata' in test_load.keys():
+        metadata=test_load['metadata']
+    else:
+        metadata={}
+
     save_array=np.empty((nfiles,nsets,nrestarts),dtype=object)
     all_parameters=np.empty((nfiles,nrestarts,),dtype=object)
     heldout_ll=np.empty((nfiles,nrestarts),dtype=np.float64)
@@ -546,6 +551,7 @@ def export_results(input_dir, job_manifest, dest_file):
                       'labels':save_array,
                       'parameters':all_parameters,
                       'heldout_ll':heldout_ll,
-                      'loglikes':loglikes})
+                      'loglikes':loglikes,
+                      'metadata':metadata})
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
