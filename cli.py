@@ -4,6 +4,7 @@ from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
 import numpy as np
+import uuid
 from collections import OrderedDict
 from train.util import train_model, whiten_all
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
@@ -552,6 +553,8 @@ def export_results(input_dir, job_manifest, dest_file):
                       'parameters':all_parameters,
                       'heldout_ll':heldout_ll,
                       'loglikes':loglikes,
-                      'metadata':metadata})
+                      'metadata':metadata,
+                      'uuid':str(uuid.uuid4())
+                      })
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
