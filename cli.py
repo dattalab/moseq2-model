@@ -444,7 +444,7 @@ def convert_results(input_file, dest_file):
 def export_results(input_dir, job_manifest, dest_file):
 
     # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
-    # TODO: include other stuff we may want, e.g. log-likes
+    # TODO: append uuid to filename!
 
     with open(job_manifest,'r') as f:
         manifest=yaml.load(f.read(),Loader=yaml.Loader)
@@ -556,5 +556,14 @@ def export_results(input_dir, job_manifest, dest_file):
                       'metadata':metadata,
                       'uuid':str(uuid.uuid4())
                       })
+
+    # strip out the filename and put in the uuid
+
+    filename=os.path.basename(dest_file)
+    pathname=os.path.dirname(dest_file)
+    ext=os.path.splitext(filename)
+
+    new_filename=ext[0]+'_'+export_dict['uuid']
+    dest_file=os.path.join(pathname,new_filename+ext[1])
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
