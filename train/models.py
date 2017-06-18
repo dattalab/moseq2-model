@@ -76,10 +76,15 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
     #print(model_hypparams)
 
     # add ze data
+    # TODO: give user the option to supply group names for separate trans,
+    # for now we will just map sessions-->groups, but just make others aware of this
+    # for now
 
     for data_name, data in data_dict.items():
-        #print('Adding '+str(data.shape[0])+' frames from '+data_name)
-        model.add_data(data)
+        if separate_trans:
+            model.add_data(data,group_id=data_name)
+        else:
+            model.add_data(data)
 
     # initialize ze states per SL's recommendation
 
