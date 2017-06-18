@@ -80,6 +80,8 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
     # for now we will just map sessions-->groups, but just make others aware of this
     # for now
 
+    # Separate Trans is killing us on RAM, need to figure out before we use!
+
     for data_name, data in data_dict.items():
         if separate_trans:
             model.add_data(data,group_id=data_name)
