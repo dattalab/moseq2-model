@@ -9,8 +9,9 @@ from copy import deepcopy
 # wow how did you get so parameters
 def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
                    cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
-                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options, suffix, kind,
-                   nmem, ssh_key=None, ssh_user=None, ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,
+                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options,
+                   suffix, kind, separate_trans, nmem, ssh_key=None, ssh_user=None,
+                   ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,
                    nfolds=None,start_num=None, **kwargs):
 
     # TODO: better safeguards against user stupidity
@@ -52,6 +53,9 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     if save_model:
         param_commands=param_commands+' --save-model'
+
+    if separate_trans:
+        param_commands=param_commands+' --separate-trans'
 
     # TODO cross-validation
 

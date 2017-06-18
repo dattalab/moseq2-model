@@ -1,6 +1,6 @@
 import numpy as np
 from autoregressive.distributions import AutoRegression
-from autoregressive.models import FastARWeakLimitStickyHDPHMM
+from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 from kinect_modeling.util import merge_dicts
 import warnings
 
@@ -35,7 +35,8 @@ def _get_empirical_ar_params(train_datas, params):
 
 def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
         K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
-        affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False):
+        affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
+        separate_trans=False):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     data_dim=data_dict.values()[0].shape[1]
@@ -66,7 +67,11 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
         obs_hypparams=_get_empirical_ar_params(data_dict.values(),obs_hypparams)
 
     obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
-    model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
+
+    if separate_trans:
+        model = FastARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
+    else:
+        model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
 
     #print(model_hypparams)
 

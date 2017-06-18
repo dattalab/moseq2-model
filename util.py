@@ -142,6 +142,7 @@ def get_parameters_from_model(model,save_ar=True):
         'kappa_0':init_obs_dist['kappa_0'],
         'nlags':model.nlags,
         'mu_0':init_obs_dist['mu_0']
+        'model_class':model.__class__.__name__
         }
 
     if save_ar:

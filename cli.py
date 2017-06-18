@@ -234,6 +234,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
+@click.option("--separate_trans", type=bool, default=False)
 @click.option("--whiten","-w", type=bool, default=True)
 @click.option("--image","-i",type=str, envvar='KINECT_GKE_MODEL_IMAGE', default='model-image')
 @click.option("--job-name", type=str, default="kubejob")
@@ -254,16 +255,15 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--ssh-mount-point",type=str, envvar='KINECT_GKE_SSH_MOUNT_POINT', default=None)
 @click.option("--kind",type=str, envvar='KINECT_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight",is_flag=True)
-@click.option("--copy-log",is_flag=True)
+@click.option("--copy-log", type=bool, default=True)
 @click.option("--skip-checks", is_flag=True)
 @click.option("--start-num", type=int, default=0)
 def kube_parameter_scan(param_file, cross_validate,
-    num_iter, restarts, var_name, save_every, save_model, model_progress,npcs,whiten,
+    num_iter, restarts, var_name, save_every, save_model, model_progress, npcs, separate_trans, whiten,
     image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
     ncpus, nmem, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
     ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log, skip_checks, start_num):
 
-    # TODO: automatic copy of the input file to the appropriate location before the modeling
     # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
@@ -280,8 +280,6 @@ def kube_parameter_scan(param_file, cross_validate,
 
     if len(check_cluster)>0 and not skip_checks:
         cluster_info=kube_cluster_check(check_cluster,ncpus=ncpus,image=image,preflight=preflight)
-
-    # TODO: use stdout instead of stderr for TQDM???
 
     if preflight and not skip_checks or cross_validate:
         pass_flag,nfolds=kube_check_mount(**job_spec)
@@ -334,9 +332,10 @@ def kube_parameter_scan(param_file, cross_validate,
 @click.option("--kappa","-k", type=float, default=1e8)
 @click.option("--gamma","-g",type=float, default=1e3)
 @click.option("--nlags",type=int, default=3)
+@click.option("--separate-trans", is_flag=True)
 @click.option("--save-ar",is_flag=True)
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
-    save_model, model_progress, npcs, whiten, kappa, gamma, nlags,save_ar):
+    save_model, model_progress, npcs, whiten, kappa, gamma, nlags, separate_trans, save_ar):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -351,7 +350,8 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     model_parameters={
         'gamma':gamma,
         'kappa':kappa,
-        'nlags':nlags
+        'nlags':nlags,
+        'separate_trans':separate_trans
     }
 
     if whiten:
