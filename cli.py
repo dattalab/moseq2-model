@@ -255,7 +255,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--ssh-mount-point",type=str, envvar='KINECT_GKE_SSH_MOUNT_POINT', default=None)
 @click.option("--kind",type=str, envvar='KINECT_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight",is_flag=True)
-@click.option("--copy-log", type=bool, default=True)
+@click.option("--copy-log", "-l", is_flag=True)
 @click.option("--skip-checks", is_flag=True)
 @click.option("--start-num", type=int, default=0)
 def kube_parameter_scan(param_file, cross_validate,
