@@ -24,10 +24,11 @@ ENV PYTHONPATH /src
 RUN mkdir -p $SRC
 
 # Get our Python requirements (needed to build pyhsmm and pybasicbayes)
-RUN conda install pip mpi4py click matplotlib gcc cython -y
+RUN conda install pip mpi4py click matplotlib gcc cython future -y
 
 # Install moseq
 COPY . $SRC/kinect_modeling
+#RUN pip install -e future
 RUN pip install -e $SRC/kinect_modeling
 
 # fix bug in Conda matplotlib implementation
