@@ -24,7 +24,7 @@ def enum(*sequential, **named):
 
 # grab matlab data
 
-def load_pcs(filename,var_name,npcs=10):
+def load_pcs(filename,var_name,load_groups,npcs=10):
 
     # TODO: trim pickles down to right number of pcs
 
@@ -34,6 +34,10 @@ def load_pcs(filename,var_name,npcs=10):
         data_dict=load_data_from_matlab(filename,var_name,npcs)
         # convert the uuid list to something that will export easily...
         metadata['uuids']=load_cell_string_from_matlab(filename,"uuids")
+        if load_groups:
+            metadata['groups']=load_cell_string_from_matlab(filename,"groups")
+        else:
+            metadata['groups']=None
     elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
         data_dict=joblib.load(filename)
     elif filename.endswith('.h5'):
@@ -129,8 +133,17 @@ def save_model_fit(filename, model, loglikes, labels):
 
 def get_parameters_from_model(model,save_ar=True):
 
-    trans_dist=model.trans_distn
+    #trans_dist=model.trans_distn
     init_obs_dist=model.init_emission_distn.hypparams
+
+    # need to be smarter about this, but for now assume parameters are the same
+    # (eek!) if we use separate trans
+
+    try:
+        trans_dist=model.trans_distn
+    except:
+        tmp=model.trans_distns
+        trans_dist=tmp[0]
 
     parameters= {
         'kappa':trans_dist.kappa,

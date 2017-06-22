@@ -343,7 +343,8 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     click.echo("Entering modeling training")
 
     run_parameters=locals()
-    data_dict,data_metadata=load_pcs(filename=input_file, var_name=var_name, npcs=npcs)
+    data_dict,data_metadata=load_pcs(filename=input_file, var_name=var_name,
+                                     npcs=npcs, load_groups=separate_trans)
 
     # use a list of dicts, with everything formatted ready to go
 
@@ -353,6 +354,11 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         'nlags':nlags,
         'separate_trans':separate_trans
     }
+
+    if separate_trans:
+        model_parameters['groups']=data_metadata['groups']
+    else:
+        model_parameters['groups']=None
 
     if whiten:
         click.echo('Whitening the training data')
