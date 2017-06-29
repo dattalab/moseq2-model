@@ -450,7 +450,6 @@ def convert_results(input_file, dest_file):
 def export_results(input_dir, job_manifest, dest_file):
 
     # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
-    # TODO: append uuid to filename!
 
     with open(job_manifest,'r') as f:
         manifest=yaml.load(f.read(),Loader=yaml.Loader)
@@ -554,13 +553,14 @@ def export_results(input_dir, job_manifest, dest_file):
 
     # export labels, parameter, bookkeeping stuff
 
+    metadata['parameters']=all_parameters
+    metadata['export_uuid']=str(uuid.uuid4())
+
     export_dict=dict({'scan_dicts':parse_dicts,
                       'labels':save_array,
-                      'parameters':all_parameters,
                       'heldout_ll':heldout_ll,
                       'loglikes':loglikes,
-                      'metadata':metadata,
-                      'uuid':str(uuid.uuid4())
+                      'metadata':metadata
                       })
 
     # strip out the filename and put in the uuid
