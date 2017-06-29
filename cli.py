@@ -555,11 +555,11 @@ def export_results(input_dir, job_manifest, dest_file):
 
     metadata['parameters']=all_parameters
     metadata['export_uuid']=str(uuid.uuid4())
-
-    export_dict=dict({'scan_dicts':parse_dicts,
-                      'labels':save_array,
-                      'heldout_ll':heldout_ll,
-                      'loglikes':loglikes,
+    metadata['scan_dicts']=parse_dicts
+    metadata['loglikes']=loglikes
+    metadata['heldout_ll']=heldout_ll
+    
+    export_dict=dict({'labels':save_array,
                       'metadata':metadata
                       })
 
@@ -569,7 +569,7 @@ def export_results(input_dir, job_manifest, dest_file):
     pathname=os.path.dirname(dest_file)
     ext=os.path.splitext(filename)
 
-    new_filename=ext[0]+'_'+export_dict['uuid']
+    new_filename=ext[0]+'_'+metadata['export_uuid']
     dest_file=os.path.join(pathname,new_filename+ext[1])
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
