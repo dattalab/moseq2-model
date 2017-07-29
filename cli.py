@@ -231,7 +231,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option("--var_name", type=str, default='features')
 @click.option("--save-every", "-s", type=int, default=1)
-@click.option("--save-model","-m", type=bool, default=False)
+@click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
 @click.option("--separate_trans", type=bool, default=False)
