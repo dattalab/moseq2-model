@@ -10,6 +10,8 @@ import os
 import sys
 import subprocess
 import re
+from autoregressive.distributions import AutoRegression
+from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 
