@@ -493,6 +493,9 @@ def export_results(input_dir, job_manifest, dest_file):
 
     if 'metadata' in test_load.keys():
         metadata=test_load['metadata']
+        for key,value in metadata.iteritems():
+            if value is None:
+                metadata[key]='Null'
     else:
         metadata={}
 
@@ -567,6 +570,7 @@ def export_results(input_dir, job_manifest, dest_file):
                 loglikes[i][0]=np.nan
 
     # export labels, parameter, bookkeeping stuff
+
 
     metadata['parameters']=all_parameters
     metadata['export_uuid']=str(uuid.uuid4())
