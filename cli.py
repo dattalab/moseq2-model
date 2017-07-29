@@ -231,7 +231,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option("--var_name", type=str, default='features')
 @click.option("--save-every", "-s", type=int, default=1)
-@click.option("--save-model","-m", is_flag=True)
+@click.option("--save-model","-m", type=bool, default=False)
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
 @click.option("--separate_trans", type=bool, default=False)
@@ -333,9 +333,8 @@ def kube_parameter_scan(param_file, cross_validate,
 @click.option("--gamma","-g",type=float, default=1e3)
 @click.option("--nlags",type=int, default=3)
 @click.option("--separate-trans", is_flag=True)
-@click.option("--save-ar",is_flag=True)
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
-    save_model, model_progress, npcs, whiten, kappa, gamma, nlags, separate_trans, save_ar):
+    save_model, model_progress, npcs, whiten, kappa, gamma, nlags, separate_trans):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -376,7 +375,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     heldout_ll = []
     save_parameters = []
 
-    for i in xrange(restarts):
+    for i in range(restarts):
         arhmm=ARHMM(data_dict=train_data, **model_parameters)
         [arhmm,loglikes_sample,labels_sample]=train_model(model=arhmm,
                                         num_iter=num_iter,
@@ -396,8 +395,24 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         labels.append(labels_sample)
         save_parameters.append(get_parameters_from_model(arhmm))
 
-    export_dict=dict({'loglikes':loglikes, 'labels':labels, 'heldout_ll':heldout_ll,
-                      'model_parameters':save_parameters,'run_parameters':run_parameters,'metadata':data_metadata})
+    # if we save the model, don't use copy_model which strips out the data and potentially
+    # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
+
+    if save_model:
+        save_model=arhmm
+    else:
+        save_model=None
+
+    # TODO:  just compute cross-likes at the end and potentially dump the model (what else
+    # would we want the model for hm?), though hard drive space is cheap, recomputing models is not...
+
+    export_dict=dict({'loglikes':loglikes,
+                      'labels':labels,
+                      'heldout_ll':heldout_ll,
+                      'model_parameters':save_parameters,
+                      'run_parameters':run_parameters,
+                      'metadata':data_metadata,
+                      'model':save_model})
 
     save_dict(filename=dest_file,obj_to_save=export_dict)
 
@@ -425,7 +440,7 @@ def convert_results(input_file, dest_file):
     click.echo('Sorting data...')
     pbar = progressbar(total=nsets*nrestarts,cli=True)
 
-    for i in xrange(nrestarts):
+    for i in range(nrestarts):
         loglikes[i]=np.array(input_data['loglikes'][i],dtype=np.float64)
         for j in xrange(nsets):
             save_labels[j][i]=input_data['labels'][i][j]
@@ -558,7 +573,7 @@ def export_results(input_dir, job_manifest, dest_file):
     metadata['scan_dicts']=parse_dicts
     metadata['loglikes']=loglikes
     metadata['heldout_ll']=heldout_ll
-    
+
     export_dict=dict({'labels':save_array,
                       'metadata':metadata
                       })
