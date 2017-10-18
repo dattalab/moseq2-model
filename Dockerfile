@@ -10,7 +10,8 @@ ENV PATH /opt/conda/lib:/opt/conda/include:$PATH
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential\
  && apt-get install -y lsb-release\
- && apt-get install -y sshfs
+ && apt-get install -y sshfs\
+ && apt-get install -y git
 
 RUN DEBIAN_FRONTEND=noninteractive export GCSFUSE_REPO=gcsfuse-`lsb_release -c -s` \
 	&& echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list\
@@ -29,7 +30,7 @@ RUN conda install pip mpi4py click matplotlib gcc cython future -y
 # Install moseq
 COPY . $SRC/kinect_modeling
 #RUN pip install -e future
-RUN pip install -e $SRC/kinect_modeling
+RUN pip install -e $SRC/kinect_modeling --process-dependency-links
 
 # fix bug in Conda matplotlib implementation
 # https://github.com/ContinuumIO/anaconda-issues/issues/1068

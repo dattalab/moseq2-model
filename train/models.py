@@ -1,6 +1,8 @@
 import numpy as np
 from autoregressive.distributions import AutoRegression
-from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
+from pybasicbayes.distributions import RobustAutoRegression
+from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
+    FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 from kinect_modeling.util import merge_dicts
 import warnings
 
@@ -33,10 +35,10 @@ def _get_empirical_ar_params(train_datas, params):
     return obs_params
 
 
-def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
+def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
         K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
         affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
-        separate_trans=False, groups=None):
+        separate_trans=False, groups=None, robust=False):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     data_dim=data_dict.values()[0].shape[1]
@@ -58,6 +60,9 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
         'init_state_distn': 'uniform'
         }
 
+    if robust:
+        default_obs_hypparams['nu'] = nu
+
     obs_hypparams=merge_dicts(default_obs_hypparams,obs_hypparams)
     model_hypparams=merge_dicts(default_model_hypparams,model_hypparams)
 
@@ -66,23 +71,27 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3,
     if empirical_bayes:
         obs_hypparams=_get_empirical_ar_params(data_dict.values(),obs_hypparams)
 
-    obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
+    # TODO: add option to change this to RobustAutoRegression (all same hypers except for nu)
 
-    if separate_trans:
+    if separate_trans and not robust:
         print 'Using model class FastARWeakLimitStickyHDPHMMSeparateTrans'
+        obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
-    else:
+    elif not separate_trans and not robust:
         print 'Using model class FastARWeakLimitStickyHDPHMM'
+        obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
+    elif not separate_trans and robust:
+        print 'Using ROBUST model class ARWeakLimitStickyHDPHMM'
+        obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
+        model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
+    elif separate_trans and robust:
+        print 'Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans'
+        obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
+        model =  ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
-    #print(model_hypparams)
 
     # add ze data
-    # TODO: give user the option to supply group names for separate trans,
-    # for now we will just map sessions-->groups, but just make others aware of this
-    # for now
-
-    # Separate Trans is killing us on RAM, need to figure out before we use!
 
     for index, (data_name, data) in enumerate(data_dict.items()):
         print 'Adding data from key '+data_name

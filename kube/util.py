@@ -2,14 +2,14 @@ from __future__ import division
 import ruamel.yaml as yaml
 import itertools, os, re, subprocess, tempfile, shutil
 from collections import OrderedDict
-from kinect_modeling.util import merge_dicts, load_pcs, load_pcs
+from kinect_modeling.util import merge_dicts, load_pcs
 from sys import platform
 from copy import deepcopy
 
 # wow how did you get so parameters
 def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_name,save_every,
                    cross_validate,model_progress,whiten,save_model,restarts,worker_dicts,
-                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options,
+                   other_parameters,ext,job_name,image,ncpus,restart_policy, gcs_options,robust,
                    suffix, kind, separate_trans, nmem, ssh_key=None, ssh_user=None,
                    ssh_remote_server=None,ssh_remote_dir=None, ssh_mount_point=None,
                    nfolds=None,start_num=None, **kwargs):
@@ -56,6 +56,9 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     if separate_trans:
         param_commands=param_commands+' --separate-trans'
+
+    if robust:
+        param_commands=param_commands+' --robust'
 
     # TODO cross-validation
 

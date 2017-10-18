@@ -331,10 +331,12 @@ def kube_parameter_scan(param_file, cross_validate,
 @click.option("--whiten","-w", is_flag=True)
 @click.option("--kappa","-k", type=float, default=1e8)
 @click.option("--gamma","-g",type=float, default=1e3)
+@click.option("--nu",type=float, default=4)
 @click.option("--nlags",type=int, default=3)
 @click.option("--separate-trans", is_flag=True)
+@click.option("--robust", is_flag=True)
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
-    save_model, model_progress, npcs, whiten, kappa, gamma, nlags, separate_trans):
+    save_model, model_progress, npcs, whiten, kappa, gamma, nu, nlags, separate_trans, robust):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -351,7 +353,9 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         'gamma':gamma,
         'kappa':kappa,
         'nlags':nlags,
-        'separate_trans':separate_trans
+        'separate_trans':separate_trans,
+        'robust':robust,
+        'nu':nu
     }
 
     if separate_trans:
