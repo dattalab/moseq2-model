@@ -26,7 +26,7 @@ def enum(*sequential, **named):
 
 # grab matlab data
 
-def load_pcs(filename,var_name,load_groups,npcs=10):
+def load_pcs(filename,var_name="features",load_groups=False,npcs=10):    
 
     # TODO: trim pickles down to right number of pcs
 
@@ -192,6 +192,8 @@ def read_cli_config(filename,suppress_output=False):
                     cfg['scan_values'].append(np.logspace(*use_range))
                 elif use_scale=='linear':
                     cfg['scan_values'].append(np.linspace(*use_range))
+                else:
+                    cfg['scan_values'].append(use_range)
 
             for itr_values in itertools.product(*cfg['scan_values']):
                 new_dict = {}

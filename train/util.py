@@ -64,6 +64,14 @@ def whiten_all(data_dict, center=True):
 
     return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items())
 
+# taken from moseq by @mattjj and @alexbw
+def whiten_each(data_dict, center=True):
+    for k,v in data_dict.items():
+        tmp_dict=whiten_all(OrderedDict([(k,v)]),center=center)
+        data_dict[k]=tmp_dict[k]
+
+    return data_dict
+    #return OrderedDict((k, whiten_all(OrderedDict([k,v]), center=center)) for k, v in data_dict.items())
 
 def parameter_scan(data_dict, parameter, values, other_parameters=dict(),
                    num_iter=100, restarts=5, use_min=True):

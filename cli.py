@@ -6,7 +6,7 @@ import ruamel.yaml as yaml
 import numpy as np
 import uuid
 from collections import OrderedDict
-from train.util import train_model, whiten_all
+from train.util import train_model, whiten_all, whiten_each
 from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
  get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank,\
  load_cell_string_from_matlab
@@ -235,7 +235,7 @@ def kube_print_cluster_info(cluster_name):
 @click.option("--model-progress","-p",is_flag=True)
 @click.option("--npcs", type=int, default=10)
 @click.option("--separate_trans", type=bool, default=False)
-@click.option("--whiten","-w", type=bool, default=True)
+@click.option("--whiten","-w", type=str, default='all')
 @click.option("--image","-i",type=str, envvar='KINECT_GKE_MODEL_IMAGE', default='model-image')
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--output-dir", type=str, default="")
@@ -328,7 +328,7 @@ def kube_parameter_scan(param_file, cross_validate,
 @click.option("--save-model","-m", is_flag=True)
 @click.option("--model-progress","-p", is_flag=True)
 @click.option("--npcs", type=int, default=10)
-@click.option("--whiten","-w", is_flag=True)
+@click.option("--whiten","-w", type=str, default='all')
 @click.option("--kappa","-k", type=float, default=1e8)
 @click.option("--gamma","-g",type=float, default=1e3)
 @click.option("--nu",type=float, default=4)
@@ -363,9 +363,14 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     else:
         model_parameters['groups']=None
 
-    if whiten:
-        click.echo('Whitening the training data')
+    if whiten[0].lower() == 'a':
+        click.echo('Whitening the training data using the whiten_all function')
         data_dict=whiten_all(data_dict)
+    elif whiten[0].lower() == 'e':
+        click.echo('Whitening the training data using the whiten_each function')
+        data_dict=whiten_each(data_dict)
+    else:
+        click.echo('Not whitening the data')
 
     all_keys=data_dict.keys()
 
@@ -465,7 +470,7 @@ def convert_results(input_file, dest_file):
 @cli.command()
 @click.option("--input-dir", "-i", type=click.Path(exists=True), default=os.getcwd())
 @click.option("--job-manifest", "-j", type=click.Path(exists=True,readable=True), default=os.path.join(os.getcwd(),'job_manifest.yaml'))
-@click.option("--dest-file","-j", type=click.Path(dir_okay=True,writable=True), default=os.path.join(os.getcwd(),'export_results.mat'))
+@click.option("--dest-file","-d", type=click.Path(dir_okay=True,writable=True), default=os.path.join(os.getcwd(),'export_results.mat'))
 def export_results(input_dir, job_manifest, dest_file):
 
     # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
@@ -479,11 +484,20 @@ def export_results(input_dir, job_manifest, dest_file):
         for i in xrange(len(parse_dicts)):
             parse_dicts[i]['hold_out']=parse_dicts[i].pop('hold-out')
 
-    test_load=joblib.load(os.path.join(input_dir,os.path.basename(parse_dicts[0]['filename'])))
+
     nfiles=len(parse_dicts)
 
-    rank=list_rank(test_load['labels'])
+    for i,use_dict in enumerate(parse_dicts):
+        test_load=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
+        if list_rank(test_load['labels'])==1 and len(test_load['labels'])==1 and np.all(np.isnan(test_load['labels'][0])):
+            continue;
+        else:
+            rank=list_rank(test_load['labels'])
+            break;
+
     click.echo(str(rank))
+
+
     if rank==2:
         restart_list=True
         nrestarts=len(test_load['labels'])

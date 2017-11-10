@@ -45,11 +45,11 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
 
     bash_commands=[yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
 
+    if whiten:
+        param_commands=param_commands+' --whiten '+whiten
+
     if model_progress:
         param_commands=param_commands+' --model-progress'
-
-    if whiten:
-        param_commands=param_commands+' --whiten'
 
     if save_model:
         param_commands=param_commands+' --save-model'
@@ -60,7 +60,6 @@ def make_kube_yaml(mount_point,input_file,bucket,output_dir,npcs,num_iter,var_na
     if robust:
         param_commands=param_commands+' --robust'
 
-    # TODO cross-validation
 
     if cross_validate and nfolds:
         new_dicts=[]
