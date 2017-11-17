@@ -15,31 +15,22 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwa
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
 
-    try:
+    log_likelihoods = []
+    labels = []
 
-        log_likelihoods = []
-        labels = []
+    for itr in progressbar(range(num_iter),cli=cli,**kwargs):
+        model.resample_model(num_procs)
+        if np.mod(itr+1,save_every)==0:
+            log_likelihoods.append(model.log_likelihood())
+            seq_list=[s.stateseq for s in model.states_list]
+            for seq_itr in xrange(len(seq_list)):
+                seq_list[seq_itr]=np.append(np.repeat(-5,model.nlags),seq_list[seq_itr])
+            labels.append(seq_list)
 
-        for itr in progressbar(range(num_iter),cli=cli,**kwargs):
-            model.resample_model(num_procs)
-            if np.mod(itr+1,save_every)==0:
-                log_likelihoods.append(model.log_likelihood())
-                seq_list=[s.stateseq for s in model.states_list]
-                for seq_itr in xrange(len(seq_list)):
-                    seq_list[seq_itr]=np.append(np.repeat(-5,model.nlags),seq_list[seq_itr])
-                labels.append(seq_list)
+    labels_cat=[]
 
-        labels_cat=[]
-
-        for i in xrange(len(labels[0])):
-            labels_cat.append(np.array([tmp[i] for tmp in labels],dtype=np.int16))
-
-    except Exception as e:
-
-        print e
-
-        log_likelihoods = np.nan
-        labels_cat = np.nan
+    for i in xrange(len(labels[0])):
+        labels_cat.append(np.array([tmp[i] for tmp in labels],dtype=np.int16))
 
     return model, log_likelihoods, labels_cat
 
