@@ -1,5 +1,11 @@
 from __future__ import division
-import click, os, datetime, subprocess, ast, joblib, gzip, sys
+import click
+import os
+import datetime
+import subprocess
+import ast
+import joblib
+import sys
 from tqdm import tqdm
 from train.models import ARHMM
 import ruamel.yaml as yaml
@@ -7,37 +13,34 @@ import numpy as np
 import uuid
 from collections import OrderedDict
 from train.util import train_model, whiten_all, whiten_each
-from util import enum, save_dict, load_pcs, read_cli_config, copy_model,\
- get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank,\
- load_cell_string_from_matlab
+from util import enum, save_dict, load_pcs, read_cli_config,\
+ get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank
 from kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
 
-@click.group()
-def cli():
-    pass
 
-@cli.command()
+@click.command()
 @click.argument("param_file", type=click.Path(exists=True))
 @click.argument("input_file", type=click.Path(exists=True))
-@click.argument("dest_file", type=click.Path(dir_okay=True,writable=True))
-@click.option("--cross-validate","-c",is_flag=True)
+@click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
+@click.option("--cross-validate", "-c", is_flag=True)
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option("--var_name", type=str, default='features')
 @click.option("--save-every", "-s", type=int, default=1)
-@click.option("--save-model","-m", is_flag=True)
-@click.option("--model-progress","-p",is_flag=True)
+@click.option("--save-model", "-m", is_flag=True)
+@click.option("--model-progress", "-p", is_flag=True)
 @click.option("--npcs", type=int, default=10)
 def mpi_parameter_scan(param_file, input_file, dest_file, cross_validate,
-    num_iter, restarts, var_name, save_every, save_model, model_progress,npcs):
+                       num_iter, restarts, var_name, save_every, save_model,
+                       model_progress, npcs):
 
-    tags = enum('READY','DONE','EXIT','START')
+    tags = enum('READY', 'DONE', 'EXIT', 'START')
 
     comm = MPI.COMM_WORLD
-    size  = comm.Get_size()
+    size = comm.Get_size()
     rank = comm.Get_rank()
     status = MPI.Status()
 
@@ -211,7 +214,7 @@ def mpi_parameter_scan(param_file, input_file, dest_file, cross_validate,
         comm.send(None, dest=0, tag=tags.EXIT)
 
 
-@cli.command()
+@click.command()
 @click.argument("cluster_name", type=str, envvar='KINECT_GKE_CLUSTER_NAME')
 def kube_print_cluster_info(cluster_name):
     # get some sweet yaml describing our cluster
@@ -224,7 +227,7 @@ def kube_print_cluster_info(cluster_name):
     click.echo(cluster_info['images'])
 
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
-@cli.command()
+@click.command()
 @click.argument("param_file", type=click.Path(exists=True))
 @click.option("--cross-validate","-c",is_flag=True)
 @click.option("--num-iter", "-n", type=int, default=100)
@@ -317,67 +320,67 @@ def kube_parameter_scan(param_file, cross_validate,
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
-@cli.command()
+@click.command()
 @click.argument("input_file", type=click.Path(exists=True))
-@click.argument("dest_file", type=click.Path(dir_okay=True,writable=True))
-@click.option("--hold-out","-h", type=int, default=-1)
-@click.option("--num-iter", "-n", type=int, default=100)
-@click.option("--restarts","-r",type=int,default=1)
-@click.option("--var-name", type=str, default='features')
-@click.option("--save-every", "-s", type=int, default=1)
-@click.option("--save-model","-m", is_flag=True)
-@click.option("--model-progress","-p", is_flag=True)
-@click.option("--npcs", type=int, default=10)
-@click.option("--whiten","-w", type=str, default='all')
-@click.option("--kappa","-k", type=float, default=1e8)
-@click.option("--gamma","-g",type=float, default=1e3)
-@click.option("--nu",type=float, default=4)
-@click.option("--nlags",type=int, default=3)
-@click.option("--separate-trans", is_flag=True)
-@click.option("--robust", is_flag=True)
+@click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
+@click.option("--hold-out", "-h", type=int, default=-1, help="Index of data group to hold out (-1 for none)")
+@click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")
+@click.option("--restarts", "-r", type=int, default=1, help="Number of restarts for model")
+@click.option("--var-name", type=str, default='features', help="Variable name in input file with PCs")
+@click.option("--save-every", "-s", type=int, default=1, help="Increment to save labels and model object")
+@click.option("--save-model", "-m", is_flag=True, help="Save model object")
+@click.option("--model-progress", "-p", is_flag=True, help="Show model progress")
+@click.option("--npcs", type=int, default=10, help="Number of PCs to use")
+@click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
+@click.option("--kappa", "-k", type=float, default=1e8, help="Kappa")
+@click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
+@click.option("--nu", type=float, default=4, help="Nu (only applicable if robust set to true)")
+@click.option("--nlags", type=int, default=3, help="Number of lags to use")
+@click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
+@click.option("--robust", is_flag=True, help="Use tAR model")
 def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
-    save_model, model_progress, npcs, whiten, kappa, gamma, nu, nlags, separate_trans, robust):
+                save_model, model_progress, npcs, whiten, kappa, gamma, nu, nlags, separate_trans, robust):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
 
     click.echo("Entering modeling training")
 
-    run_parameters=locals()
-    data_dict,data_metadata=load_pcs(filename=input_file, var_name=var_name,
-                                     npcs=npcs, load_groups=separate_trans)
+    run_parameters = locals()
+    data_dict, data_metadata = load_pcs(filename=input_file, var_name=var_name,
+                                        npcs=npcs, load_groups=separate_trans)
 
     # use a list of dicts, with everything formatted ready to go
 
-    model_parameters={
-        'gamma':gamma,
-        'kappa':kappa,
-        'nlags':nlags,
-        'separate_trans':separate_trans,
-        'robust':robust,
-        'nu':nu
+    model_parameters = {
+        'gamma': gamma,
+        'kappa': kappa,
+        'nlags': nlags,
+        'separate_trans': separate_trans,
+        'robust': robust,
+        'nu': nu
     }
 
     if separate_trans:
-        model_parameters['groups']=data_metadata['groups']
+        model_parameters['groups'] = data_metadata['groups']
     else:
-        model_parameters['groups']=None
+        model_parameters['groups'] = None
 
     if whiten[0].lower() == 'a':
         click.echo('Whitening the training data using the whiten_all function')
-        data_dict=whiten_all(data_dict)
+        data_dict = whiten_all(data_dict)
     elif whiten[0].lower() == 'e':
         click.echo('Whitening the training data using the whiten_each function')
-        data_dict=whiten_each(data_dict)
+        data_dict = whiten_each(data_dict)
     else:
         click.echo('Not whitening the data')
 
-    all_keys=data_dict.keys()
+    all_keys = data_dict.keys()
 
-    if hold_out>=0:
-        train_data=OrderedDict((i,data_dict[i]) for i in all_keys if i not in all_keys[hold_out])
+    if hold_out >= 0:
+        train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i not in all_keys[hold_out])
     else:
-        train_data=data_dict
+        train_data = data_dict
 
     loglikes = []
     labels = []
@@ -385,17 +388,18 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     save_parameters = []
 
     for i in range(restarts):
-        arhmm=ARHMM(data_dict=train_data, **model_parameters)
-        [arhmm,loglikes_sample,labels_sample]=train_model(model=arhmm,
-                                        num_iter=num_iter,
-                                        cli=True,
-                                        leave=False,
-                                        disable=not model_progress,
-                                        total=num_iter*restarts,
-                                        initial=i*num_iter,
-                                        file=sys.stdout)
+        arhmm = ARHMM(data_dict=train_data, **model_parameters)
+        [arhmm, loglikes_sample, labels_sample] = \
+            train_model(model=arhmm,
+                        num_iter=num_iter,
+                        cli=True,
+                        leave=False,
+                        disable=not model_progress,
+                        total=num_iter*restarts,
+                        initial=i*num_iter,
+                        file=sys.stdout)
 
-        if hold_out>=0:
+        if hold_out >= 0:
             heldout_ll.append(arhmm.log_likelihood(data_dict[all_keys[hold_out]]))
         else:
             heldout_ll.append(None)
@@ -408,205 +412,174 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
 
     if save_model:
-        save_model=arhmm
+        save_model = arhmm
     else:
-        save_model=None
+        save_model = None
 
     # TODO:  just compute cross-likes at the end and potentially dump the model (what else
     # would we want the model for hm?), though hard drive space is cheap, recomputing models is not...
 
-    export_dict=dict({'loglikes':loglikes,
-                      'labels':labels,
-                      'heldout_ll':heldout_ll,
-                      'model_parameters':save_parameters,
-                      'run_parameters':run_parameters,
-                      'metadata':data_metadata,
-                      'model':save_model})
+    export_dict = {
+        'loglikes': loglikes,
+        'labels': labels,
+        'heldout_ll': heldout_ll,
+        'model_parameters': save_parameters,
+        'run_parameters': run_parameters,
+        'metadata': data_metadata,
+        'model': save_model}
 
-    save_dict(filename=dest_file,obj_to_save=export_dict)
+    save_dict(filename=dest_file, obj_to_save=export_dict)
 
-@cli.command()
-@click.argument("input_file",type=click.Path(exists=True))
-@click.argument("dest_file",type=click.Path(dir_okay=True,writable=True))
+
+@click.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
 def convert_results(input_file, dest_file):
 
     click.echo('Loading data...')
-    input_data=joblib.load(input_file)
-    rank=list_rank(input_data['labels'])
+    input_data = joblib.load(input_file)
+    rank = list_rank(input_data['labels'])
 
-    if rank==2:
-        nrestarts=len(input_data['labels'])
-        nsets=len(input_data['labels'][0])
-    elif rank<2:
-        nsets=len(input_data['labels'])
-        nrestarts=1
+    if rank == 2:
+        nrestarts = len(input_data['labels'])
+        nsets = len(input_data['labels'][0])
+    elif rank < 2:
+        nsets = len(input_data['labels'])
+        nrestarts = 1
     else:
         raise ValueError("Cannot interpret labels")
 
-    save_labels=np.empty((nsets,nrestarts),dtype=object)
-    loglikes=np.empty((nrestarts,),dtype=object)
+    save_labels = np.empty((nsets, nrestarts), dtype=object)
+    loglikes = np.empty((nrestarts,), dtype=object)
 
     click.echo('Sorting data...')
-    pbar = progressbar(total=nsets*nrestarts,cli=True)
+    pbar = progressbar(total=nsets*nrestarts, cli=True)
 
     for i in range(nrestarts):
-        loglikes[i]=np.array(input_data['loglikes'][i],dtype=np.float64)
+        loglikes[i] = np.array(input_data['loglikes'][i], dtype=np.float64)
         for j in xrange(nsets):
-            save_labels[j][i]=input_data['labels'][i][j]
+            save_labels[j][i] = input_data['labels'][i][j]
             pbar.update(1)
 
     pbar.close()
 
-    #input_data['labels']=save_labels
-    export_dict=dict({
-        'labels':save_labels,
-        'parameters':input_data['model_parameters'],
-        'loglikes':loglikes
-    })
+    # input_data['labels']=save_labels
+    export_dict = {
+        'labels': save_labels,
+        'parameters': input_data['model_parameters'],
+        'loglikes': loglikes
+    }
 
-    save_dict(filename=dest_file,obj_to_save=export_dict)
+    save_dict(filename=dest_file, obj_to_save=export_dict)
 
 
-@cli.command()
+@click.command()
 @click.option("--input-dir", "-i", type=click.Path(exists=True), default=os.getcwd())
-@click.option("--job-manifest", "-j", type=click.Path(exists=True,readable=True), default=os.path.join(os.getcwd(),'job_manifest.yaml'))
-@click.option("--dest-file","-d", type=click.Path(dir_okay=True,writable=True), default=os.path.join(os.getcwd(),'export_results.mat'))
+@click.option("--job-manifest", "-j", type=click.Path(exists=True, readable=True),
+              default=os.path.join(os.getcwd(), 'job_manifest.yaml'))
+@click.option("--dest-file", "-d", type=click.Path(dir_okay=True, writable=True),
+              default=os.path.join(os.getcwd(), 'export_results.mat'))
 def export_results(input_dir, job_manifest, dest_file):
 
     # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
 
-    with open(job_manifest,'r') as f:
-        manifest=yaml.load(f.read(),Loader=yaml.Loader)
+    with open(job_manifest, 'r') as f:
+        manifest = yaml.load(f.read(), Loader=yaml.Loader)
 
-    parse_dicts=ast.literal_eval(manifest['worker_dicts'])
+    parse_dicts = ast.literal_eval(manifest['worker_dicts'])
 
     if 'hold-out' in parse_dicts[0].keys():
         for i in xrange(len(parse_dicts)):
-            parse_dicts[i]['hold_out']=parse_dicts[i].pop('hold-out')
+            parse_dicts[i]['hold_out'] = parse_dicts[i].pop('hold-out')
 
+    nfiles = len(parse_dicts)
 
-    nfiles=len(parse_dicts)
-
-    for i,use_dict in enumerate(parse_dicts):
-        test_load=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
-        if list_rank(test_load['labels'])==1 and len(test_load['labels'])==1 and np.all(np.isnan(test_load['labels'][0])):
-            continue;
+    for i, use_dict in enumerate(parse_dicts):
+        test_load = joblib.load(os.path.join(input_dir, os.path.basename(use_dict['filename'])))
+        if (list_rank(test_load['labels']) == 1 and
+                len(test_load['labels']) == 1 and np.all(np.isnan(test_load['labels'][0]))):
+            continue
         else:
-            rank=list_rank(test_load['labels'])
-            break;
+            rank = list_rank(test_load['labels'])
+            break
 
     click.echo(str(rank))
 
-
-    if rank==2:
-        restart_list=True
-        nrestarts=len(test_load['labels'])
-        nsets=len(test_load['labels'][0])
-    elif rank<2:
-        restart_list=False
-        nsets=len(test_load['labels'])
-        nrestarts=1
+    if rank == 2:
+        restart_list = True
+        nrestarts = len(test_load['labels'])
+        nsets = len(test_load['labels'][0])
+    elif rank < 2:
+        restart_list = False
+        nsets = len(test_load['labels'])
+        nrestarts = 1
     else:
         raise ValueError("Cannot interpret labels")
 
     if 'metadata' in test_load.keys():
-        metadata=test_load['metadata']
-        for key,value in metadata.iteritems():
+        metadata = test_load['metadata']
+        for key, value in metadata.iteritems():
             if value is None:
-                metadata[key]='Null'
+                metadata[key] = 'Null'
     else:
-        metadata={}
+        metadata = {}
 
-    save_array=np.empty((nfiles,nsets,nrestarts),dtype=object)
-    all_parameters=np.empty((nfiles,nrestarts,),dtype=object)
-    heldout_ll=np.empty((nfiles,nrestarts),dtype=np.float64)
-    loglikes=np.empty((nfiles,nrestarts),dtype=np.float64)
+    save_array = np.empty((nfiles, nsets, nrestarts), dtype=object)
+    all_parameters = np.empty((nfiles, nrestarts,), dtype=object)
+    heldout_ll = np.empty((nfiles, nrestarts), dtype=np.float64)
+    loglikes = np.empty((nfiles, nrestarts), dtype=np.float64)
 
-    for i,use_dict in enumerate(progressbar(parse_dicts, cli=True)):
+    save_array[:] = np.nan
+    all_parameters[:] = np.nan
+    heldout_ll[:] = np.nan
+    loglikes[:] = np.nan
+
+    for i, use_dict in enumerate(progressbar(parse_dicts, cli=True)):
 
         try:
-            use_data=joblib.load(os.path.join(input_dir,os.path.basename(use_dict['filename'])))
-        except:
-
-            if restart_list:
-                for j in xrange(nrestarts):
-                    all_parameters[i][j]=np.nan
-
-                    for k in xrange(nsets):
-                        save_array[i][k][j]=np.nan
-
-                    heldout_ll[i][j]=np.nan
-                    loglikes[i][j]=np.nan
-            else:
-                all_parameters[i][0]=np.nan
-                for j in xrange(nsets):
-                    save_array[i][j][0]=np.nan
-                heldout_ll[i][0]=np.nan
-                loglikes[i][0]=np.nan
-
+            use_data = joblib.load(os.path.join(input_dir, os.path.basename(use_dict['filename'])))
+        except IOError:
             continue
 
         if restart_list:
             for j in xrange(nrestarts):
-                all_parameters[i][j]=use_data['model_parameters'][j]
+                all_parameters[i][j] = use_data['model_parameters'][j]
 
-                try:
-                    for k in xrange(nsets):
-                        save_array[i][k][j]=np.array(use_data['labels'][j][k][-1],dtype=np.int16)
-                except:
-                    for k in xrange(nsets):
-                        save_array[i][k][j]=np.nan
+                for k in xrange(nsets):
+                    save_array[i][k][j] = np.array(use_data['labels'][j][k][-1], dtype=np.int16)
 
-                try:
-                    heldout_ll[i][j]=use_data['heldout_ll'][j]
-                except:
-                    heldout_ll[i][j]=np.nan
-
-                try:
-                    loglikes[i][j]=use_data['loglikes'][j][-1]
-                except:
-                    loglikes[i][j]=np.nan
-
+                heldout_ll[i][j] = use_data['heldout_ll'][j]
+                loglikes[i][j] = use_data['loglikes'][j][-1]
         else:
 
-            all_parameters[i][0]=use_data['model_parameters']
+            all_parameters[i][0] = use_data['model_parameters']
 
-            try:
-                for j in xrange(nsets):
-                    save_array[i][j][0]=np.array(use_data['labels'][j][-1],dtype=np.int16)
-            except:
-                for j in xrange(nsets):
-                    save_array[i][j][0]=np.nan
-            try:
-                heldout_ll[i][0]=use_data['heldout_ll']
-            except:
-                heldout_ll[i][0]=np.nan
+            for j in xrange(nsets):
+                save_array[i][j][0] = np.array(use_data['labels'][j][-1], dtype=np.int16)
 
-            try:
-                loglikes[i][0]=use_data['loglikes'][-1]
-            except:
-                loglikes[i][0]=np.nan
+            heldout_ll[i][0] = use_data['heldout_ll']
+            loglikes[i][0] = use_data['loglikes'][-1]
 
     # export labels, parameter, bookkeeping stuff
 
+    metadata['parameters'] = all_parameters
+    metadata['export_uuid'] = str(uuid.uuid4())
+    metadata['scan_dicts'] = parse_dicts
+    metadata['loglikes'] = loglikes
+    metadata['heldout_ll'] = heldout_ll
 
-    metadata['parameters']=all_parameters
-    metadata['export_uuid']=str(uuid.uuid4())
-    metadata['scan_dicts']=parse_dicts
-    metadata['loglikes']=loglikes
-    metadata['heldout_ll']=heldout_ll
-
-    export_dict=dict({'labels':save_array,
-                      'metadata':metadata
-                      })
+    export_dict = {
+        'labels': save_array,
+        'metadata': metadata
+        }
 
     # strip out the filename and put in the uuid
 
-    filename=os.path.basename(dest_file)
-    pathname=os.path.dirname(dest_file)
-    ext=os.path.splitext(filename)
+    filename = os.path.basename(dest_file)
+    pathname = os.path.dirname(dest_file)
+    ext = os.path.splitext(filename)
 
-    new_filename=ext[0]+'_'+metadata['export_uuid']
-    dest_file=os.path.join(pathname,new_filename+ext[1])
+    new_filename = ext[0]+'_'+metadata['export_uuid']
+    dest_file = os.path.join(pathname, new_filename+ext[1])
 
-    save_dict(filename=dest_file,obj_to_save=export_dict)
+    save_dict(filename=dest_file, obj_to_save=export_dict)

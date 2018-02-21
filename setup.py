@@ -17,5 +17,5 @@ setup(
          'hdf5storage', 'ruamel.yaml','tqdm'],
     dependency_links=['git+https://github.com/mattjj/pybasicbayes.git@robust_regression#egg=pybasicbayes-1',
                       'git+https://github.com/mattjj/pyhsmm-autoregressive.git@master#egg=autoregressive-1'],
-    entry_points={'console_scripts': ['MoDel = cli:cli']},
+    entry_points={'console_scripts': ['MoDel = kinect_modeling.cli:learn_model']},
 )
