@@ -28,9 +28,9 @@ RUN mkdir -p $SRC
 RUN conda install pip mpi4py click matplotlib gcc cython future -y
 
 # Install moseq
-COPY . $SRC/kinect_modeling
+COPY . $SRC/moseq2_model
 #RUN pip install -e future
-RUN pip install -e $SRC/kinect_modeling --process-dependency-links
+RUN pip install -e $SRC/moseq2_model --process-dependency-links
 
 # fix bug in Conda matplotlib implementation
 # https://github.com/ContinuumIO/anaconda-issues/issues/1068
