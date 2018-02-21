@@ -6,6 +6,7 @@ from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPH
 from moseq2_model.util import merge_dicts
 import warnings
 
+
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):
     """
@@ -36,19 +37,19 @@ def _get_empirical_ar_params(train_datas, params):
 
 
 def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
-        K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
-        affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
-        separate_trans=False, groups=None, robust=False):
+          K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
+          affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
+          separate_trans=False, groups=None, robust=False):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-    data_dim=data_dict.values()[0].shape[1]
+    data_dim = data_dict.values()[0].shape[1]
 
     default_obs_hypparams = {
         'nu_0': data_dim+2,
         'S_0': S_0_scale*np.eye(data_dim),
         'M_0': np.hstack((np.eye(data_dim),
-            np.zeros((data_dim, data_dim * (nlags-1))),
-            np.zeros((data_dim, int(affine))))),
+                          np.zeros((data_dim, data_dim * (nlags-1))),
+                          np.zeros((data_dim, int(affine))))),
         'affine': affine,
         'K_0': K_0_scale*np.eye(data_dim*nlags+affine)
         }
@@ -63,13 +64,13 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
     if robust:
         default_obs_hypparams['nu'] = nu
 
-    obs_hypparams=merge_dicts(default_obs_hypparams,obs_hypparams)
-    model_hypparams=merge_dicts(default_model_hypparams,model_hypparams)
+    obs_hypparams = merge_dicts(default_obs_hypparams, obs_hypparams)
+    model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)
 
     # TODO: return initialization parameters for saving downstream
 
     if empirical_bayes:
-        obs_hypparams=_get_empirical_ar_params(data_dict.values(),obs_hypparams)
+        obs_hypparams = _get_empirical_ar_params(data_dict.values(), obs_hypparams)
 
     # TODO: add option to change this to RobustAutoRegression (all same hypers except for nu)
 
@@ -88,8 +89,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
     elif separate_trans and robust:
         print 'Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans'
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
-        model =  ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
-
+        model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
     # add ze data
 
@@ -97,17 +97,17 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
         print 'Adding data from key '+data_name
         if separate_trans:
             print 'Group ID: '+groups[index]
-            model.add_data(data,group_id=groups[index])
+            model.add_data(data, group_id=groups[index])
         else:
             model.add_data(data)
 
     # initialize ze states per SL's recommendation
 
     if sticky_init:
-        for i in range(0,len(model.stateseqs)):
-            seqlen=len(model.stateseqs[i])
-            z_init=np.random.randint(max_states, size=seqlen//10).repeat(10)
-            z_init=np.append(z_init,np.random.randint(max_states, size=seqlen-len(z_init)))
-            model.stateseqs[i]=z_init.copy().astype('int32')
+        for i in range(0, len(model.stateseqs)):
+            seqlen = len(model.stateseqs[i])
+            z_init = np.random.randint(max_states, size=seqlen//10).repeat(10)
+            z_init = np.append(z_init,np.random.randint(max_states, size=seqlen-len(z_init)))
+            model.stateseqs[i] = z_init.copy().astype('int32')
 
     return model
