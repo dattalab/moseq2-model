@@ -1,0 +1,18 @@
+# specs for travis ci
+language: python
+python:
+  - "2.7"
+# get the dependencies
+install:
+  - pip install . --process-depedencies
+# install what we need for testing
+before_install:
+  - pip install cython
+  - pip install future
+  - pip install six
+  - pip install numpy
+  - pip install pytest pytest-cov
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+# script for tests... (eventually add coveralls)
+# script: pytest
