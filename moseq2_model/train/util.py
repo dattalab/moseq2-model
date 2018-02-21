@@ -2,11 +2,7 @@ from __future__ import division
 import numpy as np
 from functools import partial
 from collections import OrderedDict
-from tqdm import tqdm, tqdm_notebook
-from kinect_modeling.util import progressbar
-
-# TODO: simple function for cross-validation optimization of parameters
-#def cv_parameter_scan()
+from moseq2_model.util import progressbar
 
 
 # based on moseq by @mattjj and @alexbw

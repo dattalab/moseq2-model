@@ -1,8 +1,11 @@
 from __future__ import division
 import ruamel.yaml as yaml
-import itertools, os, re, subprocess, tempfile, shutil
-from collections import OrderedDict
-from kinect_modeling.util import merge_dicts, load_pcs
+import os
+import re
+import subprocess
+import tempfile
+import shutil
+from moseq2_model.util import merge_dicts, load_pcs
 from sys import platform
 from copy import deepcopy
 

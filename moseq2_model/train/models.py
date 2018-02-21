@@ -3,7 +3,7 @@ from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from kinect_modeling.util import merge_dicts
+from moseq2_model.util import merge_dicts
 import warnings
 
 # Empirical bayes estimate of S_0 (from MoSeq)
