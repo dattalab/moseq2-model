@@ -3,11 +3,11 @@ import numpy as np
 from functools import partial
 from collections import OrderedDict
 from tqdm import tqdm, tqdm_notebook
+import warnings
 from kinect_modeling.util import progressbar
 
 # TODO: simple function for cross-validation optimization of parameters
 #def cv_parameter_scan()
-
 
 # based on moseq by @mattjj and @alexbw
 def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwargs):

@@ -12,10 +12,10 @@ import ruamel.yaml as yaml
 import numpy as np
 import uuid
 from collections import OrderedDict
-from train.util import train_model, whiten_all, whiten_each
-from util import enum, save_dict, load_pcs, read_cli_config,\
+from kinect_modeling.train.util import train_model, whiten_all, whiten_each
+from kinect_modeilng.util import enum, save_dict, load_pcs, read_cli_config,\
  get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank
-from kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
+from kinect_modeling.kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 from mpi4py import MPI
 
 # leave the user with the option to use (A) MPI
@@ -225,6 +225,7 @@ def kube_print_cluster_info(cluster_name):
     click.echo("cluster name="+cluster_info['cluster_name'])
     click.echo("ncpus="+str(cluster_info['ncpus']))
     click.echo(cluster_info['images'])
+
 
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @click.command()
