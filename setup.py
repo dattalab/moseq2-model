@@ -15,8 +15,8 @@ setup(
     python_requires='>=2.6,<3',
     install_requires=['h5py', 'click', 'pybasicbayes', 'pyhsmm',
                       'autoregressive', 'joblib', 'numpy == 1.11.3',
-                      'hdf5storage', 'ruamel.yaml', 'tqdm','mpi4py'],
+                      'hdf5storage', 'ruamel.yaml', 'tqdm'],
     dependency_links=['git+https://github.com/mattjj/pybasicbayes.git@robust_regression#egg=pybasicbayes-1',
                       'git+https://github.com/mattjj/pyhsmm-autoregressive.git@master#egg=autoregressive-1'],
-    entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:learn_model']},
+    entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )

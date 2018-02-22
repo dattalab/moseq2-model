@@ -17,8 +17,12 @@ from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
 from moseq2_model.kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 
 
+@click.group()
+def cli():
+    pass
+
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
-@click.command()
+@cli.command(name="parameter-scan")
 @click.argument("param_file", type=click.Path(exists=True))
 @click.option("--cross-validate", "-c", is_flag=True)
 @click.option("--num-iter", "-n", type=int, default=100)
@@ -113,7 +117,7 @@ def kube_parameter_scan(
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
-@click.command()
+@cli.command(name="learn-model")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
 @click.option("--hold-out", "-h", type=int, default=-1, help="Index of data group to hold out (-1 for none)")
@@ -224,7 +228,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     save_dict(filename=dest_file, obj_to_save=export_dict)
 
 
-@click.command()
+@cli.command(name="convert-results")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
 def convert_results(input_file, dest_file):
@@ -266,7 +270,7 @@ def convert_results(input_file, dest_file):
     save_dict(filename=dest_file, obj_to_save=export_dict)
 
 
-@click.command()
+@cli.command("export-results")
 @click.option("--input-dir", "-i", type=click.Path(exists=True), default=os.getcwd())
 @click.option("--job-manifest", "-j", type=click.Path(exists=True, readable=True),
               default=os.path.join(os.getcwd(), 'job_manifest.yaml'))
@@ -376,3 +380,7 @@ def export_results(input_dir, job_manifest, dest_file):
     dest_file = os.path.join(pathname, new_filename+ext[1])
 
     save_dict(filename=dest_file, obj_to_save=export_dict)
+
+
+if __name__ == '__main__':
+    cli()

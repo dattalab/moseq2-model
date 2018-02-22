@@ -4,7 +4,7 @@ python:
   - "2.7"
 # get the dependencies
 install:
-  - pip install . --process-depedencies
+  - pip install . --process-dependency-links
 # install what we need for testing
 before_install:
   - pip install cython
