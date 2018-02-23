@@ -15,4 +15,4 @@ before_install:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # script for tests... (eventually add coveralls)
-# script: pytest
+script: py.test

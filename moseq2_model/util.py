@@ -16,9 +16,13 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
     # TODO: trim pickles down to right number of pcs
 
-    metadata = dict({})
+    metadata = {
+        'uuids': None,
+        'groups': None
+    }
 
     if filename.endswith('.mat'):
+        print('Loading data from matlab file')
         data_dict = load_data_from_matlab(filename, var_name, npcs)
         # convert the uuid list to something that will export easily...
         metadata['uuids'] = load_cell_string_from_matlab(filename, "uuids")
@@ -30,7 +34,26 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         data_dict = joblib.load(filename)
     elif filename.endswith('.h5'):
         with h5.File(filename, 'r') as f:
-            data_dict = f[var_name].value()
+            dsets = f.keys()
+            print('In {} found {} datasets'.format(filename, dsets))
+            if var_name in dsets:
+                print('Found pcs in {}'.format(var_name))
+                tmp = f[var_name].value
+                if type(tmp) is np.ndarray:
+                    data_dict = OrderedDict([(1, tmp)])
+                elif type(tmp) is dict:
+                    data_dict = OrderedDict([(k, v) for k, v in dict.iteritems()])
+                elif type(tmp) is OrderedDict:
+                    data_dict = tmp
+
+            if 'uuid' in dsets:
+                print('Found groups in groups')
+                metadata['uuid'] = f['uuid'].value
+
+            if 'groups' in dsets:
+                print('Found groups in groups')
+                metadata['groups'] = f['groups'].value
+
     else:
         raise ValueError('Did understand filetype')
 
