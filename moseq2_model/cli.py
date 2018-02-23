@@ -364,7 +364,11 @@ def export_results(input_dir, job_manifest, dest_file):
 
         if restart_list:
             for j in range(nrestarts):
-                all_parameters[i][j] = use_data['model_parameters'][j]
+                tmp = use_data['model_parameters'][j]
+                for k, v in tmp.iteritems():
+                    if np.all(v is None):
+                        tmp[k] = np.nan
+                all_parameters[i][j] = tmp
 
                 for k in range(nsets):
                     save_array[i][k][j] = np.array(use_data['labels'][j][k][-1], dtype=np.int16)
@@ -375,7 +379,11 @@ def export_results(input_dir, job_manifest, dest_file):
                 loglikes[i][j] = use_data['loglikes'][j][-1]
         else:
 
-            all_parameters[i][0] = use_data['model_parameters']
+            tmp = use_data['model_parameters']
+            for k, v in tmp.iteritems():
+                if np.all(v is None):
+                    tmp[k] = np.nan
+            all_parameters[i][0] = tmp
 
             for j in xrange(nsets):
                 save_array[i][j][0] = np.array(use_data['labels'][j][-1], dtype=np.int16)

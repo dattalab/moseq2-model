@@ -161,7 +161,7 @@ def get_parameters_from_model(model, save_ar=True):
         'kappa': trans_dist.kappa,
         'gamma': trans_dist.gamma,
         'alpha': trans_dist.alpha,
-        'nu': None,
+        'nu': np.nan,
         'num_states': trans_dist.N,
         'nu_0': init_obs_dist['nu_0'],
         'sigma_0': init_obs_dist['sigma_0'],

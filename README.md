@@ -34,7 +34,7 @@ Note that the installation also requires the [kubectl comand line tool](https://
 
 ```sh
 ln -s path_to_moseq2_model/scripts/moseq2_model_kube_up.sh /usr/local/bin/moseq2_model_kube_up
-ln -s path_to_moseq2_model/scripts/moseq2_model_kube_down.sh /usr/local/bin/moseq2_model_kube_up
+ln -s path_to_moseq2_model/scripts/moseq2_model_kube_down.sh /usr/local/bin/moseq2_model_kube_down
 chmod a+x /usr/local/bin/moseq2*
 moseq2_model_kube_up --help
 moseq2_model_kube_down --help
