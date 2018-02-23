@@ -94,9 +94,9 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
     # add ze data
 
     for index, (data_name, data) in enumerate(data_dict.items()):
-        print 'Adding data from key '+data_name
+        print 'Adding data from key '+str(data_name)
         if separate_trans:
-            print 'Group ID: '+groups[index]
+            print 'Group ID: '+str(groups[index])
             model.add_data(data, group_id=groups[index])
         else:
             model.add_data(data)
@@ -107,7 +107,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
         for i in range(0, len(model.stateseqs)):
             seqlen = len(model.stateseqs[i])
             z_init = np.random.randint(max_states, size=seqlen//10).repeat(10)
-            z_init = np.append(z_init,np.random.randint(max_states, size=seqlen-len(z_init)))
+            z_init = np.append(z_init, np.random.randint(max_states, size=seqlen-len(z_init)))
             model.stateseqs[i] = z_init.copy().astype('int32')
 
     return model

@@ -1,7 +1,7 @@
 from __future__ import division
 import numpy as np
 from functools import partial
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar
 
 
@@ -16,7 +16,8 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwa
 
     for itr in progressbar(range(num_iter), cli=cli, **kwargs):
         model.resample_model(num_procs)
-        if np.mod(itr+1, save_every) == 0:
+        if (np.mod(itr+1, save_every) == 0 or
+                np.mod(itr+1, num_iter) == 0):
             log_likelihoods.append(model.log_likelihood())
             seq_list = [s.stateseq for s in model.states_list]
             for seq_itr in xrange(len(seq_list)):
@@ -133,3 +134,43 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
 
 
     return heldout_ll, labels
+
+
+# taken from syllables by @alewbw
+
+def get_crosslikes(arhmm, frame_by_frame=False):
+    all_CLs = defaultdict(list)
+    Nstates = arhmm.num_states
+
+    if frame_by_frame:
+        for s in arhmm.states_list:
+            for j in range(Nstates):
+                likes = s.aBl[s.stateseq == j]
+                for i in range(Nstates):
+                    all_CLs[(i, j)].append(likes[:, i] - likes[:, j])
+        all_CLs = defaultdict(
+            list,
+            {k: np.concatenate(v) for k, v in all_CLs.iteritems()})
+    else:
+        for s in arhmm.states_list:
+            for j in range(Nstates):
+                for sl in slices_from_indicators(s.stateseq == j):
+                    likes = np.nansum(s.aBl[sl], axis=0)
+                    for i in range(Nstates):
+                        all_CLs[(i, j)].append(likes[i] - likes[j])
+
+    CL = np.zeros((Nstates, Nstates))
+    for (i, j), _ in np.ndenumerate(CL):
+        CL[i, j] = np.nanmean(all_CLs[(i, j)])
+
+    return all_CLs, CL
+
+
+def slices_from_indicators(indseq):
+    return [sl for sl in rleslices(indseq) if indseq[sl.start]]
+
+
+def rleslices(seq):
+    pos, = np.where(np.diff(seq) != 0)
+    pos = np.concatenate(([0], pos+1,[len(seq)]))
+    return map(slice, pos[:-1], pos[1:])

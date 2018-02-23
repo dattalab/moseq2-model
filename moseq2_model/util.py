@@ -76,15 +76,15 @@ def save_dict(filename, obj_to_save=None, print_message=False):
 
 def load_data_from_matlab(filename, var_name="features", npcs=10):
 
-    f = h5.File(filename)
     data_dict = OrderedDict()
 
-    if var_name in f.keys():
-        score_tmp = f[var_name]
-        for i in xrange(0, len(score_tmp)):
-            tmp = f[score_tmp[i][1]]
-            score_to_add = tmp.value
-            data_dict[str(i+1)] = score_to_add[:npcs, :].T
+    with h5.File(filename, 'r') as f:
+        if var_name in f.keys():
+            score_tmp = f[var_name]
+            for i in range(len(score_tmp)):
+                tmp = f[score_tmp[i][0]]
+                score_to_add = tmp.value
+                data_dict[i] = score_to_add[:npcs, :].T
 
     return data_dict
 
@@ -260,6 +260,7 @@ def represent_ordereddict(dumper, data):
 # taken from moseq by @mattjj and @alexbw
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
+
 
 
 def progressbar(*args, **kwargs):

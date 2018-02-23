@@ -13,7 +13,7 @@ import uuid
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
- get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank
+ get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank, copy_model
 from moseq2_model.kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 
 
@@ -21,10 +21,13 @@ from moseq2_model.kube.util import make_kube_yaml, kube_cluster_check, kube_chec
 def cli():
     pass
 
+
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command(name="parameter-scan")
 @click.argument("param_file", type=click.Path(exists=True))
 @click.option("--cross-validate", "-c", is_flag=True)
+@click.option("--hold-out", is_flag=True)
+@click.option("--nfolds", type=int, default=5)
 @click.option("--num-iter", "-n", type=int, default=100)
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option("--var_name", type=str, default='features')
@@ -46,29 +49,22 @@ def cli():
 @click.option("--input-file", type=str, default="use_data.mat")
 @click.option("--check-cluster", type=str, envvar='MOSEQ2_GKE_CLUSTER_NAME')
 @click.option("--log-path", type=click.Path(exists=True), envvar='MOSEQ2_GKE_LOG_PATH')
-@click.option("--ssh-key", type=str, envvar='MOSEQ2_GKE_SSH_KEY', default=None)
-@click.option("--ssh-user", type=str, envvar='MOSEQ2_GKE_SSH_USER', default=None)
-@click.option("--ssh-remote-server", type=str, envvar='MOSEQ2_GKE_SSH_REMOTE_SERVER', default=None)
-@click.option("--ssh-remote-dir", type=str, envvar='MOSEQ2_GKE_SSH_REMOTE_DIR', default=None)
-@click.option("--ssh-mount-point", type=str, envvar='MOSEQ2_GKE_SSH_MOUNT_POINT', default=None)
 @click.option("--kind", type=str, envvar='MOSEQ2_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight", is_flag=True)
 @click.option("--copy-log", "-l", is_flag=True)
 @click.option("--skip-checks", is_flag=True)
 @click.option("--start-num", type=int, default=0)
-def kube_parameter_scan(
-    param_file, cross_validate,
-    num_iter, restarts, var_name, save_every, save_model, model_progress, npcs, separate_trans, whiten,
-    image, job_name, output_dir, ext, mount_point, bucket, restart_policy,
-    ncpus, nmem, input_file, check_cluster, log_path, ssh_key, ssh_user, ssh_remote_server,
-        ssh_remote_dir, ssh_mount_point, kind, preflight, copy_log, skip_checks, start_num):
+def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, restarts, var_name, save_every,
+                   save_model, model_progress, npcs, separate_trans, whiten, image, job_name,
+                   output_dir, ext, mount_point, bucket, restart_policy, ncpus, nmem, input_file,
+                   check_cluster, log_path, kind, preflight, copy_log, skip_checks, start_num):
 
     # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
 
-    cfg = read_cli_config(param_file ,suppress_output=True)
+    cfg = read_cli_config(param_file, suppress_output=True)
 
     suffix = '_{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
 
@@ -78,15 +74,14 @@ def kube_parameter_scan(
     job_spec = merge_dicts(job_spec, cfg)
 
     if len(check_cluster) > 0 and not skip_checks:
-        cluster_info = kube_cluster_check(check_cluster,ncpus=ncpus,image=image,preflight=preflight)
+        cluster_info = kube_cluster_check(check_cluster, ncpus=ncpus, image=image, preflight=preflight)
 
-    if preflight and not skip_checks or cross_validate:
-        pass_flag,nfolds = kube_check_mount(**job_spec)
-        job_spec['nfolds']=nfolds
+    if preflight and not skip_checks:
+        pass_flag , _ = kube_check_mount(**job_spec)
         if preflight:
             return None
 
-    yaml_out, output_dicts, output_dir,bucket_dir = make_kube_yaml(**job_spec)
+    yaml_out, output_dicts, output_dir, bucket_dir = make_kube_yaml(**job_spec)
 
     # send the yaml to stdout
 
@@ -104,7 +99,7 @@ def kube_parameter_scan(
 
     # copy yaml file to log directory as well
 
-    log_store_path=os.path.join(log_path, job_name+suffix+'.yaml')
+    log_store_path = os.path.join(log_path, job_name+suffix+'.yaml')
     with open(log_store_path, 'w') as f:
         yaml.dump(job_spec, f, Dumper=yaml.RoundTripDumper)
 
@@ -120,12 +115,15 @@ def kube_parameter_scan(
 @cli.command(name="learn-model")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
-@click.option("--hold-out", "-h", type=int, default=-1, help="Index of data group to hold out (-1 for none)")
+@click.option("--hold-out", "-h", type=int, default=None, help="Index of data group to hold out (<nfolds)")
+@click.option("--nfolds", type=int, default=None, help="Number of folds for split")
 @click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")
 @click.option("--restarts", "-r", type=int, default=1, help="Number of restarts for model")
 @click.option("--var-name", type=str, default='features', help="Variable name in input file with PCs")
-@click.option("--save-every", "-s", type=int, default=1, help="Increment to save labels and model object")
-@click.option("--save-model", "-m", is_flag=True, help="Save model object")
+@click.option("--save-every", "-s", type=int, default=-1,
+              help="Increment to save labels and model object (-1 for just last)")
+@click.option("--save-model", is_flag=True, help="Save model object")
+@click.option("--max-states", "-m", type=int, default=100, help="Maximum number of states")
 @click.option("--model-progress", "-p", is_flag=True, help="Show model progress")
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
@@ -135,17 +133,32 @@ def kube_parameter_scan(
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
-def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, save_every,
-                save_model, model_progress, npcs, whiten, kappa, gamma, nu, nlags, separate_trans, robust):
+def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var_name,
+                save_every, save_model, max_states, model_progress, npcs, whiten,
+                kappa, gamma, nu, nlags, separate_trans, robust):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
+
+    if save_every < 0:
+        click.echo("Will only save the last iteration of the model")
+        save_every = num_iter+1
 
     click.echo("Entering modeling training")
 
     run_parameters = locals()
     data_dict, data_metadata = load_pcs(filename=input_file, var_name=var_name,
                                         npcs=npcs, load_groups=separate_trans)
+    all_keys = data_dict.keys()
+    nkeys = len(all_keys)
+
+    if hold_out >= 0 and nfolds >= hold_out and nkeys >= nfolds:
+        click.echo("Will hold out split "+str(hold_out)+" of "+str(nfolds))
+        splits = np.array_split(range(nkeys), nfolds)
+        hold_out_list = [all_keys[i] for i in splits[hold_out].astype('int').tolist()]
+        train_list = [all_keys[i] for i in all_keys if i not in hold_out_list]
+        click.echo("Holding out indices "+str(hold_out_list))
+        click.echo("Training on indices"+str(train_list))
 
     # use a list of dicts, with everything formatted ready to go
 
@@ -155,6 +168,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         'nlags': nlags,
         'separate_trans': separate_trans,
         'robust': robust,
+        'max_states': max_states,
         'nu': nu
     }
 
@@ -172,12 +186,12 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     else:
         click.echo('Not whitening the data')
 
-    all_keys = data_dict.keys()
-
-    if hold_out >= 0:
-        train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i not in all_keys[hold_out])
+    if hold_out >= 0 and nfolds >= hold_out:
+        train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
+        test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
     else:
         train_data = data_dict
+        test_data = None
 
     loglikes = []
     labels = []
@@ -188,6 +202,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         arhmm = ARHMM(data_dict=train_data, **model_parameters)
         [arhmm, loglikes_sample, labels_sample] = \
             train_model(model=arhmm,
+                        save_every=save_every,
                         num_iter=num_iter,
                         cli=True,
                         leave=False,
@@ -196,10 +211,9 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
                         initial=i*num_iter,
                         file=sys.stdout)
 
-        if hold_out >= 0:
-            heldout_ll.append(arhmm.log_likelihood(data_dict[all_keys[hold_out]]))
-        else:
-            heldout_ll.append(None)
+        if test_data:
+            click.echo("Computing held out likelihoods...")
+            [heldout_ll.append(arhmm.log_likelihood(v)) for k, v in test_data.iteritems()]
 
         loglikes.append(loglikes_sample)
         labels.append(labels_sample)
@@ -209,7 +223,7 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
 
     if save_model:
-        save_model = arhmm
+        save_model = copy_model(arhmm)
     else:
         save_model = None
 
@@ -223,7 +237,8 @@ def learn_model(input_file, dest_file, hold_out, num_iter, restarts, var_name, s
         'model_parameters': save_parameters,
         'run_parameters': run_parameters,
         'metadata': data_metadata,
-        'model': save_model}
+        'model': save_model
+        }
 
     save_dict(filename=dest_file, obj_to_save=export_dict)
 
