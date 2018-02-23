@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 import numpy as np
 import h5py as h5
 import joblib
@@ -8,15 +9,6 @@ import ruamel.yaml as yaml
 import itertools
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
-
-
-# stolen from MoSeq thanks @alexbw
-def enum(*sequential, **named):
-    """Handy way to fake an enumerated type in Python
-    http://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
-    """
-    enums = dict(zip(sequential, range(len(sequential))), **named)
-    return type('Enum', (), enums)
 
 
 # grab matlab data
@@ -69,7 +61,7 @@ def save_dict(filename, obj_to_save=None, print_message=False):
             print('Saving pickle '+filename)
             joblib.dump(obj_to_save, filename, compress=0)
         else:
-            print('Will save piclke '+filename)
+            print('Will save pickle '+filename)
     else:
         raise ValueError('Did understand filetype')
 
@@ -96,7 +88,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
     if var_name in f.keys():
 
-        tmp=f[var_name]
+        tmp = f[var_name]
 
         for i in xrange(len(tmp)):
             tmp2 = f[tmp[i][0]]
@@ -126,11 +118,7 @@ def copy_model(self):
     return cp
 
 
-def save_model_fit(filename, model, loglikes, labels):
-    joblib.dump({'model': copy_model(model), 'loglikes': loglikes, 'labels': labels})
-
-
-def get_parameters_from_model(model,save_ar=True):
+def get_parameters_from_model(model, save_ar=True):
 
     # trans_dist=model.trans_distn
     init_obs_dist = model.init_emission_distn.hypparams
@@ -140,14 +128,17 @@ def get_parameters_from_model(model,save_ar=True):
 
     try:
         trans_dist = model.trans_distn
-    except:
+    except Exception:
         tmp = model.trans_distns
         trans_dist = tmp[0]
+
+    ls_obj = dir(model.obs_distns[0])
 
     parameters = {
         'kappa': trans_dist.kappa,
         'gamma': trans_dist.gamma,
         'alpha': trans_dist.alpha,
+        'nu': None,
         'num_states': trans_dist.N,
         'nu_0': init_obs_dist['nu_0'],
         'sigma_0': init_obs_dist['sigma_0'],
@@ -156,6 +147,9 @@ def get_parameters_from_model(model,save_ar=True):
         'mu_0': init_obs_dist['mu_0'],
         'model_class': model.__class__.__name__
         }
+
+    if 'nu' in ls_obj:
+        parameters['nu'] = model.obs_distns[0].nu
 
     if save_ar:
         parameters['ar_mat'] = [obs.A for obs in model.obs_distns]
@@ -228,39 +222,38 @@ def read_cli_config(filename, suppress_output=False):
 
 
 # credit to http://stackoverflow.com/questions/14000893/specifying-styles-for-portions-of-a-pyyaml-dump
-class blockseq(dict):
-    pass
-
-
-def blockseq_rep(dumper, data):
-    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data, flow_style=False)
-
-
-class flowmap(dict):
-    pass
-
-
-def flowmap_rep(dumper, data):
-    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data, flow_style=True)
+# class blockseq(dict):
+#     pass
+#
+#
+# def blockseq_rep(dumper, data):
+#     return dumper.represent_mapping(u'tag:yaml.org,2002:map', data, flow_style=False)
+#
+#
+# class flowmap(dict):
+#     pass
+#
+#
+# def flowmap_rep(dumper, data):
+#     return dumper.represent_mapping(u'tag:yaml.org,2002:map', data, flow_style=True)
 
 
 # from http://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
-def represent_ordereddict(dumper, data):
-    value = []
-
-    for item_key, item_value in data.items():
-        node_key = dumper.represent_data(item_key)
-        node_value = dumper.represent_data(item_value)
-
-        value.append((node_key, node_value))
-
-    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+# def represent_ordereddict(dumper, data):
+#     value = []
+#
+#     for item_key, item_value in data.items():
+#         node_key = dumper.represent_data(item_key)
+#         node_value = dumper.represent_data(item_value)
+#
+#         value.append((node_key, node_value))
+#
+#     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
 
 
 # taken from moseq by @mattjj and @alexbw
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
-
 
 
 def progressbar(*args, **kwargs):

@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
@@ -95,8 +96,8 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
     nsplits = len(data_dict)
     nparameters = len(values)
 
-    print 'Will use '+str(nsplits)+' splits'
-    print 'User passed '+str(nparameters)+' parameter values for '+parameter
+    print('Will use '+str(nsplits)+' splits')
+    print('User passed '+str(nparameters)+' parameter values for '+parameter)
 
     # by default use all the data
 
@@ -172,5 +173,5 @@ def slices_from_indicators(indseq):
 
 def rleslices(seq):
     pos, = np.where(np.diff(seq) != 0)
-    pos = np.concatenate(([0], pos+1,[len(seq)]))
+    pos = np.concatenate(([0], pos+1, [len(seq)]))
     return map(slice, pos[:-1], pos[1:])

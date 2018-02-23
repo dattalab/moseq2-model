@@ -1,4 +1,5 @@
 from __future__ import division
+from __future__ import print_function
 import click
 import os
 import datetime
@@ -13,7 +14,7 @@ import uuid
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
- get_parameters_from_model, represent_ordereddict, merge_dicts, progressbar, list_rank, copy_model
+ get_parameters_from_model, merge_dicts, progressbar, list_rank, copy_model
 from moseq2_model.kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
 
 
@@ -77,7 +78,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
         cluster_info = kube_cluster_check(check_cluster, ncpus=ncpus, image=image, preflight=preflight)
 
     if preflight and not skip_checks:
-        pass_flag , _ = kube_check_mount(**job_spec)
+        pass_flag, _ = kube_check_mount(**job_spec)
         if preflight:
             return None
 
@@ -89,10 +90,11 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
     job_spec.pop('cfg', None)
     job_spec.pop('worker_dicts', None)
     job_spec['worker_dicts'] = output_dicts
-    represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
-    yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
+    # represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
+    # yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
 
-    job_spec = OrderedDict((str(key), str(value)) for key, value in sorted(job_spec.iteritems()))
+    # job_spec =
+    # job_spec = OrderedDict((str(key), str(value)) for key, value in sorted(job_spec.iteritems()))
 
     if log_path is None:
         log_path = os.getcwd()
@@ -101,7 +103,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
 
     log_store_path = os.path.join(log_path, job_name+suffix+'.yaml')
     with open(log_store_path, 'w') as f:
-        yaml.dump(job_spec, f, Dumper=yaml.RoundTripDumper)
+        yaml.dump(job_spec, f)
 
     # is user specifies copy this ish to the output directory as well for solid(!) bookkeeping
 
@@ -321,9 +323,11 @@ def export_results(input_dir, job_manifest, dest_file):
         restart_list = True
         nrestarts = len(test_load['labels'])
         nsets = len(test_load['labels'][0])
+        nholdouts = len(test_load['heldout_ll'])
     elif rank < 2:
         restart_list = False
         nsets = len(test_load['labels'])
+        nholdouts = len(test_load['heldout_ll'])
         nrestarts = 1
     else:
         raise ValueError("Cannot interpret labels")
@@ -338,7 +342,7 @@ def export_results(input_dir, job_manifest, dest_file):
 
     save_array = np.empty((nfiles, nsets, nrestarts), dtype=object)
     all_parameters = np.empty((nfiles, nrestarts,), dtype=object)
-    heldout_ll = np.empty((nfiles, nrestarts), dtype=np.float64)
+    heldout_ll = np.empty((nfiles, nholdouts, nrestarts), dtype=np.float64)
     loglikes = np.empty((nfiles, nrestarts), dtype=np.float64)
 
     save_array[:] = np.nan
@@ -346,21 +350,28 @@ def export_results(input_dir, job_manifest, dest_file):
     heldout_ll[:] = np.nan
     loglikes[:] = np.nan
 
+    # farm this out with joblib parallel
+
     for i, use_dict in enumerate(progressbar(parse_dicts, cli=True)):
 
         try:
             use_data = joblib.load(os.path.join(input_dir, os.path.basename(use_dict['filename'])))
         except IOError:
             continue
+        except KeyboardInterrupt:
+            click.echo("Bailing")
+            sys.exit()
 
         if restart_list:
-            for j in xrange(nrestarts):
+            for j in range(nrestarts):
                 all_parameters[i][j] = use_data['model_parameters'][j]
 
-                for k in xrange(nsets):
+                for k in range(nsets):
                     save_array[i][k][j] = np.array(use_data['labels'][j][k][-1], dtype=np.int16)
 
-                heldout_ll[i][j] = use_data['heldout_ll'][j]
+                for k in range(nholdouts):
+                    heldout_ll[i][k][j] = use_data['heldout_ll'][k]
+
                 loglikes[i][j] = use_data['loglikes'][j][-1]
         else:
 
@@ -369,7 +380,9 @@ def export_results(input_dir, job_manifest, dest_file):
             for j in xrange(nsets):
                 save_array[i][j][0] = np.array(use_data['labels'][j][-1], dtype=np.int16)
 
-            heldout_ll[i][0] = use_data['heldout_ll']
+            for j in range(nholdouts):
+                heldout_ll[i][j] = use_data['heldout_ll'][j]
+
             loglikes[i][0] = use_data['loglikes'][-1]
 
     # export labels, parameter, bookkeeping stuff
