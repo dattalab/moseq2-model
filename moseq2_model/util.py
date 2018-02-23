@@ -288,7 +288,7 @@ def progressbar(*args, **kwargs):
     else:
         try:
             return tqdm_notebook(*args, **kwargs)
-        except:
+        except Exception:
             return tqdm(*args, **kwargs)
 
 

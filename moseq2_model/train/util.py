@@ -57,7 +57,7 @@ def whiten_all(data_dict, center=True):
 # taken from moseq by @mattjj and @alexbw
 def whiten_each(data_dict, center=True):
     for k, v in data_dict.items():
-        tmp_dict = whiten_all(OrderedDict([(k,v)]), center=center)
+        tmp_dict = whiten_all(OrderedDict([(k, v)]), center=center)
         data_dict[k] = tmp_dict[k]
 
     return data_dict
@@ -132,7 +132,6 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
 
                 for label_itr, tmp_label in enumerate(tmp_labels):
                     labels[itr, data_idx, parameter_idx, label_itr] = tmp_label
-
 
     return heldout_ll, labels
 
