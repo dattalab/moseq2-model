@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 # I've hardcorded the dependency links to use very high version numbers, hope it doesn't break anything!
 # note that you will need to pass the option --process-dependency-links for this to work correctly
 setup(
-    name='kinect_modeling',
+    name='moseq2_model',
     version='0.0.1',
     author='Datta Lab',
     description='Modeling for the best',
