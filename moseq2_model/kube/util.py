@@ -16,7 +16,7 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
                    var_name, save_every, cross_validate, model_progress, whiten,
                    save_model, restarts, worker_dicts, other_parameters, ext,
                    job_name, image, ncpus, restart_policy, gcs_options, robust,
-                   suffix, kind, separate_trans, nmem, hold_out,
+                   suffix, kind, separate_trans, nmem, hold_out, 
                    nfolds=None, start_num=None, **kwargs):
 
     # TODO: better safeguards against user stupidity
@@ -109,7 +109,7 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
         # scan parameters are commands, along with any other specified parameters
         # build up the list for what we're going to pass to the command line
 
-        # restart_idx = worker_dicts[itr].pop('restart', 0)
+        worker_dicts[itr].pop('restart', 0)
         all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
 
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))

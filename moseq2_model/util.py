@@ -3,10 +3,10 @@ from __future__ import print_function
 import numpy as np
 import h5py as h5
 import joblib
-import scipy.io as sio
 import copy
 import ruamel.yaml as yaml
 import itertools
+import hdf5storage
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 
@@ -60,33 +60,77 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
     return data_dict, metadata
 
 
-def save_dict(filename, obj_to_save=None, print_message=False):
+def save_dict(filename, obj_to_save=None):
 
     # we gotta switch to lists here my friend, create a file with multiple
     # pickles, only load as we need them
 
     if filename.endswith('.mat'):
-        if not print_message:
-            print('Saving MAT file '+filename)
-            sio.savemat(filename, mdict=obj_to_save)
-        else:
-            print('Will save MAT file '+filename)
+        print('Saving MAT file '+filename)
+        hdf5storage.savemat(filename, mdict=obj_to_save)
     elif filename.endswith('.z'):
-        # pickle it
-        if not print_message:
-            print('Saving compressed pickle '+filename)
-            joblib.dump(obj_to_save, filename, compress=3)
-        else:
-            print('Will save compressed pickle '+filename)
+        print('Saving compressed pickle '+filename)
+        joblib.dump(obj_to_save, filename, compress=3)
     elif filename.endswith('.pkl') | filename.endswith('.p'):
-        # pickle it
-        if not print_message:
-            print('Saving pickle '+filename)
-            joblib.dump(obj_to_save, filename, compress=0)
-        else:
-            print('Will save pickle '+filename)
+        print('Saving pickle '+filename)
+        joblib.dump(obj_to_save, filename, compress=0)
+    elif filename.endswith('.h5'):
+        print('Saving h5 file '+filename)
+        with h5.File(filename, 'w') as f:
+            recursively_save_dict_contents_to_group(f, obj_to_save)
     else:
         raise ValueError('Did understand filetype')
+
+
+# https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
+def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
+    """
+    ....
+    """
+    for key, item in export_dict.iteritems():
+        print(path+key)
+        print(type(item))
+        if isinstance(key, (tuple, int)):
+            key = str(key)
+
+        if isinstance(item, unicode):
+            item = item.encode('utf8')
+
+        if isinstance(item, np.ndarray) and item.dtype == np.object:
+            dt = h5.special_dtype(vlen=item.flat[0].dtype)
+            h5file.create_dataset(path+key, item.shape, dtype=dt, compression='gzip')
+            for tup, idx in np.ndenumerate(item):
+                if item[tup] is not None:
+                    h5file[path+key][tup] = np.array(item[tup]).ravel()
+        elif isinstance(item, (np.ndarray, list)):
+            h5file.create_dataset(path+key, data=item, compression='gzip')
+        elif isinstance(item, (np.int, np.float, str, bytes)):
+            h5file.create_dataset(path+key, data=item)
+        elif isinstance(item, dict):
+            recursively_save_dict_contents_to_group(h5file, item, path + key + '/')
+        else:
+            raise ValueError('Cannot save {} type'.format(type(item)))
+
+
+def load_dict_from_hdf5(filename):
+    """
+    ....
+    """
+    with h5.File(filename, 'r') as h5file:
+        return recursively_load_dict_contents_from_group(h5file, '/')
+
+
+def recursively_load_dict_contents_from_group(h5file, path):
+    """
+    ....
+    """
+    ans = {}
+    for key, item in h5file[path].items():
+        if isinstance(item, h5._hl.dataset.Dataset):
+            ans[key] = item.value
+        elif isinstance(item, h5._hl.group.Group):
+            ans[key] = recursively_load_dict_contents_from_group(h5file, path + key + '/')
+    return ans
 
 
 def load_data_from_matlab(filename, var_name="features", npcs=10):

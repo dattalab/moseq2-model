@@ -11,7 +11,7 @@ from train.models import ARHMM
 import ruamel.yaml as yaml
 import numpy as np
 import uuid
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
  get_parameters_from_model, merge_dicts, progressbar, list_rank, copy_model
@@ -232,6 +232,9 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     # TODO:  just compute cross-likes at the end and potentially dump the model (what else
     # would we want the model for hm?), though hard drive space is cheap, recomputing models is not...
 
+    # TODO: decision time, we could just save the model and strip out the parameters later,
+    # would be much more lightweight, right now we're being too redundant
+
     export_dict = {
         'loglikes': loglikes,
         'labels': labels,
@@ -302,9 +305,9 @@ def export_results(input_dir, job_manifest, dest_file):
 
     parse_dicts = ast.literal_eval(manifest['worker_dicts'])
 
-    if 'hold-out' in parse_dicts[0].keys():
-        for i in xrange(len(parse_dicts)):
-            parse_dicts[i]['hold_out'] = parse_dicts[i].pop('hold-out')
+    # if 'hold-out' in parse_dicts[0].keys():
+    #     for i in xrange(len(parse_dicts)):
+    #         parse_dicts[i]['hold_out'] = parse_dicts[i].pop('hold-out')
 
     nfiles = len(parse_dicts)
 
@@ -335,24 +338,42 @@ def export_results(input_dir, job_manifest, dest_file):
     if 'metadata' in test_load.keys():
         metadata = test_load['metadata']
         for key, value in metadata.iteritems():
+            print (key)
             if value is None:
                 metadata[key] = 'Null'
+            if key == 'uuids' or key == 'groups' and value is list and all(isinstance(value, str)):
+                metadata[key] = [n.encode("utf8") for n in value]
     else:
         metadata = {}
 
-    save_array = np.empty((nfiles, nsets, nrestarts), dtype=object)
-    all_parameters = np.empty((nfiles, nrestarts,), dtype=object)
+    save_array = np.empty((nfiles, nsets, nrestarts), dtype=np.object)
+
+    all_parameters = {
+        'kappa': np.empty((nfiles, nrestarts), dtype=np.float64),
+        'gamma': np.empty((nfiles, nrestarts), dtype=np.float64),
+        'nu': np.empty((nfiles, nrestarts), dtype=np.float64),
+        'num_states': np.empty((nfiles, nrestarts), dtype=np.uint16),
+        'nlags': np.empty((nfiles, nrestarts), dtype=np.uint8),
+        'npcs': np.empty((nfiles, nrestarts), dtype=np.uint8),
+        'ar_mat': np.empty((nfiles, nrestarts), dtype=np.object),
+        'sig': np.empty((nfiles, nrestarts), dtype=np.object)
+    }
+
+    for k in all_parameters.keys():
+        all_parameters[k][:] = np.nan
+
     heldout_ll = np.empty((nfiles, nholdouts, nrestarts), dtype=np.float64)
     loglikes = np.empty((nfiles, nrestarts), dtype=np.float64)
 
-    save_array[:] = np.nan
-    all_parameters[:] = np.nan
     heldout_ll[:] = np.nan
     loglikes[:] = np.nan
 
     # farm this out with joblib parallel
+    # parse_dicts = parse_dicts[:2]
 
     for i, use_dict in enumerate(progressbar(parse_dicts, cli=True)):
+
+        # scan_dicts[i] = parse_dicts[i]
 
         try:
             use_data = joblib.load(os.path.join(input_dir, os.path.basename(use_dict['filename'])))
@@ -363,15 +384,28 @@ def export_results(input_dir, job_manifest, dest_file):
             sys.exit()
 
         if restart_list:
+
             for j in range(nrestarts):
                 tmp = use_data['model_parameters'][j]
+                tmp['npcs'] = tmp['sig'][0].shape[0]
+
                 for k, v in tmp.iteritems():
                     if np.all(v is None):
                         tmp[k] = np.nan
-                all_parameters[i][j] = tmp
+
+                    if k == 'sig' or k == 'ar_mat':
+                        nsigs = len(v)
+                        r, c = v[0].shape
+                        newsig = np.empty((nsigs, r, c), dtype=np.float64)
+                        for l, sig in enumerate(v):
+                            newsig[l, ...] = sig
+                        tmp[k] = newsig
+
+                for k in all_parameters.keys():
+                    all_parameters[k][i, j] = tmp[k]
 
                 for k in range(nsets):
-                    save_array[i][k][j] = np.array(use_data['labels'][j][k][-1], dtype=np.int16)
+                    save_array[i, k, j] = np.array(use_data['labels'][j][k][-1], dtype=np.int16)
 
                 for k in range(nholdouts):
                     heldout_ll[i][k][j] = use_data['heldout_ll'][k]
@@ -397,7 +431,7 @@ def export_results(input_dir, job_manifest, dest_file):
 
     metadata['parameters'] = all_parameters
     metadata['export_uuid'] = str(uuid.uuid4())
-    metadata['scan_dicts'] = parse_dicts
+    # metadata['scan_dicts'] = scan_dicts
     metadata['loglikes'] = loglikes
     metadata['heldout_ll'] = heldout_ll
 

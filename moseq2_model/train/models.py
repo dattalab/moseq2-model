@@ -35,6 +35,10 @@ def _get_empirical_ar_params(train_datas, params):
     # E_{IW}[S] = S_0 / (nu_0 - datadimension - 1)
     obs_params["S_0"] = obs_distn.sigma * (params["nu_0"] - datadimension - 1)
 
+    # make sure to include nu if we're using the tAR model
+    if 'nu' in params.keys():
+        obs_params['nu'] = params['nu']
+
     return obs_params
 
 
@@ -69,12 +73,10 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
     obs_hypparams = merge_dicts(default_obs_hypparams, obs_hypparams)
     model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)
 
-    # TODO: return initialization parameters for saving downstream
-
     if empirical_bayes:
         obs_hypparams = _get_empirical_ar_params(data_dict.values(), obs_hypparams)
 
-    # TODO: add option to change this to RobustAutoRegression (all same hypers except for nu)
+    # TODO: return initialization parameters for saving downstream
 
     if separate_trans and not robust:
         print('Using model class FastARWeakLimitStickyHDPHMMSeparateTrans')

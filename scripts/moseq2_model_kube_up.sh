@@ -116,15 +116,12 @@ case $key in
 		;;
 		-a|--authorize)
 		AUTHORIZE=true
-		shift
 		;;
 		-p|--preemptible)
 		PREEMPTIBLE=true
-		shift
 		;;
 		-d|--dry-run)
 		DRYRUN=true
-		shift
 		;;
 		--auto-scale)
 		AUTOSCALE=true
