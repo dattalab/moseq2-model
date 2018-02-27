@@ -11,7 +11,7 @@ from train.models import ARHMM
 import ruamel.yaml as yaml
 import numpy as np
 import uuid
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
  get_parameters_from_model, merge_dicts, progressbar, list_rank, copy_model
@@ -303,7 +303,10 @@ def export_results(input_dir, job_manifest, dest_file):
     with open(job_manifest, 'r') as f:
         manifest = yaml.load(f.read(), Loader=yaml.Loader)
 
-    parse_dicts = ast.literal_eval(manifest['worker_dicts'])
+    if type(manifest['worker_dicts']) is list:
+        parse_dicts = manifest['worker_dicts']
+    elif type(manifest['worker_dicts']) is str:
+        parse_dicts = ast.literal_eval(manifest['worker_dicts'])
 
     # if 'hold-out' in parse_dicts[0].keys():
     #     for i in xrange(len(parse_dicts)):
@@ -349,9 +352,9 @@ def export_results(input_dir, job_manifest, dest_file):
     save_array = np.empty((nfiles, nsets, nrestarts), dtype=np.object)
 
     all_parameters = {
-        'kappa': np.empty((nfiles, nrestarts), dtype=np.float64),
-        'gamma': np.empty((nfiles, nrestarts), dtype=np.float64),
-        'nu': np.empty((nfiles, nrestarts), dtype=np.float64),
+        'kappa': np.empty((nfiles, nrestarts), dtype=np.float32),
+        'gamma': np.empty((nfiles, nrestarts), dtype=np.float32),
+        'nu': np.empty((nfiles, nrestarts), dtype=np.float32),
         'num_states': np.empty((nfiles, nrestarts), dtype=np.uint16),
         'nlags': np.empty((nfiles, nrestarts), dtype=np.uint8),
         'npcs': np.empty((nfiles, nrestarts), dtype=np.uint8),
@@ -362,8 +365,8 @@ def export_results(input_dir, job_manifest, dest_file):
     for k in all_parameters.keys():
         all_parameters[k][:] = np.nan
 
-    heldout_ll = np.empty((nfiles, nholdouts, nrestarts), dtype=np.float64)
-    loglikes = np.empty((nfiles, nrestarts), dtype=np.float64)
+    heldout_ll = np.empty((nfiles, nholdouts, nrestarts), dtype=np.float32)
+    loglikes = np.empty((nfiles, nrestarts), dtype=np.float32)
 
     heldout_ll[:] = np.nan
     loglikes[:] = np.nan
@@ -396,7 +399,7 @@ def export_results(input_dir, job_manifest, dest_file):
                     if k == 'sig' or k == 'ar_mat':
                         nsigs = len(v)
                         r, c = v[0].shape
-                        newsig = np.empty((nsigs, r, c), dtype=np.float64)
+                        newsig = np.empty((nsigs, r, c), dtype=np.float32)
                         for l, sig in enumerate(v):
                             newsig[l, ...] = sig
                         tmp[k] = newsig
