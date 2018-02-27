@@ -67,7 +67,7 @@ def save_dict(filename, obj_to_save=None):
 
     if filename.endswith('.mat'):
         print('Saving MAT file '+filename)
-        hdf5storage.savemat(filename, mdict=obj_to_save)
+        sio.savemat(filename, mdict=obj_to_save)
     elif filename.endswith('.z'):
         print('Saving compressed pickle '+filename)
         joblib.dump(obj_to_save, filename, compress=3)
@@ -88,8 +88,6 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
     ....
     """
     for key, item in export_dict.iteritems():
-        print(path+key)
-        print(type(item))
         if isinstance(key, (tuple, int)):
             key = str(key)
 
