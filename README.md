@@ -28,7 +28,9 @@ pip install cython
 pip install -e . --process-dependency-links
 ```
 
-### Bash scripts
+If you just want to use these tools locally, you're done.  If you want to train models on GKE, you'll need to complete parts 2 and 3.
+
+### Bash scripts (GKE only)
 
 Note that the installation also requires the [kubectl comand line tool](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl-binary-via-curl).  Be sure to install before proceeding.  Included in this repo are two convenience scripts for firing up and tearing down a GKE cluster, `scripts/moseq2_model_kube_up.sh` and `scripts/moseq2_model_kube_down.sh`.  Make symlinks to them in /usr/local/bin/,
 
@@ -40,7 +42,7 @@ moseq2_model_kube_up --help
 moseq2_model_kube_down --help
 ```
 
-### Gcloud components
+### Gcloud components (GKE only)
 
 You will need to create a project using the [Google Cloud Platform console](https://cloud.google.com/resource-manager/docs/creating-managing-projects).  Once that is done, let's authorize gcloud,
 
@@ -85,7 +87,63 @@ These commands will display what would be issued to the command line if you were
 
 ## Usage
 
-### Model training
+### Data format (pickle)
+
+If you save your PCs with the extension `.p, .p.z, .pkl`, then it is assumed that your data is stored as a pickle saved through `joblib.dump`.  You may use one of the two following formats for your PCs,
+
+1. An ordered dictionary (from `collections.OrderedDict`) with key value pairs, where each value is a 2D numpy array that is `nframes x pcs`, and each key specifies a different session (or experiment, doesn't matter).  Here, the keys are completely arbitrary, but your results are returned in the same order, which is why we use an ordered dictionary.
+
+```python
+from collections import OrderedDict
+import numpy
+import joblib
+fake_data=OrderedDict()
+fake_data['session1']=numpy.random.randn(1000,10)
+fake_data['session2']=numpy.random.randn(1000,10)
+joblib.dump('myfakedata.p',fake_data)
+```
+
+2. An ordered dictionary where each value is a `NamedTuple` (from Python `collections.NamedTuple`), with two fields `pcs` and `group`.  The field `pcs` should point to a 2D numpy array, and `group` should be a string that specifies, e.g. the treatment group.  This will be used to specify separate transition matrices when training the model.
+
+```python
+from collections import OrderedDict, NamedTuple
+import numpy
+import joblib
+fake_data=OrderedDict()
+features=namedtuple('features',['pcs','group'])
+fake_data[1]=features(pcs=np.random.randn(1000,10),group='saline')
+fake_data[2]=features(pcs=np.random.randn(1000,10),group='drug')
+fake_data[3]=features(pcs=np.random.randn(1000,10),group='saline')
+joblib.dump('myfakedata.p',fake_data)
+```
+
+Now keys `1` and `3` will use the same transition matrix, and `2` will use a separate one.
+
+### Data format (MATLAB)
+
+If you are exporting your PCs from a MATLAB environment, use the `.mat` extension, and save your PCs and groups as separate cell arrays.
+
+```matlab
+fake_data={}
+fake_data{1}=randn(1000,10)
+fake_data{2}=randn(1000,10)
+groups{1}='saline'
+groups{2}='drug'
+```
+
+### Model training (local)
+
+To train a model use the `learn-model` command so, e.g.
+
+```sh
+moseq2-model learn-model myfakedata.p myresults.p.z
+```
+
+This will train a model using all default parameters, and will store the results in `myresults.p.z`.  To explore the myriad options,
+
+```sh
+moseq2-model learn-model --help
+```
 
 ### Parameter scan
 
