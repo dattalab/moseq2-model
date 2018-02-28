@@ -7,6 +7,7 @@ import copy
 import ruamel.yaml as yaml
 import itertools
 import hdf5storage
+import scipy.io as sio
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 
