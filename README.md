@@ -124,12 +124,15 @@ Now keys `1` and `3` will use the same transition matrix, and `2` will use a sep
 If you are exporting your PCs from a MATLAB environment, use the `.mat` extension, and save your PCs and groups as separate cell arrays.
 
 ```matlab
-fake_data={}
-fake_data{1}=randn(1000,10)
-fake_data{2}=randn(1000,10)
+features={}
+features{1}=randn(1000,10)
+features{2}=randn(1000,10)
 groups{1}='saline'
 groups{2}='drug'
+save('myfakedata.mat','fake_data','groups','-v7.3')
 ```
+
+By default `moseq2-model` assumes that your pcs live in `features` and your groups in `groups`.  Use the `-v7.3` flag to make sure you use an hdf5-compatible format.
 
 ### Model training (local)
 
