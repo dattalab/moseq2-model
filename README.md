@@ -1,4 +1,4 @@
-# MoSeq2-model [![Build Status](https://travis-ci.com/jmarkow/moseq2_model.svg?token=gvoikVySDHEmvHT7Dbed&branch=master)](https://travis-ci.com/jmarkow/moseq2_model)
+# MoSeq2-model [![Build Status](https://travis-ci.com/dattalab/moseq2_model.svg?token=gvoikVySDHEmvHT7Dbed&branch=master)](https://travis-ci.com/dattalab/moseq2_model)
 
 Welcome to moseq2-model, a package of convenience functions for submitting data extracted using moseq2 for modeling.
 
