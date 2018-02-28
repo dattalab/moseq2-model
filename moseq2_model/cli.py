@@ -248,48 +248,6 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     save_dict(filename=dest_file, obj_to_save=export_dict)
 
 
-@cli.command(name="convert-results")
-@click.argument("input_file", type=click.Path(exists=True))
-@click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
-def convert_results(input_file, dest_file):
-
-    click.echo('Loading data...')
-    input_data = joblib.load(input_file)
-    rank = list_rank(input_data['labels'])
-
-    if rank == 2:
-        nrestarts = len(input_data['labels'])
-        nsets = len(input_data['labels'][0])
-    elif rank < 2:
-        nsets = len(input_data['labels'])
-        nrestarts = 1
-    else:
-        raise ValueError("Cannot interpret labels")
-
-    save_labels = np.empty((nsets, nrestarts), dtype=object)
-    loglikes = np.empty((nrestarts,), dtype=object)
-
-    click.echo('Sorting data...')
-    pbar = progressbar(total=nsets*nrestarts, cli=True)
-
-    for i in range(nrestarts):
-        loglikes[i] = np.array(input_data['loglikes'][i], dtype=np.float64)
-        for j in xrange(nsets):
-            save_labels[j][i] = input_data['labels'][i][j]
-            pbar.update(1)
-
-    pbar.close()
-
-    # input_data['labels']=save_labels
-    export_dict = {
-        'labels': save_labels,
-        'parameters': input_data['model_parameters'],
-        'loglikes': loglikes
-    }
-
-    save_dict(filename=dest_file, obj_to_save=export_dict)
-
-
 @cli.command("export-results")
 @click.option("--input-dir", "-i", type=click.Path(exists=True), default=os.getcwd())
 @click.option("--job-manifest", "-j", type=click.Path(exists=True, readable=True),

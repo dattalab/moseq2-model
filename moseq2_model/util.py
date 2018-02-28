@@ -1,13 +1,12 @@
 from __future__ import division
 from __future__ import print_function
 import numpy as np
-import h5py as h5
+import h5py
 import joblib
 import copy
 import ruamel.yaml as yaml
 import itertools
-import hdf5storage
-import scipy.io as sio
+import scipy.io
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 
@@ -19,7 +18,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
     metadata = {
         'uuids': None,
-        'groups': None
+        'groups': [],
     }
 
     if filename.endswith('.mat'):
@@ -32,9 +31,20 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         else:
             metadata['groups'] = None
     elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
+        print('Loading data from pickle file')
         data_dict = joblib.load(filename)
+
+        if is_named_tuple(data_dict.itervalues().next()):
+            print('Detected NamedTuple')
+            for k, v in data_dict.iteritems():
+                data_dict[k] = v.pcs[:, :npcs]
+                metadata['groups'].append(v.group)
+        else:
+            for k, v in data_dict.iteritems():
+                data_dict[k] = v[:, :npcs]
+
     elif filename.endswith('.h5'):
-        with h5.File(filename, 'r') as f:
+        with h5py.File(filename, 'r') as f:
             dsets = f.keys()
             print('In {} found {} datasets'.format(filename, dsets))
             if var_name in dsets:
@@ -68,7 +78,7 @@ def save_dict(filename, obj_to_save=None):
 
     if filename.endswith('.mat'):
         print('Saving MAT file '+filename)
-        sio.savemat(filename, mdict=obj_to_save)
+        scipy.io.savemat(filename, mdict=obj_to_save)
     elif filename.endswith('.z'):
         print('Saving compressed pickle '+filename)
         joblib.dump(obj_to_save, filename, compress=3)
@@ -77,7 +87,7 @@ def save_dict(filename, obj_to_save=None):
         joblib.dump(obj_to_save, filename, compress=0)
     elif filename.endswith('.h5'):
         print('Saving h5 file '+filename)
-        with h5.File(filename, 'w') as f:
+        with h5py.File(filename, 'w') as f:
             recursively_save_dict_contents_to_group(f, obj_to_save)
     else:
         raise ValueError('Did understand filetype')
@@ -96,7 +106,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             item = item.encode('utf8')
 
         if isinstance(item, np.ndarray) and item.dtype == np.object:
-            dt = h5.special_dtype(vlen=item.flat[0].dtype)
+            dt = h5py.special_dtype(vlen=item.flat[0].dtype)
             h5file.create_dataset(path+key, item.shape, dtype=dt, compression='gzip')
             for tup, idx in np.ndenumerate(item):
                 if item[tup] is not None:
@@ -115,7 +125,7 @@ def load_dict_from_hdf5(filename):
     """
     ....
     """
-    with h5.File(filename, 'r') as h5file:
+    with h5py.File(filename, 'r') as h5file:
         return recursively_load_dict_contents_from_group(h5file, '/')
 
 
@@ -125,9 +135,9 @@ def recursively_load_dict_contents_from_group(h5file, path):
     """
     ans = {}
     for key, item in h5file[path].items():
-        if isinstance(item, h5._hl.dataset.Dataset):
+        if isinstance(item, h5py._hl.dataset.Dataset):
             ans[key] = item.value
-        elif isinstance(item, h5._hl.group.Group):
+        elif isinstance(item, h5py._hl.group.Group):
             ans[key] = recursively_load_dict_contents_from_group(h5file, path + key + '/')
     return ans
 
@@ -136,7 +146,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 
     data_dict = OrderedDict()
 
-    with h5.File(filename, 'r') as f:
+    with h5py.File(filename, 'r') as f:
         if var_name in f.keys():
             score_tmp = f[var_name]
             for i in range(len(score_tmp)):
@@ -149,7 +159,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 
 def load_cell_string_from_matlab(filename, var_name="uuids"):
 
-    f = h5.File(filename)
+    f = h5py.File(filename)
     return_list = []
 
     if var_name in f.keys():
@@ -287,43 +297,12 @@ def read_cli_config(filename, suppress_output=False):
     return cfg
 
 
-# credit to http://stackoverflow.com/questions/14000893/specifying-styles-for-portions-of-a-pyyaml-dump
-# class blockseq(dict):
-#     pass
-#
-#
-# def blockseq_rep(dumper, data):
-#     return dumper.represent_mapping(u'tag:yaml.org,2002:map', data, flow_style=False)
-#
-#
-# class flowmap(dict):
-#     pass
-#
-#
-# def flowmap_rep(dumper, data):
-#     return dumper.represent_mapping(u'tag:yaml.org,2002:map', data, flow_style=True)
-
-
-# from http://stackoverflow.com/questions/16782112/can-pyyaml-dump-dict-items-in-non-alphabetical-order
-# def represent_ordereddict(dumper, data):
-#     value = []
-#
-#     for item_key, item_value in data.items():
-#         node_key = dumper.represent_data(item_key)
-#         node_value = dumper.represent_data(item_value)
-#
-#         value.append((node_key, node_value))
-#
-#     return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
-
-
 # taken from moseq by @mattjj and @alexbw
 def merge_dicts(base_dict, clobbering_dict):
     return dict(base_dict, **clobbering_dict)
 
 
 def progressbar(*args, **kwargs):
-
     cli = kwargs.pop('cli', False)
 
     if cli:
@@ -344,3 +323,19 @@ def list_rank(chk_list):
             rank += 1
 
     return rank
+
+
+# https://stackoverflow.com/questions/2166818/python-how-to-check-if-an-object-is-an-instance-of-a-namedtuple
+def is_named_tuple(variable):
+    t = type(variable)
+    b = t.__bases__
+
+    if len(b) != 1 or b[0] != tuple:
+        return False
+
+    f = getattr(t, '_fields', None)
+
+    if not isinstance(f, tuple):
+        return False
+
+    return all(type(n) == str for n in f)
