@@ -166,6 +166,8 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
         tmp = f[var_name]
 
+        # change unichr to chr for python 3
+
         for i in range(len(tmp)):
             tmp2 = f[tmp[i][0]]
             uni_list = [''.join(unichr(c)) for c in tmp2]
