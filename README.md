@@ -19,7 +19,8 @@ Moseq2-model has been tested with Python 2.7.  All requirements can be installed
 
 ```sh
 conda create -n moseq2_model python=2.7
-git clone https://github.com/jmarkow/moseq2_model.git
+source activate moseq2_model
+git clone https://github.com/dattalab/moseq2_model.git
 cd moseq2_model/
 pip install numpy==1.13.0
 pip install future
