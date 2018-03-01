@@ -11,8 +11,10 @@ before_install:
   - pip install future
   - pip install six
   - pip install numpy==1.13.0
-  - pip install pytest pytest-cov
+  - pip install pytest pytest-cov codecov
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # script for tests... (eventually add coveralls)
-script: py.test
+script: py.test --cov=./moseq2_model
+after_success:
+  - codecov -t 0920ece4-7a13-4764-9ec2-192f709670ca

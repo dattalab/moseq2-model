@@ -9,7 +9,6 @@ setup(
     version='0.0.1',
     author='Datta Lab',
     description='Modeling for the best',
-    license='Crapl',
     packages=find_packages(exclude='docs'),
     platforms='any',
     python_requires='>=2.6,<3',
