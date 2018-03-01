@@ -7,7 +7,7 @@ import subprocess
 import ast
 import joblib
 import sys
-from train.models import ARHMM
+from moseq2_model.train.models import ARHMM
 import ruamel.yaml as yaml
 import numpy as np
 import uuid
@@ -154,7 +154,7 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     all_keys = data_dict.keys()
     nkeys = len(all_keys)
 
-    if hold_out >= 0 and nfolds >= hold_out and nkeys >= nfolds:
+    if hold_out and hold_out >= 0 and nfolds >= hold_out and nkeys >= nfolds:
         click.echo("Will hold out split "+str(hold_out)+" of "+str(nfolds))
         splits = np.array_split(range(nkeys), nfolds)
         hold_out_list = [all_keys[i] for i in splits[hold_out].astype('int').tolist()]
@@ -328,6 +328,7 @@ def export_results(input_dir, job_manifest, dest_file):
 
     heldout_ll[:] = np.nan
     loglikes[:] = np.nan
+    save_array[:] = np.nan
 
     # farm this out with joblib parallel
     # parse_dicts = parse_dicts[:2]
