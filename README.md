@@ -104,17 +104,16 @@ fake_data['session2']=numpy.random.randn(1000,10)
 joblib.dump('myfakedata.p',fake_data)
 ```
 
-2. An ordered dictionary where each value is a `NamedTuple` (from Python `collections.NamedTuple`), with two fields `pcs` and `group`.  The field `pcs` should point to a 2D numpy array, and `group` should be a string that specifies, e.g. the treatment group.  This will be used to specify separate transition matrices when training the model.
+2. An ordered dictionary where each value is a `tuple', where the first value is an ndarray with the PCs and the second value is a string specifying the group.  This will be used to specify separate transition matrices when training the model.
 
 ```python
-from collections import OrderedDict, NamedTuple
+from collections import OrderedDict
 import numpy
 import joblib
 fake_data=OrderedDict()
-features=namedtuple('features',['pcs','group'])
-fake_data[1]=features(pcs=np.random.randn(1000,10),group='saline')
-fake_data[2]=features(pcs=np.random.randn(1000,10),group='drug')
-fake_data[3]=features(pcs=np.random.randn(1000,10),group='saline')
+fake_data[1]=(np.random.randn(1000,10),'saline')
+fake_data[2]=(np.random.randn(1000,10),'drug')
+fake_data[3]=(np.random.randn(1000,10),'saline')
 joblib.dump('myfakedata.p',fake_data)
 ```
 
