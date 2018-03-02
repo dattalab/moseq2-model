@@ -8,8 +8,7 @@ import ruamel.yaml as yaml
 import itertools
 import scipy.io
 from tqdm import tqdm_notebook, tqdm
-from collections import OrderedDict
-
+from collections import OrderedDict, namedtuple
 
 # grab matlab data
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
@@ -20,6 +19,8 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         'uuids': None,
         'groups': [],
     }
+
+
 
     if filename.endswith('.mat'):
         print('Loading data from matlab file')
@@ -34,11 +35,11 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
-        if is_named_tuple(data_dict.itervalues().next()):
-            print('Detected NamedTuple')
+        if isinstance(data_dict.itervalues().next(),tuple):
+            print('Detected tuple')
             for k, v in data_dict.iteritems():
-                data_dict[k] = v.pcs[:, :npcs]
-                metadata['groups'].append(v.group)
+                data_dict[k] = v[0][:, :npcs]
+                metadata['groups'].append(v[1])
         else:
             for k, v in data_dict.iteritems():
                 data_dict[k] = v[:, :npcs]
