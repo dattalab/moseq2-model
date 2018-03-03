@@ -1,20 +1,16 @@
 # specs for travis ci
 language: python
 python:
-  - "2.7"
+  - "3.6"
 # get the dependencies
 install:
   - pip install . --process-dependency-links
 # install what we need for testing
 before_install:
-  - pip install cython
-  - pip install future
-  - pip install six
-  - pip install numpy==1.13.0
   - pip install pytest pytest-cov codecov
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # script for tests... (eventually add coveralls)
-script: py.test --cov=./moseq2_model
+script: pytest --cov=./moseq2_model
 after_success:
   - codecov -t 0920ece4-7a13-4764-9ec2-192f709670ca

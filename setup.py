@@ -4,6 +4,31 @@ from setuptools import setup, find_packages
 # note that we need to pull in autoregressive and pybasicbayes from github,
 # I've hardcorded the dependency links to use very high version numbers, hope it doesn't break anything!
 # note that you will need to pass the option --process-dependency-links for this to work correctly
+
+try:
+    import numpy
+except ImportError:
+    import pip
+    pip.main(['install','numpy==1.13.0'])
+
+try:
+    import future
+except ImportError:
+    import pip
+    pip.main(['install','future'])
+
+try:
+    import six
+except ImportError:
+    import pip
+    pip.main(['install','six'])
+
+try:
+    import cython
+except ImportError:
+    import pip
+    pip.main(['install','cython'])
+
 setup(
     name='moseq2_model',
     version='0.0.1',
