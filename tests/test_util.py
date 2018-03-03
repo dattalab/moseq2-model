@@ -25,7 +25,7 @@ def test_load_matlab_data(script_loc):
     cwd = str(script_loc)
     pcs = load_data_from_matlab(os.path.join(cwd, 'test_data/dummy_matlab.mat'),
                                 var_name='features')
-    keys = lst(pcs.keys())
+    keys = list(pcs.keys())
 
     assert(len(keys) == 1)
     assert(keys[0] == 0)
