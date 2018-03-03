@@ -11,7 +11,7 @@ setup(
     description='Modeling for the best',
     packages=find_packages(exclude='docs'),
     platforms='any',
-    python_requires='>=2.6,<3',
+    python_requires='>3.4',
     install_requires=['future', 'h5py', 'click', 'numpy==1.13.0',
                       'pybasicbayes', 'pyhsmm',
                       'autoregressive', 'joblib',

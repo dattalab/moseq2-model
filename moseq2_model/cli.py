@@ -188,7 +188,7 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     else:
         click.echo('Not whitening the data')
 
-    if hold_out >= 0 and nfolds >= hold_out:
+    if hold_out and hold_out >= 0 and nfolds >= hold_out:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
     else:

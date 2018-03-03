@@ -45,7 +45,7 @@ def whiten_all(data_dict, center=True):
     meancov = lambda x: (x.mean(0), np.cov(x, rowvar=False, bias=1))
     contig = partial(np.require, dtype=np.float64, requirements='C')
 
-    mu, Sigma = meancov(np.concatenate(map(non_nan, data_dict.values())))
+    mu, Sigma = meancov(np.concatenate(list(map(non_nan, data_dict.values()))))
     L = np.linalg.cholesky(Sigma)
 
     offset = 0. if center else mu

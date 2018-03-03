@@ -48,7 +48,8 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
           separate_trans=False, groups=None, robust=False):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-    data_dim = data_dict.values()[0].shape[1]
+
+    data_dim = list(data_dict.values())[0].shape[1]
 
     default_obs_hypparams = {
         'nu_0': data_dim+2,
@@ -74,7 +75,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
     model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)
 
     if empirical_bayes:
-        obs_hypparams = _get_empirical_ar_params(data_dict.values(), obs_hypparams)
+        obs_hypparams = _get_empirical_ar_params(list(data_dict.values()), obs_hypparams)
 
     # TODO: return initialization parameters for saving downstream
 

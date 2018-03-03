@@ -171,7 +171,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
         for i in range(len(tmp)):
             tmp2 = f[tmp[i][0]]
-            uni_list = [''.join(unichr(c)) for c in tmp2]
+            uni_list = [''.join(chr(c)) for c in tmp2]
             return_list.append(''.join(uni_list))
 
     return return_list
