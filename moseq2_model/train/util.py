@@ -21,13 +21,13 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwa
                 np.mod(itr+1, num_iter) == 0):
             log_likelihoods.append(model.log_likelihood())
             seq_list = [s.stateseq for s in model.states_list]
-            for seq_itr in xrange(len(seq_list)):
+            for seq_itr in range(len(seq_list)):
                 seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
             labels.append(seq_list)
 
     labels_cat = []
 
-    for i in xrange(len(labels[0])):
+    for i in range(len(labels[0])):
         labels_cat.append(np.array([tmp[i] for tmp in labels], dtype=np.int16))
 
     return model, log_likelihoods, labels_cat
@@ -75,7 +75,7 @@ def parameter_scan(data_dict, parameter, values, other_parameters=dict(),
     loglikes=np.empty((restarts, nparameters), dtype=object)
 
     for parameter_idx, parameter_value in enumerate(progressbar(values, leave=False)):
-        for itr in xrange(restarts):
+        for itr in range(restarts):
 
             tmp_parameters = merge_dicts(other_parameters,{parameter: parameter_value})
             arhmm = ARHMM(data_dict=data_dict, **tmp_parameters)
@@ -105,7 +105,7 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
         lens = [len(item) for item in data_dict.values()]
         use_frames = min(lens)
         print('Only using '+str(use_frames)+' per split')
-        for key, item in data_dict.iteritems():
+        for key, item in data_dict.items():
             data_dict[key] = item[:use_frames, :]
 
     # return the heldout likelihood, model object and labels
@@ -123,7 +123,7 @@ def cv_parameter_scan(data_dict, parameter, values, other_parameters=dict(),
         test_data = OrderedDict([('1', data_dict[test_key])])
 
         for parameter_idx, parameter_value in enumerate(progressbar(values, leave=False)):
-            for itr in xrange(restarts):
+            for itr in range(restarts):
 
                 tmp_parameters = merge_dicts(other_parameters, {parameter: parameter_value})
                 arhmm = ARHMM(data_dict=train_data, **tmp_parameters)
@@ -150,7 +150,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
                     all_CLs[(i, j)].append(likes[:, i] - likes[:, j])
         all_CLs = defaultdict(
             list,
-            {k: np.concatenate(v) for k, v in all_CLs.iteritems()})
+            {k: np.concatenate(v) for k, v in all_CLs.items()})
     else:
         for s in arhmm.states_list:
             for j in range(Nstates):

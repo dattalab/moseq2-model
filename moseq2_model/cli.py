@@ -74,7 +74,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
     job_spec = locals()
     job_spec = merge_dicts(job_spec, cfg)
 
-    if len(check_cluster) > 0 and not skip_checks:
+    if check_cluster and len(check_cluster) > 0 and not skip_checks:
         cluster_info = kube_cluster_check(check_cluster, ncpus=ncpus, image=image, preflight=preflight)
 
     if preflight and not skip_checks:
@@ -94,7 +94,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
     # yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
 
     # job_spec =
-    # job_spec = OrderedDict((str(key), str(value)) for key, value in sorted(job_spec.iteritems()))
+    # job_spec = OrderedDict((str(key), str(value)) for key, value in sorted(job_spec.items()))
 
     if log_path is None:
         log_path = os.getcwd()
@@ -215,7 +215,7 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
 
         if test_data:
             click.echo("Computing held out likelihoods...")
-            [heldout_ll.append(arhmm.log_likelihood(v)) for k, v in test_data.iteritems()]
+            [heldout_ll.append(arhmm.log_likelihood(v)) for k, v in test_data.items()]
 
         loglikes.append(loglikes_sample)
         labels.append(labels_sample)
@@ -267,7 +267,7 @@ def export_results(input_dir, job_manifest, dest_file):
         parse_dicts = ast.literal_eval(manifest['worker_dicts'])
 
     # if 'hold-out' in parse_dicts[0].keys():
-    #     for i in xrange(len(parse_dicts)):
+    #     for i in range(len(parse_dicts)):
     #         parse_dicts[i]['hold_out'] = parse_dicts[i].pop('hold-out')
 
     nfiles = len(parse_dicts)
@@ -298,7 +298,7 @@ def export_results(input_dir, job_manifest, dest_file):
 
     if 'metadata' in test_load.keys():
         metadata = test_load['metadata']
-        for key, value in metadata.iteritems():
+        for key, value in metadata.items():
             print (key)
             if value is None:
                 metadata[key] = 'Null'
@@ -351,7 +351,7 @@ def export_results(input_dir, job_manifest, dest_file):
                 tmp = use_data['model_parameters'][j]
                 tmp['npcs'] = tmp['sig'][0].shape[0]
 
-                for k, v in tmp.iteritems():
+                for k, v in tmp.items():
                     if np.all(v is None):
                         tmp[k] = np.nan
 
@@ -376,12 +376,12 @@ def export_results(input_dir, job_manifest, dest_file):
         else:
 
             tmp = use_data['model_parameters']
-            for k, v in tmp.iteritems():
+            for k, v in tmp.items():
                 if np.all(v is None):
                     tmp[k] = np.nan
             all_parameters[i][0] = tmp
 
-            for j in xrange(nsets):
+            for j in range(nsets):
                 save_array[i][j][0] = np.array(use_data['labels'][j][-1], dtype=np.int16)
 
             for j in range(nholdouts):

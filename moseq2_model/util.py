@@ -37,11 +37,11 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
         if isinstance(data_dict.itervalues().next(),tuple):
             print('Detected tuple')
-            for k, v in data_dict.iteritems():
+            for k, v in data_dict.items():
                 data_dict[k] = v[0][:, :npcs]
                 metadata['groups'].append(v[1])
         else:
-            for k, v in data_dict.iteritems():
+            for k, v in data_dict.items():
                 data_dict[k] = v[:, :npcs]
 
     elif filename.endswith('.h5'):
@@ -54,7 +54,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
                 if type(tmp) is np.ndarray:
                     data_dict = OrderedDict([(1, tmp)])
                 elif type(tmp) is dict:
-                    data_dict = OrderedDict([(k, v) for k, v in dict.iteritems()])
+                    data_dict = OrderedDict([(k, v) for k, v in dict.items()])
                 elif type(tmp) is OrderedDict:
                     data_dict = tmp
 
@@ -99,7 +99,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
     """
     ....
     """
-    for key, item in export_dict.iteritems():
+    for key, item in export_dict.items():
         if isinstance(key, (tuple, int)):
             key = str(key)
 

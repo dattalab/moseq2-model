@@ -16,7 +16,7 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
                    var_name, save_every, cross_validate, model_progress, whiten,
                    save_model, restarts, worker_dicts, other_parameters, ext,
                    job_name, image, ncpus, restart_policy, gcs_options, robust,
-                   suffix, kind, separate_trans, nmem, hold_out, 
+                   suffix, kind, separate_trans, nmem, hold_out,
                    nfolds=None, start_num=None, **kwargs):
 
     # TODO: better safeguards against user stupidity
@@ -78,14 +78,14 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
 
     if restarts > 1:
         new_dicts = []
-        for i in xrange(len(worker_dicts)):
-            for j in xrange(restarts):
+        for i in range(len(worker_dicts)):
+            for j in range(restarts):
                 worker_dicts[i]['restart'] = j
                 new_dicts.append(worker_dicts[i].copy())
 
         worker_dicts = new_dicts
 
-    # worker_dicts=[val for val in worker_dicts for _ in xrange(restarts)]
+    # worker_dicts=[val for val in worker_dicts for _ in range(restarts)]
 
     output_dicts = deepcopy(worker_dicts)
     njobs = len(worker_dicts)
@@ -116,7 +116,7 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
         issue_command = mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
         issue_command = issue_command+' '+param_commands
 
-        for param, value in all_parameters.iteritems():
+        for param, value in all_parameters.items():
             param_name = yaml.scalarstring.DoubleQuotedScalarString('--'+param)
             param_value = yaml.scalarstring.DoubleQuotedScalarString(str(value))
             issue_command = issue_command+' '+param_name
