@@ -26,7 +26,7 @@ pip install numpy==1.13.0
 pip install future
 pip install six
 pip install cython
-pip install -e . --process-dependency-links
+pip install -e . --process-dependency-links --no-cache-dir
 ```
 
 If you just want to use these tools locally, you're done.  If you want to train models on GKE, you'll need to complete parts 2 and 3.
