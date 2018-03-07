@@ -242,6 +242,7 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     export_dict = {
         'loglikes': loglikes,
         'labels': labels,
+        'keys': all_keys,
         'heldout_ll': heldout_ll,
         'model_parameters': save_parameters,
         'run_parameters': run_parameters,
