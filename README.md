@@ -97,7 +97,7 @@ import joblib
 fake_data=OrderedDict()
 fake_data['session1']=numpy.random.randn(1000,10)
 fake_data['session2']=numpy.random.randn(1000,10)
-joblib.dump('myfakedata.p',fake_data)
+joblib.dump(fake_data, 'myfakedata.p', compress=True)
 ```
 
 2. An ordered dictionary where each value is a `tuple', where the first value is an ndarray with the PCs and the second value is a string specifying the group.  This will be used to specify separate transition matrices when training the model.
@@ -110,7 +110,7 @@ fake_data=OrderedDict()
 fake_data[1]=(np.random.randn(1000,10),'saline')
 fake_data[2]=(np.random.randn(1000,10),'drug')
 fake_data[3]=(np.random.randn(1000,10),'saline')
-joblib.dump('myfakedata.p',fake_data)
+joblib.dump(fake_data, 'myfakedata.p', compress=True)
 ```
 
 Now keys `1` and `3` will use the same transition matrix, and `2` will use a separate one.
