@@ -114,7 +114,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
 # parameters we could/would possibly scan over
 @cli.command(name="learn-model")
 @click.argument("input_file", type=click.Path(exists=True))
-@click.argument("dest_file", type=click.Path(dir_okay=True, writable=True))
+@click.argument("dest_file", type=click.Path(file_okay=True, writable=True))
 @click.option("--hold-out", "-h", type=int, default=None, help="Index of data group to hold out (<nfolds)")
 @click.option("--nfolds", type=int, default=None, help="Number of folds for split")
 @click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")
@@ -139,6 +139,12 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
+
+    if not(os.path.dirname(dest_file)):
+        dest_file = os.path.join('./', dest_file)
+
+    if not os.access(os.path.dirname(dest_file), os.W_OK):
+        raise IOError('Output directory is not writable.')
 
     if save_every < 0:
         click.echo("Will only save the last iteration of the model")
