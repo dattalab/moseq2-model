@@ -1,5 +1,3 @@
-from __future__ import division
-from __future__ import print_function
 import ruamel.yaml as yaml
 import os
 import re
@@ -170,7 +168,7 @@ def kube_cluster_check(cluster_name, ncpus, image, preflight=False):
 
     parsed_output = yaml.load(test, Loader=yaml.Loader)
     machine = parsed_output['nodeConfig']['machineType']
-    re_machine = re.split('\-', machine)
+    re_machine = re.split('-', machine)
 
     if re_machine[0] == 'custom':
         cluster_info['ncpus'] = int(re_machine[1])

@@ -1,14 +1,13 @@
-from __future__ import division
-from __future__ import print_function
 import numpy as np
-import h5py
 import joblib
 import copy
 import ruamel.yaml as yaml
 import itertools
 import scipy.io
+import h5py
 from tqdm import tqdm_notebook, tqdm
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
+
 
 # grab matlab data
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
@@ -19,8 +18,6 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         'uuids': None,
         'groups': [],
     }
-
-
 
     if filename.endswith('.mat'):
         print('Loading data from matlab file')
@@ -35,7 +32,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
-        if isinstance(data_dict.itervalues().next(),tuple):
+        if isinstance(data_dict.itervalues().next(), tuple):
             print('Detected tuple')
             for k, v in data_dict.items():
                 data_dict[k] = v[0][:, :npcs]

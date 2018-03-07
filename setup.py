@@ -9,25 +9,26 @@ try:
     import numpy
 except ImportError:
     import pip
-    pip.main(['install','numpy==1.13.0'])
+    #pip.main(['install', 'numpy==1.13.0'])
+    pip.main(['install', 'numpy'])
 
 try:
     import future
 except ImportError:
     import pip
-    pip.main(['install','future'])
+    pip.main(['install', 'future'])
 
 try:
     import six
 except ImportError:
     import pip
-    pip.main(['install','six'])
+    pip.main(['install', 'six'])
 
 try:
     import cython
 except ImportError:
     import pip
-    pip.main(['install','cython'])
+    pip.main(['install', 'cython'])
 
 setup(
     name='moseq2_model',
@@ -37,7 +38,7 @@ setup(
     packages=find_packages(exclude='docs'),
     platforms='any',
     python_requires='>3.4',
-    install_requires=['future', 'h5py', 'click', 'numpy==1.13.0',
+    install_requires=['future', 'h5py', 'click', 'numpy',
                       'pybasicbayes', 'pyhsmm',
                       'autoregressive', 'joblib',
                       'hdf5storage', 'ruamel.yaml', 'tqdm'],
