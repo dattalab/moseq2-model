@@ -9,6 +9,7 @@ from moseq2_model.train.models import ARHMM
 import ruamel.yaml as yaml
 import numpy as np
 import uuid
+import random
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
@@ -115,8 +116,11 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
 @cli.command(name="learn-model")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True))
-@click.option("--hold-out", "-h", type=int, default=-1, help="Index of data group to hold out (<nfolds)")
-@click.option("--nfolds", type=int, default=None, help="Number of folds for split")
+@click.option("--hold-out", "-h", type=bool, default=False, is_flag=True,
+              help="Hold out one fold (set by nfolds) for computing heldout likelihood")
+@click.option("--hold-out-seed", type=int, default=-1,
+              help="Random seed for holding out data (set for reproducibility)")
+@click.option("--nfolds", type=int, default=5, help="Number of folds for split")
 @click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")
 @click.option("--restarts", "-r", type=int, default=1, help="Number of restarts for model")
 @click.option("--var-name", type=str, default='features', help="Variable name in input file with PCs")
@@ -133,7 +137,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
-def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var_name,
+def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter, restarts, var_name,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
                 kappa, gamma, nu, nlags, separate_trans, robust):
 
@@ -159,14 +163,23 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     nkeys = len(all_keys)
     compute_heldouts = False
 
-    if hold_out >= 0 and nfolds >= hold_out and nkeys >= nfolds:
-        click.echo("Will hold out split index (from 0)"+str(hold_out)+" of "+str(nfolds))
-        splits = np.array_split(range(nkeys), nfolds)
-        hold_out_list = [all_keys[i] for i, k in enumerate(splits[hold_out].astype('int').tolist())]
-        train_list = [all_keys[i] for i, k in enumerate(all_keys) if k not in hold_out_list]
-        click.echo("Holding out indices "+str(hold_out_list))
-        click.echo("Training on indices "+str(train_list))
+    if hold_out and nkeys >= nfolds:
+        click.echo("Will hold out 1 fold of "+str(nfolds))
+
+        if hold_out_seed >= 0:
+            click.echo("Settings random seed to "+str(hold_out_seed))
+            splits = np.array_split(random.Random(hold_out_seed).sample(list(range(nkeys)), nkeys), nfolds)
+        else:
+            splits = np.array_split(random.sample(list(range(nkeys)), nkeys), nfolds)
+
+        hold_out_list = [all_keys[k] for k in splits[0].astype('int').tolist()]
+        train_list = [k for k in all_keys if k not in hold_out_list]
+        click.echo("Holding out "+str(hold_out_list))
+        click.echo("Training on "+str(train_list))
         compute_heldouts = True
+    else:
+        hold_out_list = None
+        train_list = all_keys
 
     # use a list of dicts, with everything formatted ready to go
 
@@ -197,9 +210,13 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     if compute_heldouts:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
+        train_list = list(train_data.keys())
+        hold_out_list = list(test_data.keys())
     else:
         train_data = data_dict
         test_data = None
+        train_list = list(data_dict.keys())
+        test_list = None
 
     loglikes = []
     labels = []
@@ -253,7 +270,9 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
         'model_parameters': save_parameters,
         'run_parameters': run_parameters,
         'metadata': data_metadata,
-        'model': save_model
+        'model': save_model,
+        'hold_out_list': hold_out_list,
+        'train_list': train_list
         }
 
     save_dict(filename=dest_file, obj_to_save=export_dict)
