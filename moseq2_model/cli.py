@@ -10,6 +10,7 @@ import ruamel.yaml as yaml
 import numpy as np
 import uuid
 import random
+import warnings
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
@@ -167,9 +168,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter
         click.echo("Will hold out 1 fold of "+str(nfolds))
 
         if hold_out_seed >= 0:
-            click.echo("Settings random seed to "+str(hold_out_seed))
+            click.echo("Settings random seed to "+str(hold_out_seed))            
             splits = np.array_split(random.Random(hold_out_seed).sample(list(range(nkeys)), nkeys), nfolds)
         else:
+            warnings.warn("Random seed not set, will choose a different test set each time this is run...")
             splits = np.array_split(random.sample(list(range(nkeys)), nkeys), nfolds)
 
         hold_out_list = [all_keys[k] for k in splits[0].astype('int').tolist()]
