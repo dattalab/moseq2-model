@@ -115,7 +115,7 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
 @cli.command(name="learn-model")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True))
-@click.option("--hold-out", "-h", type=int, default=None, help="Index of data group to hold out (<nfolds)")
+@click.option("--hold-out", "-h", type=int, default=-1, help="Index of data group to hold out (<nfolds)")
 @click.option("--nfolds", type=int, default=None, help="Number of folds for split")
 @click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")
 @click.option("--restarts", "-r", type=int, default=1, help="Number of restarts for model")
@@ -155,16 +155,18 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     run_parameters = locals()
     data_dict, data_metadata = load_pcs(filename=input_file, var_name=var_name,
                                         npcs=npcs, load_groups=separate_trans)
-    all_keys = data_dict.keys()
+    all_keys = list(data_dict.keys())
     nkeys = len(all_keys)
+    compute_heldouts = False
 
-    if hold_out and hold_out >= 0 and nfolds >= hold_out and nkeys >= nfolds:
-        click.echo("Will hold out split "+str(hold_out)+" of "+str(nfolds))
+    if hold_out >= 0 and nfolds >= hold_out and nkeys >= nfolds:
+        click.echo("Will hold out split index (from 0)"+str(hold_out)+" of "+str(nfolds))
         splits = np.array_split(range(nkeys), nfolds)
-        hold_out_list = [all_keys[i] for i in splits[hold_out].astype('int').tolist()]
-        train_list = [all_keys[i] for i in all_keys if i not in hold_out_list]
+        hold_out_list = [all_keys[i] for i, k in enumerate(splits[hold_out].astype('int').tolist())]
+        train_list = [all_keys[i] for i, k in enumerate(all_keys) if k not in hold_out_list]
         click.echo("Holding out indices "+str(hold_out_list))
-        click.echo("Training on indices"+str(train_list))
+        click.echo("Training on indices "+str(train_list))
+        compute_heldouts = True
 
     # use a list of dicts, with everything formatted ready to go
 
@@ -192,7 +194,7 @@ def learn_model(input_file, dest_file, hold_out, nfolds, num_iter, restarts, var
     else:
         click.echo('Not whitening the data')
 
-    if hold_out and hold_out >= 0 and nfolds >= hold_out:
+    if compute_heldouts:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
     else:

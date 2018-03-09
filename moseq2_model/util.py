@@ -32,7 +32,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
-        if isinstance(data_dict.itervalues().next(), tuple):
+        if isinstance(list(data_dict.values())[0], tuple):
             print('Detected tuple')
             for k, v in data_dict.items():
                 data_dict[k] = v[0][:, :npcs]
