@@ -68,6 +68,7 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
         for i in range(len(worker_dicts)):
             worker_dicts[i]['hold-out'] = nfolds-1
             worker_dicts[i]['nfolds'] = nfolds
+            worker_dicts[i]['hold-out-seed'] = 1
             new_dicts.append(worker_dicts[i].copy())
 
         worker_dicts = new_dicts
