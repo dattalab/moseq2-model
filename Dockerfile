@@ -1,4 +1,4 @@
-FROM continuumio/anaconda
+FROM continuumio/anaconda3
 
 # yes I have tried miniconda, I get a segfault that I simply cannot get rid of
 
@@ -18,6 +18,7 @@ RUN DEBIAN_FRONTEND=noninteractive export GCSFUSE_REPO=gcsfuse-`lsb_release -c -
 	&& curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
 RUN DEBIAN_FRONTEND=noninteractive apt-get update -y
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y gcsfuse
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libgl1-mesa-glx
 
 # Build a little home for our code
 ENV SRC /src
@@ -25,8 +26,8 @@ ENV PYTHONPATH /src
 RUN mkdir -p $SRC
 
 # Get our Python requirements (needed to build pyhsmm and pybasicbayes)
-RUN conda install pip mpi4py click matplotlib gcc cython future -y
-
+# RUN conda install pip mpi4py click matplotlib gcc cython future -y
+RUN conda install pip gcc_linux-64 -y
 # Install moseq
 COPY . $SRC/moseq2_model
 #RUN pip install -e future
@@ -34,4 +35,4 @@ RUN pip install -e $SRC/moseq2_model --process-dependency-links
 
 # fix bug in Conda matplotlib implementation
 # https://github.com/ContinuumIO/anaconda-issues/issues/1068
-RUN conda install pyqt=4.11
+# RUN conda install pyqt=4.11
