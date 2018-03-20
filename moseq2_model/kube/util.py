@@ -11,7 +11,7 @@ from copy import deepcopy
 
 # wow how did you get so parameters
 def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
-                   var_name, save_every, cross_validate, model_progress, whiten,
+                   var_name, save_every, model_progress, whiten,
                    save_model, restarts, worker_dicts, other_parameters, ext,
                    job_name, image, ncpus, restart_policy, gcs_options, robust,
                    suffix, kind, separate_trans, nmem, hold_out,
@@ -48,11 +48,9 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
     if robust:
         param_commands = param_commands+' --robust'
 
-    if cross_validate and nfolds:
-        param_commands = param_commands+' --hold-out'
-
-    if cross_validate and nfolds:
+    if hold_out and nfolds:
         new_dicts = []
+        param_commands = param_commands+' --hold-out'
 
         # split number of keys into nfolds equally
 
