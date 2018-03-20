@@ -150,7 +150,7 @@ def kube_cluster_check(cluster_name, ncpus, image, preflight=False):
 
     try:
         images = subprocess.check_output("gcloud beta container images list | awk '{if(NR>1)print}'",
-                                         shell=True).split('\n')
+                                         shell=True).decode().split('\n')
     except ValueError as e:
         print("Error trying to call gcloud: {}\n".format(e.output))
 
