@@ -26,6 +26,7 @@ def cli():
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command(name="parameter-scan")
 @click.argument("param_file", type=click.Path(exists=True))
+@click.option("--cross-validate", "-c", is_flag=True)
 @click.option("--hold-out", is_flag=True)
 @click.option("--nfolds", type=int, default=5)
 @click.option("--num-iter", "-n", type=int, default=100)
@@ -54,7 +55,7 @@ def cli():
 @click.option("--copy-log", "-l", is_flag=True)
 @click.option("--skip-checks", is_flag=True)
 @click.option("--start-num", type=int, default=0)
-def parameter_scan(param_file, hold_out, nfolds, num_iter, restarts, var_name, save_every,
+def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, restarts, var_name, save_every,
                    save_model, model_progress, npcs, separate_trans, whiten, image, job_name,
                    output_dir, ext, mount_point, bucket, restart_policy, ncpus, nmem, input_file,
                    check_cluster, log_path, kind, preflight, copy_log, skip_checks, start_num):
