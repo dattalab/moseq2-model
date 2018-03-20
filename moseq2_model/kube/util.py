@@ -49,6 +49,9 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
         param_commands = param_commands+' --robust'
 
     if cross_validate and nfolds:
+        param_commands = param_commands+' --hold-out'
+
+    if cross_validate and nfolds:
         new_dicts = []
 
         # split number of keys into nfolds equally
@@ -66,7 +69,6 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
         # split number of keys into nfolds equally
 
         for i in range(len(worker_dicts)):
-            worker_dicts[i]['hold-out'] = nfolds-1
             worker_dicts[i]['nfolds'] = nfolds
             worker_dicts[i]['hold-out-seed'] = 1
             new_dicts.append(worker_dicts[i].copy())
