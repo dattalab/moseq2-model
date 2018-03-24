@@ -100,7 +100,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
         if isinstance(key, (tuple, int)):
             key = str(key)
 
-        if isinstance(item, unicode):
+        if isinstance(item, str):
             item = item.encode('utf8')
 
         if isinstance(item, np.ndarray) and item.dtype == np.object:

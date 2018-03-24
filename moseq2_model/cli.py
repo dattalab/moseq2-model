@@ -331,13 +331,15 @@ def export_results(input_dir, job_manifest, dest_file):
     if 'metadata' in test_load.keys():
         metadata = test_load['metadata']
         for key, value in metadata.items():
-            print (key)
             if value is None:
                 metadata[key] = 'Null'
-            if key == 'uuids' or key == 'groups' and value is list and all(isinstance(value, str)):
+            elif key == 'uuids' or key == 'groups' and value is list and all(isinstance(value, str)):
                 metadata[key] = [n.encode("utf8") for n in value]
     else:
         metadata = {}
+
+    if 'keys' in test_load.keys():
+        metadata['input_keys'] = [n.encode('utf8') for n in test_load['keys']]
 
     save_array = np.empty((nfiles, nsets, nrestarts), dtype=np.object)
 
