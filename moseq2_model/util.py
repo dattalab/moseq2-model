@@ -244,7 +244,8 @@ def read_cli_config(filename, suppress_output=False):
         'worker_dicts': None,
         'scan_parameter': None,
         'scan_values': None,
-        'other_parameters': {}
+        'parameters': {},
+        'flags': {},
     }
 
     if 'scan_settings' in config:
@@ -284,6 +285,9 @@ def read_cli_config(filename, suppress_output=False):
 
     if 'parameters' in config.keys():
         cfg['other_parameters'] = config['parameters']
+
+    if 'flags' in config.keys():
+        cfg['flags'] = config['flags']
 
     if not suppress_output:
         if type(cfg['scan_parameter']) is list:

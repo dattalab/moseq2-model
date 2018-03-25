@@ -16,6 +16,8 @@ from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
  get_parameters_from_model, merge_dicts, progressbar, list_rank, copy_model
 from moseq2_model.kube.util import make_kube_yaml, kube_cluster_check, kube_check_mount
+from pathlib import Path
+from moseq2_model.slurm.util import make_slurm_batch
 
 
 @click.group()
@@ -26,39 +28,33 @@ def cli():
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command(name="parameter-scan")
 @click.argument("param_file", type=click.Path(exists=True))
-@click.option("--cross-validate", "-c", is_flag=True)
-@click.option("--hold-out", is_flag=True)
-@click.option("--nfolds", type=int, default=5)
-@click.option("--num-iter", "-n", type=int, default=100)
+@click.option("--cluster-type", "-c",
+              type=click.Choice(['slurm', 'kubernetes', 'local']),
+              default="kubernetes")
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option("--var_name", type=str, default='features')
-@click.option("--save-every", "-s", type=int, default=1)
-@click.option("--save-model", "-m", is_flag=True)
-@click.option("--model-progress", "-p", is_flag=True)
-@click.option("--npcs", type=int, default=10)
-@click.option("--separate_trans", type=bool, default=False)
-@click.option("--whiten", "-w", type=str, default='all')
 @click.option("--image", "-i", type=str, envvar='MOSEQ2_GKE_MODEL_IMAGE', default='model-image')
 @click.option("--job-name", type=str, default="kubejob")
 @click.option("--output-dir", type=str, default="")
-@click.option("--ext", "-e", type=str, default=".p.z")
+@click.option("--ext", "-e", type=click.Choice(['.p.z', '.p', '.mat', '.h5']), default=".p.z")
 @click.option("--mount-point", type=str, envvar='MOSEQ2_GKE_MOUNT_POINT', default='/mnt/user_gcs_bucket')
 @click.option("--bucket", "-b", type=str, envvar='MOSEQ2_GKE_MODEL_BUCKET', default='bucket')
 @click.option("--restart-policy", type=str, default="OnFailure")
 @click.option("--ncpus", type=int, envvar='MOSEQ2_GKE_MODEL_NCPUS', default=4)
-@click.option("--nmem", type=int, envvar='MOSEQ2_GKE_MODEL_NMEM', default=3000)
+@click.option("--nmem", type=int, envvar='MOSEQ2_GKE_MODEL_NMEM', default=10000)
 @click.option("--input-file", type=str, default="use_data.mat")
 @click.option("--check-cluster", type=str, envvar='MOSEQ2_GKE_CLUSTER_NAME')
-@click.option("--log-path", type=click.Path(exists=True), envvar='MOSEQ2_GKE_LOG_PATH')
+@click.option("--log-path", type=click.Path(exists=True), envvar='MOSEQ2_GKE_LOG_PATH',
+              default=os.path.join(str(Path.home()), '.moseq2_model_logs'))
 @click.option("--kind", type=str, envvar='MOSEQ2_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight", is_flag=True)
 @click.option("--copy-log", "-l", is_flag=True)
 @click.option("--skip-checks", is_flag=True)
 @click.option("--start-num", type=int, default=0)
-def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, restarts, var_name, save_every,
-                   save_model, model_progress, npcs, separate_trans, whiten, image, job_name,
-                   output_dir, ext, mount_point, bucket, restart_policy, ncpus, nmem, input_file,
-                   check_cluster, log_path, kind, preflight, copy_log, skip_checks, start_num):
+def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name,
+                   output_dir, ext, mount_point, bucket, restart_policy,
+                   ncpus, nmem, input_file, check_cluster, log_path,
+                   kind, preflight, copy_log, skip_checks, start_num):
 
     # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
 
@@ -74,42 +70,41 @@ def parameter_scan(param_file, cross_validate, hold_out, nfolds, num_iter, resta
     job_spec = locals()
     job_spec = merge_dicts(job_spec, cfg)
 
-    if check_cluster and len(check_cluster) > 0 and not skip_checks:
-        cluster_info = kube_cluster_check(check_cluster, ncpus=ncpus, image=image, preflight=preflight)
+    if cluster_type == 'kubernetes':
+        if check_cluster and len(check_cluster) > 0 and not skip_checks:
+            cluster_info = kube_cluster_check(check_cluster, ncpus=ncpus, image=image, preflight=preflight)
 
-    if preflight and not skip_checks:
-        pass_flag, _ = kube_check_mount(**job_spec)
-        if preflight:
-            return None
+        if preflight and not skip_checks:
+            pass_flag, _ = kube_check_mount(**job_spec)
+            if preflight:
+                return None
 
-    yaml_out, output_dicts, output_dir, bucket_dir = make_kube_yaml(**job_spec)
+        yaml_out, output_dicts, output_dir, bucket_dir = make_kube_yaml(**job_spec)
 
-    # send the yaml to stdout
+        # send the yaml to stdout
 
-    click.echo(yaml_out)
-    job_spec.pop('cfg', None)
-    job_spec.pop('worker_dicts', None)
-    job_spec['worker_dicts'] = output_dicts
-    # represent_dict_order = lambda self, data:  self.represent_mapping('tag:yaml.org,2002:map', data.items())
-    # yaml.RoundTripDumper.add_representer(OrderedDict, represent_ordereddict)
+        click.echo(yaml_out)
+        job_spec.pop('cfg', None)
+        job_spec.pop('worker_dicts', None)
+        job_spec['worker_dicts'] = output_dicts
 
-    # job_spec =
-    # job_spec = OrderedDict((str(key), str(value)) for key, value in sorted(job_spec.items()))
+        if log_path is None:
+            log_path = os.getcwd()
 
-    if log_path is None:
-        log_path = os.getcwd()
+        # copy yaml file to log directory as well
 
-    # copy yaml file to log directory as well
+        log_store_path = os.path.join(log_path, job_name+suffix+'.yaml')
+        with open(log_store_path, 'w') as f:
+            yaml.dump(job_spec, f)
 
-    log_store_path = os.path.join(log_path, job_name+suffix+'.yaml')
-    with open(log_store_path, 'w') as f:
-        yaml.dump(job_spec, f)
+        if copy_log and bucket_dir:
+            subprocess.check_output("gsutil cp "+log_store_path +
+                                    " gs://"+os.path.join(bucket_dir, 'job_manifest.yaml'),
+                                    shell=True)
+    elif cluster_type == 'slurm':
+        make_slurm_batch(**job_spec)
 
     # is user specifies copy this ish to the output directory as well for solid(!) bookkeeping
-
-    if copy_log and bucket_dir:
-        subprocess.check_output("gsutil cp "+log_store_path +
-                                " gs://"+os.path.join(bucket_dir, 'job_manifest.yaml'), shell=True)
 
 
 # this is the entry point for learning models over Kubernetes, expose all

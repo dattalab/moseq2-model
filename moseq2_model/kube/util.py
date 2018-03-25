@@ -10,12 +10,11 @@ from copy import deepcopy
 
 
 # wow how did you get so parameters
-def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
-                   var_name, save_every, cross_validate, model_progress, whiten,
-                   save_model, restarts, worker_dicts, other_parameters, ext,
-                   job_name, image, ncpus, restart_policy, gcs_options, robust,
-                   suffix, kind, separate_trans, nmem, hold_out,
-                   nfolds=None, start_num=None, **kwargs):
+def make_kube_yaml(mount_point, input_file, bucket, output_dir,
+                   restarts, worker_dicts, other_parameters, ext,
+                   job_name, image, ncpus, restart_policy, gcs_options,
+                   suffix, kind, nmem, start_num=None, parameters={}, flags={},
+                   **kwargs):
 
     # TODO: better safeguards against user stupidity
 
@@ -26,39 +25,18 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
     bash_arguments = 'moseq2-model learn-model '+os.path.join(mount_point, input_file)
     mount_arguments = 'mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
     dir_arguments = 'mkdir -p '+output_dir
-    param_commands = ('--npcs '+str(npcs) +
-                      ' --num-iter '+str(num_iter) +
-                      ' --var-name '+var_name +
-                      ' --save-every '+str(save_every) +
-                      ' --whiten '+whiten)
+
+    param_commands = ''
+    for k, v in parameters.items():
+        param_commands += ' --{} {}'.format(k, str(v))
+
+    for k, v in flags.items():
+        if v:
+            param_commands += ' --{}'.format(k)
 
     # if we're using ssh need a whole new ****-load of parameters
 
     bash_commands = [yaml.scalarstring.DoubleQuotedScalarString(cmd) for cmd in bash_commands]
-
-    if model_progress:
-        param_commands = param_commands+' --model-progress'
-
-    if save_model:
-        param_commands = param_commands+' --save-model'
-
-    if separate_trans:
-        param_commands = param_commands+' --separate-trans'
-
-    if robust:
-        param_commands = param_commands+' --robust'
-
-    if hold_out and nfolds:
-        new_dicts = []
-        param_commands = param_commands+' --hold-out'
-        # split number of keys into nfolds equally
-
-        for i in range(len(worker_dicts)):
-            worker_dicts[i]['nfolds'] = nfolds
-            worker_dicts[i]['hold-out-seed'] = 1
-            new_dicts.append(worker_dicts[i].copy())
-
-        worker_dicts = new_dicts
 
     # allow for internal loop restarts too?
 
@@ -99,7 +77,11 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir, npcs, num_iter,
         all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
 
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))
-        issue_command = mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
+        if mount_point:
+            issue_command = mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
+        else:
+            issue_command = dir_arguments+'; '+bash_arguments+' '+output_dir_string
+            
         issue_command = issue_command+' '+param_commands
 
         for param, value in all_parameters.items():
