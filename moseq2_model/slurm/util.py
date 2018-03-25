@@ -6,7 +6,7 @@ from copy import deepcopy
 
 # wow how did you get so parameters
 def make_slurm_batch(mount_point, input_file, bucket, output_dir,
-                     restarts, worker_dicts, other_parameters, ext,
+                     restarts, worker_dicts, ext,
                      job_name, image, ncpus, restart_policy, gcs_options,
                      suffix, kind, nmem, prefix='', start_num=None, parameters={}, flags={},
                      **kwargs):
@@ -64,7 +64,7 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         # build up the list for what we're going to pass to the command line
 
         worker_dicts[itr].pop('restart', 0)
-        all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
+        # all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
 
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))
 
@@ -80,9 +80,8 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
 
         issue_command = issue_command+' '+param_commands
 
-        for param, value in all_parameters.items():
-            issue_command = issue_command+' '+param
-            issue_command = issue_command+' '+str(value)
+        for param, value in worker_dicts[itr].items():
+            issue_command = issue_command+' --{} {}'.format(param, str(value))
 
         issue_command += '"'
 

@@ -281,10 +281,8 @@ def read_cli_config(filename, suppress_output=False):
                 }
                 cfg['worker_dicts'].append(new_dict)
 
-    cfg['other_parameters'] = {}
-
     if 'parameters' in config.keys():
-        cfg['other_parameters'] = config['parameters']
+        cfg['parameters'] = config['parameters']
 
     if 'flags' in config.keys():
         cfg['flags'] = config['flags']

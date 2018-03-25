@@ -11,7 +11,7 @@ from copy import deepcopy
 
 # wow how did you get so parameters
 def make_kube_yaml(mount_point, input_file, bucket, output_dir,
-                   restarts, worker_dicts, other_parameters, ext,
+                   restarts, worker_dicts, ext,
                    job_name, image, ncpus, restart_policy, gcs_options,
                    suffix, kind, nmem, start_num=None, parameters={}, flags={},
                    **kwargs):
@@ -74,14 +74,14 @@ def make_kube_yaml(mount_point, input_file, bucket, output_dir,
         # build up the list for what we're going to pass to the command line
 
         worker_dicts[itr].pop('restart', 0)
-        all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
+        # all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
 
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))
         if mount_point:
             issue_command = mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
         else:
             issue_command = dir_arguments+'; '+bash_arguments+' '+output_dir_string
-            
+
         issue_command = issue_command+' '+param_commands
 
         for param, value in all_parameters.items():
