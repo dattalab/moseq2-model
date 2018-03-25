@@ -1,6 +1,4 @@
-import ruamel.yaml as yaml
 import os
-from moseq2_model.util import merge_dicts, load_pcs
 from copy import deepcopy
 
 
@@ -42,7 +40,8 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         worker_dicts = new_dicts
 
     # worker_dicts=[val for val in worker_dicts for _ in range(restarts)]
-
+    # make sure we dump via yaml to the output directory!
+    
     output_dicts = deepcopy(worker_dicts)
     njobs = len(worker_dicts)
 
@@ -85,6 +84,9 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
 
         issue_command += '"'
 
+        # print the command then sleep to give slurm a break
+
         print(issue_command)
+        print('sleep 0.3')
 
     return bucket_dir
