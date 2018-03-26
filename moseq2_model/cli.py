@@ -45,7 +45,7 @@ def cli():
 @click.option("--nmem", type=int, envvar='MOSEQ2_GKE_MODEL_NMEM', default=10000)
 @click.option("--input-file", type=str, default="use_data.mat")
 @click.option("--check-cluster", type=str, envvar='MOSEQ2_GKE_CLUSTER_NAME')
-@click.option("--log-path", type=click.Path(exists=True), envvar='MOSEQ2_GKE_LOG_PATH',
+@click.option("--log-path", type=click.Path(), envvar='MOSEQ2_GKE_LOG_PATH',
               default=os.path.join(str(Path.home()), '.moseq2_model_logs'))
 @click.option("--kind", type=str, envvar='MOSEQ2_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight", is_flag=True)
