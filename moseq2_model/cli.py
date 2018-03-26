@@ -11,6 +11,7 @@ import numpy as np
 import uuid
 import random
 import warnings
+import shutil
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
@@ -58,6 +59,10 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
 
     # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
 
+    if not os.path.exists(log_path):
+        click.echo("Log path {} does not exist, creating".format(log_path))
+        os.makedirs(log_path)
+
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
     # file that we can then farm out to Kubernetes cluster using kubectl
 
@@ -102,7 +107,28 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
                                     " gs://"+os.path.join(bucket_dir, 'job_manifest.yaml'),
                                     shell=True)
     elif cluster_type == 'slurm':
-        make_slurm_batch(**job_spec)
+
+        if not os.access(os.path.dirname(job_spec['output_dir']), os.W_OK):
+            raise IOError('Output directory is not writable.')
+
+        output_dicts, output_dir, bucket_dir = make_slurm_batch(**job_spec)
+
+        job_spec.pop('cfg', None)
+        job_spec.pop('worker_dicts', None)
+        job_spec['worker_dicts'] = output_dicts
+
+        if log_path is None:
+            log_path = os.getcwd()
+
+        log_store_path = os.path.join(log_path, job_name+suffix+'.yaml')
+
+        with open(log_store_path, 'w') as f:
+            yaml.dump(job_spec, f)
+
+        if copy_log:
+            shutil.copy2(log_store_path, output_dir)
+
+
 
     # is user specifies copy this ish to the output directory as well for solid(!) bookkeeping
 
