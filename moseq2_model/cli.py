@@ -60,7 +60,6 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
     # TODO: allow for "inner" and "outer" restarts (one internal to learn model the other external)
 
     if not os.path.exists(log_path):
-        click.echo("Log path {} does not exist, creating".format(log_path))
         os.makedirs(log_path)
 
     # use pyyaml to build up a list of worker dictionaries, make a giant yaml
@@ -107,9 +106,6 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
                                     " gs://"+os.path.join(bucket_dir, 'job_manifest.yaml'),
                                     shell=True)
     elif cluster_type == 'slurm':
-
-        if not os.access(os.path.dirname(job_spec['output_dir']), os.W_OK):
-            raise IOError('Output directory is not writable.')
 
         output_dicts, output_dir, bucket_dir = make_slurm_batch(**job_spec)
 

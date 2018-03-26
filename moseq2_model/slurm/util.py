@@ -18,6 +18,12 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
     mount_arguments = 'mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
     dir_arguments = 'mkdir -p '+output_dir
 
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    if not os.access(output_dir, os.W_OK):
+        raise IOError('Output directory is not writable.')
+
     param_commands = ''
     for k, v in parameters.items():
         param_commands += ' --{} {}'.format(k, str(v))
