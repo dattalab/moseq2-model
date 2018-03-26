@@ -77,10 +77,10 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         if prefix:
             issue_command += prefix+'; '
 
-        if mount_point:
-            issue_command += mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
-        else:
-            issue_command += dir_arguments+'; '+bash_arguments+' '+output_dir_string
+        # if mount_point:
+        #     issue_command += mount_arguments+'; '+dir_arguments+'; '+bash_arguments+' '+output_dir_string
+        # else:
+        #     issue_command += dir_arguments+'; '+bash_arguments+' '+output_dir_string
 
         issue_command = issue_command+' '+param_commands
 
