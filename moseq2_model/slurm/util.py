@@ -14,6 +14,12 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
     bucket_dir = os.path.join(bucket, output_dir, job_name+suffix)
     output_dir = os.path.join(mount_point, output_dir, job_name+suffix)
 
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    if not os.access(output_dir, os.W_OK):
+        raise IOError('Output directory {} is not writable.'.format(output_dir))
+
     bash_arguments = 'moseq2-model learn-model '+os.path.join(mount_point, input_file)
 
     param_commands = ''
