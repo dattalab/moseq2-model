@@ -57,8 +57,8 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))
         output_log_string = os.path.join(output_dir, 'job_{:06d}.out')
 
-        issue_command = 'sbatch --nodes 1 --ntasks-per-node=1 --cpus-per-task={:d} --mem={:d} --output --wrap "'\
-            .format(ncpus, output_log_string, nmem)
+        issue_command = 'sbatch --nodes 1 --ntasks-per-node=1 --cpus-per-task={:d} --mem={:d} --output {} --wrap "'\
+            .format(ncpus, nmem, output_log_string)
 
         if prefix:
             issue_command += prefix+'; '
