@@ -29,7 +29,7 @@ def cli():
 
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command(name="parameter-scan")
-@click.argument("param_file", type=click.Path(exists=True), help=".yaml configuration")
+@click.argument("param_file", type=click.Path(exists=True))
 @click.option("--cluster-type", "-c",
               type=click.Choice(['slurm', 'kubernetes']),
               default="slurm", help="Cluster environment (slurm/kubernetes)")
