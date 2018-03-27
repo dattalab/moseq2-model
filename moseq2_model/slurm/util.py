@@ -15,8 +15,6 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
     output_dir = os.path.join(mount_point, output_dir, job_name+suffix)
 
     bash_arguments = 'moseq2-model learn-model '+os.path.join(mount_point, input_file)
-    mount_arguments = 'mkdir '+mount_point+'; gcsfuse '+gcs_options+' '+bucket+' '+mount_point
-    dir_arguments = 'mkdir -p '+output_dir
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -50,19 +48,11 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
 
     njobs = len(worker_dicts)
 
-    if kind == 'Pod':
-        job_dict = [{'apiVersion': 'v1', 'kind': 'Pod'}]*njobs
-    elif kind == 'Job':
-        job_dict = [{'apiVersion': 'batch/v1', 'kind': 'Job'}]*njobs
+    output_dicts = deepcopy(worker_dicts)
 
     for itr, job in enumerate(worker_dicts):
 
         # need some unique stuff to specify what this job is, do some good bookkeeping for once
-
-        job_dict[itr]['metadata'] = {
-            'name': job_name+'-{:d}'.format(itr+start_num),
-            'labels': {'jobgroup': job_name}
-            }
 
         # scan parameters are commands, along with any other specified parameters
         # build up the list for what we're going to pass to the command line
@@ -91,9 +81,9 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         issue_command += '"'
 
         # print the command then sleep to give slurm a break
-        job_dict[itr]['filename'] = output_dir_string
+        output_dicts[itr]['filename'] = output_dir_string
 
         print(issue_command)
         print('sleep 0.3')
 
-    return job_dict, output_dir, bucket_dir
+    return output_dicts, output_dir, bucket_dir

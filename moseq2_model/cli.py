@@ -12,6 +12,7 @@ import uuid
 import random
 import warnings
 import shutil
+import glob
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, read_cli_config,\
@@ -299,36 +300,47 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter
 
 @cli.command("export-results")
 @click.option("--input-dir", "-i", type=click.Path(exists=True), default=os.getcwd())
-@click.option("--job-manifest", "-j", type=click.Path(exists=True, readable=True),
-              default=os.path.join(os.getcwd(), 'job_manifest.yaml'))
+@click.option("--job-manifest", "-j", type=str, default=None)
 @click.option("--dest-file", "-d", type=click.Path(dir_okay=True, writable=True),
               default=os.path.join(os.getcwd(), 'export_results.mat'))
 def export_results(input_dir, job_manifest, dest_file):
 
     # TODO: smart detection of restarts and cross-validation (use worker_dicts or job manifest)
 
-    with open(job_manifest, 'r') as f:
-        manifest = yaml.load(f.read(), Loader=yaml.Loader)
+    if job_manifest is None:
+        yaml_list = glob.glob(os.path.join(input_dir, '*.yaml'))
+        if not yaml_list:
+            parse_dicts = []
 
-    if type(manifest['worker_dicts']) is list:
-        parse_dicts = manifest['worker_dicts']
-    elif type(manifest['worker_dicts']) is str:
-        parse_dicts = ast.literal_eval(manifest['worker_dicts'])
+            # if we don't have a manifest, just grab a list of files etc etc
 
-    # if 'hold-out' in parse_dicts[0].keys():
-    #     for i in range(len(parse_dicts)):
-    #         parse_dicts[i]['hold_out'] = parse_dicts[i].pop('hold-out')
+            parse_dicts = [{'filename': f} for f in glob.glob(os.path.join(input_dir, '*'))
+                           if f not in yaml_list]
+        else:
+            job_manifest = yaml_list[0]
+
+            with open(job_manifest, 'r') as f:
+                manifest = yaml.load(f.read(), Loader=yaml.Loader)
+
+            if type(manifest['worker_dicts']) is list:
+                parse_dicts = manifest['worker_dicts']
+            elif type(manifest['worker_dicts']) is str:
+                parse_dicts = ast.literal_eval(manifest['worker_dicts'])
+
+            for i, use_dict in enumerate(parse_dicts):
+                parse_dicts[i]['filename'] = os.path.join(input_dir, os.path.basename(use_dict['filename']))
 
     nfiles = len(parse_dicts)
 
     for i, use_dict in enumerate(parse_dicts):
-        test_load = joblib.load(os.path.join(input_dir, os.path.basename(use_dict['filename'])))
-        if (list_rank(test_load['labels']) == 1 and
-                len(test_load['labels']) == 1 and np.all(np.isnan(test_load['labels'][0]))):
-            continue
-        else:
-            rank = list_rank(test_load['labels'])
-            break
+        if os.path.exists(use_dict['filename']):
+            test_load = joblib.load(use_dict['filename'])
+            if (list_rank(test_load['labels']) == 1 and
+                    len(test_load['labels']) == 1 and np.all(np.isnan(test_load['labels'][0]))):
+                continue
+            else:
+                rank = list_rank(test_load['labels'])
+                break
 
     click.echo(str(rank))
 
@@ -356,7 +368,7 @@ def export_results(input_dir, job_manifest, dest_file):
         metadata = {}
 
     if 'keys' in test_load.keys():
-        metadata['input_keys'] = [n.encode('utf8') for n in test_load['keys']]
+        metadata['input_keys'] = [str(n).encode("utf8") for n in test_load['keys']]
 
     save_array = np.empty((nfiles, nsets, nrestarts), dtype=np.object)
 
@@ -389,7 +401,7 @@ def export_results(input_dir, job_manifest, dest_file):
         # scan_dicts[i] = parse_dicts[i]
 
         try:
-            use_data = joblib.load(os.path.join(input_dir, os.path.basename(use_dict['filename'])))
+            use_data = joblib.load(use_dict['filename'])
         except IOError:
             continue
         except KeyboardInterrupt:
