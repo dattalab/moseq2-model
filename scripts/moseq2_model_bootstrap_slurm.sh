@@ -23,3 +23,7 @@ git clone https://github.com/dattalab/moseq2_model.git $HOME/python_repos/moseq2
 git clone https://github.com/dattalab/moseq2.git $HOME/python_repos/moseq2
 pip install -e $HOME/python_repos/moseq2_model --process-dependency-links
 pip install -e $HOME/python_repos/moseq2
+
+# home for modeling data and results
+mkdir $HOME/modeling_data
+mkdir $HOME/modeling_results
