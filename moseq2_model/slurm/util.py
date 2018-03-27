@@ -55,7 +55,7 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         # all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
 
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))
-        output_log_string = os.path.join(output_dir, 'job_{:06d}.out')
+        output_log_string = os.path.join(output_dir, 'job_{:06d}.out'.format(itr))
 
         issue_command = 'sbatch --nodes 1 --ntasks-per-node=1 --cpus-per-task={:d} --mem={:d} --output {} --wrap "'\
             .format(ncpus, nmem, output_log_string)
