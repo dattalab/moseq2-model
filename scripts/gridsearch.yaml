@@ -4,9 +4,9 @@ scan_settings:
   scan_parameter: [kappa, nu]
   scan_range: [[5,9,5],[1,20,20]]
   scan_scale:  ['log','linear']
-  input_file: /home/<USER>/d1d2_round2/export_pca.mat # add your username here
+  input_file: /home/<USER>/modeling_data/d1d2_round2/export_pca.mat # add your username here
   notes: Data modeling for my great experiment, large parameter scan
-  output_dir: /home/<USER>/d1d2_round2/ # put your username in here
+  output_dir: /home/<USER>/modeling_data/d1d2_round2/ # put your username in here
   restarts: 2
   ext: .p # output of modeling (by default joblib dump to pickle)
   prefix: "source activate moseq2" # do anything before initiating command?
@@ -17,8 +17,9 @@ parameters:
   whiten: all # whiten all data (can also be each)
   hold-out-seed: 0  # random seed for holding out data
   nfolds: 5 # number of splits for hold out (one split gets held out)
+  gamma: 999
 flags:
   hold-out: True # hold out?
   save-model: True # save model object?
-  robust: False # use tAR?
+  robust: True # use tAR?
   model-progress: True # display progress bar
