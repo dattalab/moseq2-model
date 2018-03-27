@@ -3,7 +3,7 @@
 scan_settings:
   scan_parameter: [kappa, nu]
   scan_range: [[5,9,5],[1,20,20]]
-  scan_scale:  ['log','linear]
+  scan_scale:  ['log','linear']
   input_file: /home/<USER>/d1d2_round2/export_pca.mat # add your username here
   notes: Data modeling for my great experiment, large parameter scan
   output_dir: /home/<USER>/d1d2_round2/ # put your username in here
