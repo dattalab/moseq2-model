@@ -29,25 +29,30 @@ def cli():
 
 # this will take some parameter scan specification and create a yaml file we can pipe into kubectl
 @cli.command(name="parameter-scan")
-@click.argument("param_file", type=click.Path(exists=True))
+@click.argument("param_file", type=click.Path(exists=True), help=".yaml configuration")
 @click.option("--cluster-type", "-c",
-              type=click.Choice(['slurm', 'kubernetes', 'local']),
-              default="slurm")
-@click.option("--restarts", "-r", type=int, default=1)
-@click.option("--var_name", type=str, default='features')
-@click.option("--image", "-i", type=str, envvar='MOSEQ2_GKE_MODEL_IMAGE', default='model-image')
-@click.option("--job-name", type=str, default="kubejob")
-@click.option("--output-dir", type=str, default="")
-@click.option("--ext", "-e", type=click.Choice(['.p.z', '.p', '.mat', '.h5']), default=".p.z")
-@click.option("--mount-point", type=str, envvar='MOSEQ2_GKE_MOUNT_POINT', default='/mnt/user_gcs_bucket')
-@click.option("--bucket", "-b", type=str, envvar='MOSEQ2_GKE_MODEL_BUCKET', default='bucket')
-@click.option("--restart-policy", type=str, default="OnFailure")
-@click.option("--ncpus", type=int, envvar='MOSEQ2_GKE_MODEL_NCPUS', default=4)
-@click.option("--nmem", type=int, envvar='MOSEQ2_GKE_MODEL_NMEM', default=10000)
-@click.option("--input-file", type=str, default="use_data.mat")
-@click.option("--check-cluster", type=str, envvar='MOSEQ2_GKE_CLUSTER_NAME')
+              type=click.Choice(['slurm', 'kubernetes']),
+              default="slurm", help="Cluster environment (slurm/kubernetes)")
+@click.option("--restarts", "-r", type=int, default=1, help="Number of restarts per parameter settings")
+@click.option("--var_name", type=str, default='features', help="variable with pcs (MATLAB/h5 only)")
+@click.option("--image", "-i", type=str, envvar='MOSEQ2_GKE_MODEL_IMAGE',
+              default='model-image', help="Docker image (k8s only)")
+@click.option("--job-name", type=str, default="kubejob", help="Name of job (k8s only)")
+@click.option("--output-dir", type=str, default="", help="Directory to store job output")
+@click.option("--ext", "-e", type=click.Choice(['.p.z', '.p', '.mat', '.h5']), default=".p")
+@click.option("--mount-point", type=str, envvar='MOSEQ2_GKE_MOUNT_POINT',
+              default='', help="Google bucket mount point (k8s only)")
+@click.option("--bucket", "-b", type=str, envvar='MOSEQ2_GKE_MODEL_BUCKET',
+              default='bucket', help="Google bucket to mount")
+@click.option("--restart-policy", type=str, default="OnFailure", help="Restart policy for pods (k8s only)")
+@click.option("--ncpus", type=int, envvar='MOSEQ2_GKE_MODEL_NCPUS', default=7, help="Number of cpus per job")
+@click.option("--nmem", type=int, envvar='MOSEQ2_GKE_MODEL_NMEM', default=20000,
+              help="RAM usage per job (MB)")
+@click.option("--input-file", type=str, default="use_data.mat", help="File with data to model")
+@click.option("--check-cluster", type=str, envvar='MOSEQ2_GKE_CLUSTER_NAME',
+              help="Name of GKE cluster (k8s only)")
 @click.option("--log-path", type=click.Path(), envvar='MOSEQ2_GKE_LOG_PATH',
-              default=os.path.join(str(Path.home()), '.moseq2_model_logs'))
+              default=os.path.join(str(Path.home()), '.moseq2_model_logs'), help="Path for log files")
 @click.option("--kind", type=str, envvar='MOSEQ2_GKE_MODEL_KIND', default='Job')
 @click.option("--preflight", is_flag=True)
 @click.option("--copy-log", "-l", is_flag=True)

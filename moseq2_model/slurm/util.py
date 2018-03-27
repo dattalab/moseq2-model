@@ -16,12 +16,6 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
 
     bash_arguments = 'moseq2-model learn-model '+os.path.join(mount_point, input_file)
 
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    if not os.access(output_dir, os.W_OK):
-        raise IOError('Output directory is not writable.')
-
     param_commands = ''
     for k, v in parameters.items():
         param_commands += ' --{} {}'.format(k, str(v))
@@ -61,8 +55,10 @@ def make_slurm_batch(mount_point, input_file, bucket, output_dir,
         # all_parameters = merge_dicts(other_parameters, worker_dicts[itr])
 
         output_dir_string = os.path.join(output_dir, 'job_{:06d}{}'.format(itr, ext))
+        output_log_string = os.path.join(output_dir, 'job_{:06d}.out')
 
-        issue_command = 'sbatch --ntasks=1 --cpus-per-task={:d} --mem={:d} --wrap "'.format(ncpus, nmem)
+        issue_command = 'sbatch --nodes 1 --ntasks-per-node=1 --cpus-per-task={:d} --mem={:d} --output --wrap "'\
+            .format(ncpus, output_log_string, nmem)
 
         if prefix:
             issue_command += prefix+'; '
