@@ -32,7 +32,7 @@ def cli():
 @click.argument("param_file", type=click.Path(exists=True))
 @click.option("--cluster-type", "-c",
               type=click.Choice(['slurm', 'kubernetes', 'local']),
-              default="kubernetes")
+              default="slurm")
 @click.option("--restarts", "-r", type=int, default=1)
 @click.option("--var_name", type=str, default='features')
 @click.option("--image", "-i", type=str, envvar='MOSEQ2_GKE_MODEL_IMAGE', default='model-image')
