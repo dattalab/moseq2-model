@@ -113,12 +113,6 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
                                     shell=True)
     elif cluster_type == 'slurm':
 
-        if not os.path.exists(job_spec['output_dir']):
-            os.makedirs(job_spec['output_dir'])
-
-        if not os.access(job_spec['output_dir'], os.W_OK):
-            raise IOError('Output directory {} is not writable.'.format(job_spec['output_dir']))
-
         if not os.path.exists(job_spec['input_file']):
             raise IOError("Could not find input file {}".format(job_spec['input_file']))
 
@@ -138,10 +132,6 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
 
         if copy_log:
             shutil.copy2(log_store_path, output_dir)
-
-
-
-    # is user specifies copy this ish to the output directory as well for solid(!) bookkeeping
 
 
 # this is the entry point for learning models over Kubernetes, expose all
