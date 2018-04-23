@@ -49,9 +49,9 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
                 if isinstance(tmp, h5py._hl.dataset.Dataset):
-                    data_dict = OrderedDict([(1, tmp)])
+                    data_dict = OrderedDict([(1, tmp.value)])
                 elif isinstance(tmp, h5py._hl.group.Group):
-                    data_dict = OrderedDict([(k, v) for k, v in dict.items()])
+                    data_dict = OrderedDict([(k, v.value) for k, v in dict.items()])
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
