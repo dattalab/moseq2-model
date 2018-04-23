@@ -113,6 +113,9 @@ def parameter_scan(param_file, cluster_type, restarts, var_name, image, job_name
 
         output_dicts, output_dir, bucket_dir = make_slurm_batch(**job_spec)
 
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
         job_spec.pop('cfg', None)
         job_spec.pop('worker_dicts', None)
         job_spec['worker_dicts'] = output_dicts
