@@ -258,14 +258,17 @@ def read_cli_config(filename, suppress_output=False):
         cfg['worker_dicts'] = []
 
         if type(cfg['scan_parameter']) is list:
-            for use_parameter, use_range, use_scale in zip(cfg['scan_parameter'],
-                                                           cfg['scan_range'], cfg['scan_scale']):
+            for use_parameter, use_range, use_scale, use_type in\
+                zip(cfg['scan_parameter'],
+                    cfg['scan_range'],
+                    cfg['scan_scale'],
+                    cfg['scan_type']):
                 if use_scale == 'log':
-                    cfg['scan_values'].append(np.logspace(*use_range))
+                    cfg['scan_values'].append(np.logspace(*use_range).astype(use_type))
                 elif use_scale == 'linear':
-                    cfg['scan_values'].append(np.linspace(*use_range))
+                    cfg['scan_values'].append(np.linspace(*use_range).astype(use_type))
                 else:
-                    cfg['scan_values'].append(use_range)
+                    cfg['scan_values'].append(use_range.astype(use_type))
 
             for itr_values in itertools.product(*cfg['scan_values']):
                 new_dict = {}
