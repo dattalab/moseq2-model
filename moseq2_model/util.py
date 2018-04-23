@@ -49,9 +49,9 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
                 if isinstance(tmp, h5py._hl.dataset.Dataset):
-                    data_dict = OrderedDict([(1, tmp.value)])
+                    data_dict = OrderedDict([(1, tmp.value[:, :npcs])])
                 elif isinstance(tmp, h5py._hl.group.Group):
-                    data_dict = OrderedDict([(k, v.value) for k, v in tmp.items()])
+                    data_dict = OrderedDict([(k, v.value[:, :npcs]) for k, v in tmp.items()])
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -247,6 +247,7 @@ def read_cli_config(filename, suppress_output=False):
         'worker_dicts': None,
         'scan_parameter': None,
         'scan_values': None,
+        'scan_type': None,
         'parameters': {},
         'flags': {},
     }
@@ -256,6 +257,9 @@ def read_cli_config(filename, suppress_output=False):
         cfg = merge_dicts(cfg, config['scan_settings'])
         cfg['scan_values'] = []
         cfg['worker_dicts'] = []
+
+        if cfg['scan_type'] is None:
+            cfg['scan_type'] = ['float'] * len(cfg['scan_parameter'])
 
         if type(cfg['scan_parameter']) is list:
             for use_parameter, use_range, use_scale, use_type in\
