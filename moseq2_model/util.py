@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 
 # grab matlab data
-def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
+def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
 
     # TODO: trim pickles down to right number of pcs
 
@@ -44,20 +44,23 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
     elif filename.endswith('.h5'):
         with h5py.File(filename, 'r') as f:
             dsets = f.keys()
-            print('In {} found {} datasets'.format(filename, dsets))
+
             if var_name in dsets:
                 print('Found pcs in {}'.format(var_name))
-                tmp = f[var_name].value
-                if type(tmp) is np.ndarray:
+                tmp = f[var_name]
+                if isinstance(tmp, h5py._hl.dataset.Dataset):
                     data_dict = OrderedDict([(1, tmp)])
-                elif type(tmp) is dict:
+                elif isinstance(tmp, h5py._hl.group.Group):
                     data_dict = OrderedDict([(k, v) for k, v in dict.items()])
-                elif type(tmp) is OrderedDict:
-                    data_dict = tmp
+                else:
+                    raise IOError('Could not load data from h5 file')
+            else:
+                raise IOError('Could not find dataset name {} in {}'.format(var_name, filename))
 
-            if 'uuid' in dsets:
-                print('Found groups in groups')
-                metadata['uuid'] = f['uuid'].value
+            if 'uuids' in dsets:
+                metadata['uuids'] = f['uuid'].value
+            elif h5_key_is_uuid:
+                metadata['uuids'] = list(data_dict.keys())
 
             if 'groups' in dsets:
                 print('Found groups in groups')
