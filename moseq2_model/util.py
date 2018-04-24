@@ -1,8 +1,6 @@
 import numpy as np
 import joblib
 import copy
-import ruamel.yaml as yaml
-import itertools
 import scipy.io
 import h5py
 from tqdm import tqdm_notebook, tqdm
@@ -235,83 +233,6 @@ def get_parameters_from_model(model, save_ar=True):
         parameters['sig'] = [obs.sigma for obs in model.obs_distns]
 
     return parameters
-
-
-# read in user yml file for mpi jobs
-def read_cli_config(filename, suppress_output=False):
-
-    with open(filename, 'r') as f:
-        config = yaml.load(f.read(), Loader=yaml.Loader)
-
-    cfg = {
-        'worker_dicts': None,
-        'scan_parameter': None,
-        'scan_values': None,
-        'scan_type': None,
-        'parameters': {},
-        'flags': {},
-    }
-
-    if 'scan_settings' in config:
-
-        cfg = merge_dicts(cfg, config['scan_settings'])
-        cfg['scan_values'] = []
-        cfg['worker_dicts'] = []
-
-        if cfg['scan_type'] is None:
-            cfg['scan_type'] = ['float'] * len(cfg['scan_parameter'])
-
-        if type(cfg['scan_parameter']) is list:
-            for use_parameter, use_range, use_scale, use_type in\
-                zip(cfg['scan_parameter'],
-                    cfg['scan_range'],
-                    cfg['scan_scale'],
-                    cfg['scan_type']):
-                if use_scale == 'log':
-                    cfg['scan_values'].append(np.logspace(*use_range).astype(use_type))
-                elif use_scale == 'linear':
-                    cfg['scan_values'].append(np.linspace(*use_range).astype(use_type))
-                else:
-                    cfg['scan_values'].append(use_range.astype(use_type))
-
-            for itr_values in itertools.product(*cfg['scan_values']):
-                new_dict = {}
-                for param, value in zip(cfg['scan_parameter'], itr_values):
-                    new_dict[param] = value
-                cfg['worker_dicts'].append(new_dict)
-        else:
-            if cfg['scan_scale'] == 'log':
-                cfg['scan_values'].append(np.logspace(*cfg['scan_range']))
-            elif cfg['scan_scale'] == 'linear':
-                cfg['scan_values'].append(np.linspace(*cfg['scan_range']))
-
-            for value in cfg['scan_values'][0]:
-                new_dict = {
-                    cfg['scan_parameter']: value
-                }
-                cfg['worker_dicts'].append(new_dict)
-
-    if 'parameters' in config.keys():
-        cfg['parameters'] = config['parameters']
-
-    if 'flags' in config.keys():
-        cfg['flags'] = config['flags']
-
-    if not suppress_output:
-        if type(cfg['scan_parameter']) is list:
-            for param, values in zip(cfg['scan_parameter'], cfg['scan_values']):
-                print('Will scan parameter '+param)
-                print('Will scan value '+str(values))
-        else:
-            print('Will scan parameter '+cfg['scan_parameter'])
-            print('Will scan value '+str(cfg['scan_values'][0]))
-
-    return cfg
-
-
-# taken from moseq by @mattjj and @alexbw
-def merge_dicts(base_dict, clobbering_dict):
-    return dict(base_dict, **clobbering_dict)
 
 
 def progressbar(*args, **kwargs):
