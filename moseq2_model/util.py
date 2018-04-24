@@ -272,3 +272,8 @@ def is_named_tuple(variable):
         return False
 
     return all(type(n) == str for n in f)
+
+
+# taken from moseq by @mattjj and @alexbw
+def merge_dicts(base_dict, clobbering_dict):
+    return dict(base_dict, **clobbering_dict)
