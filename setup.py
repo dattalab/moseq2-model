@@ -1,3 +1,4 @@
+import subprocess, sys
 from setuptools import setup, find_packages
 
 # testing w/o 'scikit-learn == 0.16.1','scikit-image',works okay but leaving here for reference
@@ -5,30 +6,29 @@ from setuptools import setup, find_packages
 # I've hardcorded the dependency links to use very high version numbers, hope it doesn't break anything!
 # note that you will need to pass the option --process-dependency-links for this to work correctly
 
+install = lambda pkg: subprocess.check_call([sys.executable, '-m', 'pip', 'install', pkg])
+
 try:
     import numpy
 except ImportError:
-    import pip
     #pip.main(['install', 'numpy==1.13.0'])
-    pip.main(['install', 'numpy'])
+    #pip.main(['install', 'numpy'])
+    install('numpy')
 
 try:
     import future
 except ImportError:
-    import pip
-    pip.main(['install', 'future'])
+    install('future')
 
 try:
     import six
 except ImportError:
-    import pip
-    pip.main(['install', 'six'])
+    install('six')
 
 try:
     import cython
 except ImportError:
-    import pip
-    pip.main(['install', 'cython'])
+    install('cython')
 
 setup(
     name='moseq2_model',
