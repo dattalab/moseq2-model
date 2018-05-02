@@ -18,15 +18,22 @@ Welcome to moseq2-model, a package of convenience functions for submitting data 
 
 Moseq2-model has been tested with Python 3.6.  All requirements can be installed using pip, though it's recommended you create a new conda environment to ensure the dependencies do not conflict with any software you may have currently installed.
 
+If you do not have a moseq2 environment already , make one.
+
 ```sh
-conda create -n moseq2_model python=3.6
-source activate moseq2_model
-git clone https://github.com/dattalab/moseq2_model.git
-cd moseq2_model/
+conda create -n moseq2 python=3.6
+source activate moseq2
+```
+
+Next, let's install the repository in the moseq2 environment,
+
+```sh
+git clone https://github.com/dattalab/moseq2-model.git
+cd moseq2-model/
 pip install -e . --process-dependency-links
 ```
 
-If you just want to use these tools locally, you're done.  
+You need the process-dependency-links option to install a few custom repositories from github. If you just want to use these tools locally, you're done.  
 
 
 ## Usage
