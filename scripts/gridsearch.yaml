@@ -18,8 +18,9 @@ parameters:
   hold-out-seed: 0  # random seed for holding out data
   nfolds: 5 # number of splits for hold out (one split gets held out)
   gamma: 999
+  var-name: scores # group in the h5 file that contains PC score datasets
 flags:
-  hold-out: True # hold out?
-  save-model: True # save model object?
-  robust: True # use tAR?
+  hold-out: False # hold out?
+  save-model: False # save model object?
+  robust: False # use tAR?
   model-progress: True # display progress bar
