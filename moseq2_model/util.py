@@ -50,6 +50,8 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                     data_dict = OrderedDict([(1, tmp.value[:, :npcs])])
                 elif isinstance(tmp, h5py._hl.group.Group):
                     data_dict = OrderedDict([(k, v.value[:, :npcs]) for k, v in tmp.items()])
+                    if 'groups' in dsets:
+                        metadata['groups'] = [f['groups/{}'.format(key)].value for key in tmp.keys()]
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -60,9 +62,9 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             elif h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
 
-            if 'groups' in dsets:
-                print('Found groups in groups')
-                metadata['groups'] = f['groups'].value
+            # if 'groups' in dsets:
+            #     print('Found groups in groups')
+            #     metadata['groups'] = f['groups'].value
 
     else:
         raise ValueError('Did understand filetype')

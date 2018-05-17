@@ -10,6 +10,15 @@ from copy import deepcopy
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, get_parameters_from_model, copy_model
 
+orig_init = click.core.Option.__init__
+
+
+def new_init(self, *args, **kwargs):
+    orig_init(self, *args, **kwargs)
+    self.show_default = True
+
+
+click.core.Option.__init__ = new_init
 
 @click.group()
 def cli():
