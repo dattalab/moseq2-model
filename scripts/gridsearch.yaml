@@ -23,4 +23,3 @@ flags:
   hold-out: False # hold out?
   save-model: False # save model object?
   robust: False # use tAR?
-  model-progress: True # display progress bar
