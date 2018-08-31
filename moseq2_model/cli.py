@@ -80,11 +80,11 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter
     if kappa is None:
         total_frames = 0
         for v in data_dict.values():
-            total_frames += len(v)
+            idx = (~np.isnan(v)).all(axis=1)
+            total_frames += np.sum(idx)
 
         print('Setting kappa to the number of frames: {}'.format(total_frames))
         kappa = total_frames
-
 
     if hold_out and nkeys >= nfolds:
         click.echo("Will hold out 1 fold of "+str(nfolds))

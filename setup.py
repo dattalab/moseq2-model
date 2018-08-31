@@ -32,7 +32,7 @@ except ImportError:
 
 setup(
     name='moseq2_model',
-    version='0.1.0',
+    version='0.1.1',
     author='Datta Lab',
     description='Modeling for the best',
     packages=find_packages(exclude='docs'),
