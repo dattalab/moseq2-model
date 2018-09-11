@@ -1,9 +1,8 @@
 # specs for travis ci
 language: python
 python:
-  - "3.4"
-  - "3.5"
-  - "3.6"
+  - 3.6
+  - 3.7
 # get the dependencies
 install:
   - pip install . --process-dependency-links
