@@ -25,6 +25,21 @@ def cli():
     pass
 
 
+@cli.command(name='count-frames')
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
+def count_frames(input_file, var_name):
+
+    data_dict, data_metadata = load_pcs(filename=input_file, var_name=var_name,
+                                        npcs=10, load_groups=False)
+    total_frames = 0
+    for v in data_dict.values():
+        idx = (~np.isnan(v)).all(axis=1)
+        total_frames += np.sum(idx)
+
+    print('Total frames: {}'.format(total_frames))
+
+
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
 @cli.command(name="learn-model")
