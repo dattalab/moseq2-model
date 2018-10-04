@@ -25,6 +25,21 @@ def cli():
     pass
 
 
+@cli.command(name='count-frames')
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
+def count_frames(input_file, var_name):
+
+    data_dict, data_metadata = load_pcs(filename=input_file, var_name=var_name,
+                                        npcs=10, load_groups=False)
+    total_frames = 0
+    for v in data_dict.values():
+        idx = (~np.isnan(v)).all(axis=1)
+        total_frames += np.sum(idx)
+
+    print('Total frames: {}'.format(total_frames))
+
+
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
 @cli.command(name="learn-model")
@@ -45,7 +60,7 @@ def cli():
 @click.option("--model-progress", "-p", type=bool, default=True, help="Show model progress")
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
-@click.option("--kappa", "-k", type=float, default=1e8, help="Kappa")
+@click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--nu", type=float, default=4, help="Nu (only applicable if robust set to true)")
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
@@ -76,6 +91,15 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter
     all_keys = list(data_dict.keys())
     nkeys = len(all_keys)
     compute_heldouts = False
+
+    if kappa is None:
+        total_frames = 0
+        for v in data_dict.values():
+            idx = (~np.isnan(v)).all(axis=1)
+            total_frames += np.sum(idx)
+
+        print('Setting kappa to the number of frames: {}'.format(total_frames))
+        kappa = total_frames
 
     if hold_out and nkeys >= nfolds:
         click.echo("Will hold out 1 fold of "+str(nfolds))
