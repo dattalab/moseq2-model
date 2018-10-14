@@ -66,8 +66,9 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
         'init_state_distn': 'uniform'
         }
 
-    if robust:
-        default_obs_hypparams['nu'] = nu
+    # accomodate SL's new RobustAutogression code 10/14/2018
+    # if robust:
+    #     default_obs_hypparams['nu'] = nu
 
     obs_hypparams = merge_dicts(default_obs_hypparams, obs_hypparams)
     model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)

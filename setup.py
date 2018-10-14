@@ -42,7 +42,7 @@ setup(
                       'pybasicbayes', 'pyhsmm',
                       'autoregressive', 'joblib==0.11',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm'],
-    dependency_links=['git+https://github.com/mattjj/pybasicbayes.git@robust_regression#egg=pybasicbayes-1',
+    dependency_links=['git+https://github.com/mattjj/pybasicbayes.git@master#egg=pybasicbayes-1',
                       'git+https://github.com/mattjj/pyhsmm-autoregressive.git@master#egg=autoregressive-1'],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )
