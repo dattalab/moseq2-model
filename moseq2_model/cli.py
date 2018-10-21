@@ -50,6 +50,7 @@ def count_frames(input_file, var_name):
 @click.option("--hold-out-seed", type=int, default=-1,
               help="Random seed for holding out data (set for reproducibility)")
 @click.option("--nfolds", type=int, default=5, help="Number of folds for split")
+@click.option("--ncpus", "-c", type=int, default=0, help="Number of cores to use for resampling")
 @click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")
 @click.option("--restarts", "-r", type=int, default=1, help="Number of restarts for model")
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
@@ -66,7 +67,8 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
-def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter, restarts, var_name,
+def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
+                num_iter, restarts, var_name,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
                 kappa, gamma, nu, nlags, separate_trans, robust):
 
@@ -173,6 +175,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, num_iter
                         disable=not model_progress,
                         total=num_iter*restarts,
                         initial=i*num_iter,
+                        ncpus=ncpus,
                         file=sys.stdout)
 
         if test_data and separate_trans:
