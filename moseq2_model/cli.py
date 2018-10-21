@@ -94,6 +94,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     nkeys = len(all_keys)
     compute_heldouts = False
 
+    if ncpus > all_keys:
+        warnings.warn('Setting ncpus to {}, ncpus must be <= nkeys in dataset, {}'.format(nkeys, nkeys))
+        ncpus = nkeys
+
     if kappa is None:
         total_frames = 0
         for v in data_dict.values():
