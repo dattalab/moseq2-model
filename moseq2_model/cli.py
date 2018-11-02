@@ -63,6 +63,7 @@ def count_frames(input_file, var_name):
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
+@click.option("--alpha", "-g", type=float, default=5.7, help="Alpha")
 @click.option("--nu", type=float, default=4, help="Nu (only applicable if robust set to true)")
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
@@ -70,7 +71,7 @@ def count_frames(input_file, var_name):
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, restarts, var_name,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
-                kappa, gamma, nu, nlags, separate_trans, robust):
+                kappa, gamma, alpha, nu, nlags, separate_trans, robust):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -130,6 +131,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     model_parameters = {
         'gamma': gamma,
+        'alpha': alpha,
         'kappa': kappa,
         'nlags': nlags,
         'separate_trans': separate_trans,
