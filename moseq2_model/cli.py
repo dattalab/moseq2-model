@@ -8,7 +8,7 @@ import warnings
 from collections import OrderedDict
 from copy import deepcopy
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
-from moseq2_model.util import save_dict, load_pcs, get_parameters_from_model, copy_model
+from moseq2_model.util import save_dict, load_pcs, get_parameters_from_model, copy_model, load_arhmm_checkpoint
 
 orig_init = click.core.Option.__init__
 
@@ -59,6 +59,7 @@ def count_frames(input_file, var_name):
 @click.option("--save-model", is_flag=True, help="Save model object")
 @click.option("--max-states", "-m", type=int, default=100, help="Maximum number of states")
 @click.option("--model-progress", "-p", type=bool, default=True, help="Show model progress")
+@click.option("--save-model-progress", type=int, default=None, help='Save the model object after this many iterations')
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
@@ -71,7 +72,7 @@ def count_frames(input_file, var_name):
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, restarts, var_name,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
-                kappa, gamma, alpha, nu, nlags, separate_trans, robust):
+                kappa, gamma, alpha, nu, nlags, separate_trans, robust, save_model_progress):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -170,8 +171,17 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     heldout_ll = []
     save_parameters = []
 
+    checkpoint_file = os.path.split(dest_file)[0] + '-checkpoint.arhmm'
+
+
     for i in range(restarts):
-        arhmm = ARHMM(data_dict=train_data, **model_parameters)
+        # look for model checkpoint
+        if os.path.exists(checkpoint_file):
+            checkpoint = load_arhmm_checkpoint(checkpoint_file)
+            arhmm = checkpoint.pop('model')
+        else:
+            arhmm = ARHMM(data_dict=train_data, **model_parameters)
+            checkpoint = dict(iter=0)
         [arhmm, loglikes_sample, labels_sample] = \
             train_model(model=arhmm,
                         save_every=save_every,
@@ -182,7 +192,9 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                         total=num_iter*restarts,
                         initial=i*num_iter,
                         ncpus=ncpus,
-                        file=sys.stdout)
+                        file=sys.stdout,
+                        save_progress=save_model_progress,
+                        filename=dest_file, **checkpoint)
 
         if test_data and separate_trans:
             click.echo("Computing held out likelihoods with separate transition matrix...")

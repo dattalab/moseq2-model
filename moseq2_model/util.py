@@ -122,6 +122,14 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             raise ValueError('Cannot save {} type'.format(type(item)))
 
 
+def load_arhmm_checkpoint(filename):
+    return joblib.load(filename)
+
+
+def save_arhmm_checkpoint(filename, arhmm):
+    joblib.dump(arhmm, filename)
+
+
 def load_dict_from_hdf5(filename):
     """
     ....

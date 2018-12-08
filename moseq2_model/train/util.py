@@ -1,7 +1,8 @@
+import os
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
-from moseq2_model.util import progressbar
+from moseq2_model.util import progressbar, save_arhmm_checkpoint
 
 
 # based on moseq by @mattjj and @alexbw
@@ -10,10 +11,15 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
 
-    log_likelihoods = []
-    labels = []
+    log_likelihoods = kwargs.pop('log_likelihoods', [])
+    labels = kwargs.pop('labels', [])
 
-    for itr in progressbar(range(num_iter), cli=cli, **kwargs):
+    save_progress = kwargs.pop('save_progress', None)
+    filename = kwargs.pop('filename', 'model.arhmm')
+    filename = os.path.split(filename)[0] + '-checkpoint.arhmm'
+    start = kwargs.pop('iter', 0)
+
+    for itr in progressbar(range(start, num_iter), cli=cli, **kwargs):
         model.resample_model(num_procs=ncpus)
         if (np.mod(itr+1, save_every) == 0 or
                 np.mod(itr+1, num_iter) == 0):
@@ -22,6 +28,9 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
             for seq_itr in range(len(seq_list)):
                 seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
             labels.append(seq_list)
+        if save_progress is not None and (itr + 1) % save_progress:
+            save_arhmm_checkpoint(filename, {'iter': itr, 'model': model,
+                'log_likelihoods': log_likelihoods, 'labels': labels})
 
     labels_cat = []
 
