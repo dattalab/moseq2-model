@@ -16,7 +16,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
 
     save_progress = kwargs.pop('save_progress', None)
     filename = kwargs.pop('filename', 'model.arhmm')
-    filename = os.path.split(filename)[0] + '-checkpoint.arhmm'
+    filename = os.path.splitext(filename)[0] + '-checkpoint.arhmm'
     start = kwargs.pop('iter', 0)
 
     for itr in progressbar(range(start, num_iter), cli=cli, **kwargs):
@@ -28,7 +28,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
             for seq_itr in range(len(seq_list)):
                 seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
             labels.append(seq_list)
-        if save_progress is not None and (itr + 1) % save_progress:
+        if save_progress is not None and (itr + 1) % save_progress == 0:
             save_arhmm_checkpoint(filename, {'iter': itr, 'model': model,
                 'log_likelihoods': log_likelihoods, 'labels': labels})
 

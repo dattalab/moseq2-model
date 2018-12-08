@@ -171,12 +171,13 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     heldout_ll = []
     save_parameters = []
 
-    checkpoint_file = os.path.split(dest_file)[0] + '-checkpoint.arhmm'
+    checkpoint_file = os.path.splitext(dest_file)[0] + '-checkpoint.arhmm'
 
 
     for i in range(restarts):
         # look for model checkpoint
         if os.path.exists(checkpoint_file):
+            print('loading checkpoint')
             checkpoint = load_arhmm_checkpoint(checkpoint_file)
             arhmm = checkpoint.pop('model')
         else:
