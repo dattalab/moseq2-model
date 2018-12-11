@@ -127,7 +127,7 @@ def load_arhmm_checkpoint(filename):
 
 
 def save_arhmm_checkpoint(filename, arhmm):
-    joblib.dump(arhmm, filename)
+    joblib.dump(arhmm, filename, compress=('zlib', 4))
 
 
 def load_dict_from_hdf5(filename):
