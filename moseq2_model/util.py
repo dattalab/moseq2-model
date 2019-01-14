@@ -47,27 +47,23 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
                 if isinstance(tmp, h5py._hl.dataset.Dataset):
-                    data_dict = OrderedDict([(1, tmp.value[:, :npcs])])
+                    data_dict = OrderedDict([(1, tmp[:, :npcs])])
                 elif isinstance(tmp, h5py._hl.group.Group):
-                    data_dict = OrderedDict([(k, v.value[:, :npcs]) for k, v in tmp.items()])
+                    data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
                     if 'groups' in dsets:
-                        metadata['groups'] = [f['groups/{}'.format(key)].value for key in tmp.keys()]
+                        metadata['groups'] = [f['groups/{}'.format(key)][()] for key in tmp.keys()]
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
                 raise IOError('Could not find dataset name {} in {}'.format(var_name, filename))
 
             if 'uuids' in dsets:
-                metadata['uuids'] = f['uuid'].value
+                metadata['uuids'] = f['uuid'][()]
             elif h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
 
-            # if 'groups' in dsets:
-            #     print('Found groups in groups')
-            #     metadata['groups'] = f['groups'].value
-
     else:
-        raise ValueError('Did understand filetype')
+        raise ValueError('Did not understand filetype')
 
     return data_dict, metadata
 
@@ -145,7 +141,7 @@ def recursively_load_dict_contents_from_group(h5file, path):
     ans = {}
     for key, item in h5file[path].items():
         if isinstance(item, h5py._hl.dataset.Dataset):
-            ans[key] = item.value
+            ans[key] = item[()]
         elif isinstance(item, h5py._hl.group.Group):
             ans[key] = recursively_load_dict_contents_from_group(h5file, path + key + '/')
     return ans
@@ -160,7 +156,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
             score_tmp = f[var_name]
             for i in range(len(score_tmp)):
                 tmp = f[score_tmp[i][0]]
-                score_to_add = tmp.value
+                score_to_add = tmp[()]
                 data_dict[i] = score_to_add[:npcs, :].T
 
     return data_dict
