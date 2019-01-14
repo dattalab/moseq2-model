@@ -1,12 +1,13 @@
 import click
 import os
 import sys
-from moseq2_model.train.models import ARHMM
-import numpy as np
+import shutil
 import random
 import warnings
-from collections import OrderedDict
+import numpy as np
 from copy import deepcopy
+from collections import OrderedDict
+from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, get_parameters_from_model, copy_model, load_arhmm_checkpoint
 
@@ -180,6 +181,9 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             print('Loading checkpoint')
             try:
                 checkpoint = load_arhmm_checkpoint(checkpoint_file)
+                if os.path.exists(checkpoint + '.1'):
+                    os.remove(checkpoint + '.1')
+                shutil.move(checkpoint, checkpoint + '.1')
             except ValueError:
                 print('Loading original checkpoint failed, checking backups')
                 checkpoint = load_arhmm_checkpoint(checkpoint_file + '.1')
