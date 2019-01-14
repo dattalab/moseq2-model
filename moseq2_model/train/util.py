@@ -1,4 +1,5 @@
 import os
+import shutil
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
@@ -29,6 +30,10 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
                 seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
             labels.append(seq_list)
         if save_progress is not None and (itr + 1) % save_progress == 0:
+            if os.path.exists(filename):
+                if os.path.exists(filename + '.1'):
+                    os.remove(filename + '.1')
+                shutil.move(filename, filename + '.1')
             save_arhmm_checkpoint(filename, {'iter': itr, 'model': model,
                 'log_likelihoods': log_likelihoods, 'labels': labels})
 

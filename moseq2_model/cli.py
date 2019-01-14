@@ -177,9 +177,14 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     for i in range(restarts):
         # look for model checkpoint
         if os.path.exists(checkpoint_file):
-            print('loading checkpoint')
-            checkpoint = load_arhmm_checkpoint(checkpoint_file)
+            print('Loading checkpoint')
+            try:
+                checkpoint = load_arhmm_checkpoint(checkpoint_file)
+            except ValueError:
+                print('Loading original checkpoint failed, checking backups')
+                checkpoint = load_arhmm_checkpoint(checkpoint_file + '.1')
             arhmm = checkpoint.pop('model')
+            print('On iteration', checkpoint['iter'])
         else:
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
             checkpoint = dict(iter=0)
