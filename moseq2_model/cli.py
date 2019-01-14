@@ -193,19 +193,20 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         else:
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
             checkpoint = dict(iter=0)
-        [arhmm, loglikes_sample, labels_sample] = \
-            train_model(model=arhmm,
-                        save_every=save_every,
-                        num_iter=num_iter,
-                        cli=True,
-                        leave=False,
-                        disable=not model_progress,
-                        total=num_iter*restarts,
-                        initial=i*num_iter,
-                        ncpus=ncpus,
-                        file=sys.stdout,
-                        save_progress=save_model_progress,
-                        filename=dest_file, **checkpoint)
+        arhmm, loglikes_sample, labels_sample = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            cli=True,
+            leave=False,
+            disable=not model_progress,
+            total=num_iter*restarts,
+            initial=i*num_iter,
+            ncpus=ncpus,
+            file=sys.stdout,
+            save_progress=save_model_progress,
+            filename=dest_file, **checkpoint
+        )
 
         if test_data and separate_trans:
             click.echo("Computing held out likelihoods with separate transition matrix...")
