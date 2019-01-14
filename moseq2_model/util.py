@@ -228,7 +228,7 @@ def get_parameters_from_model(model, save_ar=True):
         }
 
     if 'nu' in ls_obj:
-        parameters['nu'] = model.obs_distns[0].nu
+        parameters['nu'] = [obs.nu for obs in model.obs_distns]
 
     if save_ar:
         parameters['ar_mat'] = [obs.A for obs in model.obs_distns]

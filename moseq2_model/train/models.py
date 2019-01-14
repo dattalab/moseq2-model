@@ -40,7 +40,7 @@ def _get_empirical_ar_params(train_datas, params):
     return obs_params
 
 
-def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
+def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4, alpha=5.7,
           K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
           separate_trans=False, groups=None, robust=False):
@@ -60,14 +60,15 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4,
         }
 
     default_model_hypparams = {
-        'alpha': 5.7,
+        'alpha': alpha,
         'gamma': gamma,
         'kappa': kappa,
         'init_state_distn': 'uniform'
         }
 
-    if robust:
-        default_obs_hypparams['nu'] = nu
+    # accomodate SL's new RobustAutogression code 10/14/2018
+    # if robust:
+    #     default_obs_hypparams['nu'] = nu
 
     obs_hypparams = merge_dicts(default_obs_hypparams, obs_hypparams)
     model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)

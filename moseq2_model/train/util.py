@@ -5,7 +5,7 @@ from moseq2_model.util import progressbar
 
 
 # based on moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwargs):
+def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
@@ -14,7 +14,7 @@ def train_model(model, num_iter=100, save_every=1, num_procs=1, cli=False, **kwa
     labels = []
 
     for itr in progressbar(range(num_iter), cli=cli, **kwargs):
-        model.resample_model(num_procs)
+        model.resample_model(num_procs=ncpus)
         if (np.mod(itr+1, save_every) == 0 or
                 np.mod(itr+1, num_iter) == 0):
             log_likelihoods.append(model.log_likelihood())
