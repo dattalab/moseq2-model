@@ -193,6 +193,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         else:
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
             checkpoint = dict(iter=0)
+        
         arhmm, loglikes_sample, labels_sample = train_model(
             model=arhmm,
             save_every=save_every,
