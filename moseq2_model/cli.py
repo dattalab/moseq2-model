@@ -171,13 +171,14 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     labels = []
     heldout_ll = []
     save_parameters = []
-
-    checkpoint_file = os.path.splitext(dest_file)[0] + '-checkpoint.arhmm'
+    _tmp = os.path.splitext(dest_file)[0]
+    checkpoint_file = _tmp + '-checkpoint.arhmm'
+    checkpoint_file2 = checkpoint_file + '.1'
 
 
     for i in range(restarts):
         # look for model checkpoint
-        if os.path.exists(checkpoint_file):
+        if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file2):
             print('Loading checkpoint')
             try:
                 checkpoint = load_arhmm_checkpoint(checkpoint_file)
@@ -187,7 +188,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             except ValueError:
                 print('Loading original checkpoint failed, checking backups')
                 os.remove(checkpoint_file)
-                checkpoint = load_arhmm_checkpoint(checkpoint_file + '.1')
+                checkpoint = load_arhmm_checkpoint(checkpoint_file2)
             arhmm = checkpoint.pop('model')
             print('On iteration', checkpoint['iter'])
         else:
