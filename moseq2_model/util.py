@@ -1,8 +1,8 @@
 import numpy as np
 import joblib
-import copy
 import scipy.io
 import h5py
+from copy import deepcopy
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 
@@ -118,11 +118,35 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             raise ValueError('Cannot save {} type'.format(type(item)))
 
 
-def load_arhmm_checkpoint(filename):
-    return joblib.load(filename)
+def load_arhmm_checkpoint(filename: str, data: dict, groups=None, separate_trans=False) -> dict:
+    '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
+    Args:
+        filename: path that specifies the checkpoint
+        data: an OrderedDict that contains the training data
+        groups (optional: default - None): a list of groups each mouse is a part of.
+            Only used if `separate_trans` is `True`
+        separate_trans (optional: default - False): a bool flag to tell the model
+            to use separate transition matrices 
+    Returns:
+        a dict containing the model with reloaded data, and associated training data
+    '''
+    mdl_dict = joblib.load(filename)
+    for index, (uuid, _data) in enumerate(data.items()):
+        if separate_trans:
+            mdl_dict['model'].add_data(_data, group_id=groups[index])
+        else:
+            mdl_dict['model'].add_data(_data)
+    return mdl_dict
 
 
-def save_arhmm_checkpoint(filename, arhmm):
+def save_arhmm_checkpoint(filename: str, arhmm: dict):
+    '''Save an arhmm checkpoint and strip out data used to train the model
+    Args:
+        filename: path that specifies the checkpoint 
+        arhmm: a dictionary containing the model obj, training iteration number,
+               log-likelihoods of each training step, and labels for each step
+    '''
+    arhmm['model'] = copy_model(arhmm.pop('model'))
     joblib.dump(arhmm, filename, compress=('zlib', 4))
 
 
@@ -182,20 +206,20 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
 
 # per Scott's suggestion
-def copy_model(self):
+def copy_model(model_obj):
     tmp = []
 
     # make a deep copy of the data-less version
 
-    for s in self.states_list:
+    for s in model_obj.states_list:
         tmp.append(s.data)
         s.data = None
 
-    cp = copy.deepcopy(self)
+    cp = deepcopy(model_obj)
 
     # now put the data back in
 
-    for s, t in zip(self.states_list, tmp):
+    for s, t in zip(model_obj.states_list, tmp):
         s.data = t
 
     return cp
