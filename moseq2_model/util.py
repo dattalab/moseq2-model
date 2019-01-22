@@ -131,6 +131,7 @@ def load_arhmm_checkpoint(filename: str, data: dict) -> dict:
         a dict containing the model with reloaded data, and associated training data
     '''
     mdl_dict = joblib.load(filename)
+    nlags = mdl_dict['model'].nlags
     for s, t in zip(mdl_dict['model'].states_list, data.values()):
         # remove the first 3 frames because the model already does this
         s.data = t[3:]
