@@ -35,7 +35,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
                 if os.path.exists(filename + '.1'):
                     os.remove(filename + '.1')
                 shutil.move(filename, filename + '.1')
-            save_arhmm_checkpoint(filename, {'iter': itr, 'model': model,
+            save_arhmm_checkpoint(filename, {'iter': itr + 1, 'model': model,
                 'log_likelihoods': log_likelihoods, 'labels': labels})
 
     labels_cat = []
