@@ -132,7 +132,8 @@ def load_arhmm_checkpoint(filename: str, data: dict) -> dict:
     '''
     mdl_dict = joblib.load(filename)
     for s, t in zip(mdl_dict['model'].states_list, data.values()):
-        s.data = t
+        # remove the first 3 frames because the model already does this
+        s.data = t[3:]
     return mdl_dict
 
 
