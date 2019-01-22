@@ -119,7 +119,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             raise ValueError('Cannot save {} type'.format(type(item)))
 
 
-def load_arhmm_checkpoint(filename: str) -> dict:
+def load_arhmm_checkpoint(filename: str, states_file: str) -> dict:
     '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
     Args:
         filename: path that specifies the checkpoint
@@ -132,13 +132,19 @@ def load_arhmm_checkpoint(filename: str) -> dict:
         a dict containing the model with reloaded data, and associated training data
     '''
     mdl_dict = joblib.load(filename)
-    # find a states file
-    states_file = [f + '-states' for f in [filename, filename[:-2]] if os.path.exists(f + '-states')]
-    states = joblib.load(states_file[0])
+    states = joblib.load(states_file)
 
     for s, t in zip(mdl_dict['model'].states_list, states):
         s.data = t
+
     return mdl_dict
+
+def save_arhmm_states(filename:str, arhmm):
+    _tmp = []
+    # now grab the stateslist to feed back into the arhmm
+    for s in arhmm.states_list:
+        _tmp += [s.data]
+    joblib.dump(_tmp, filename, compress=('zlib', 4))
 
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
@@ -149,13 +155,6 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
                log-likelihoods of each training step, and labels for each step
     '''
     mdl = arhmm.pop('model')
-    if not os.path.exists(filename + '-states'):
-        _tmp = []
-        # now grab the stateslist to feed back into the arhmm
-        for s in mdl.states_list:
-            _tmp += [s.data]
-        joblib.dump(_tmp, filename + '-states', compress=('lzma', 4))
-
     arhmm['model'] = copy_model(mdl)
     joblib.dump(arhmm, filename, compress=('zlib', 4))
 
