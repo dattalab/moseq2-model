@@ -181,16 +181,14 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file2):
             print('Loading checkpoint')
             try:
-                checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data,
-                                model_parameters['groups'], model_parameters['separate_trans'])
+                checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
                 if os.path.exists(checkpoint_file + '.1'):
                     os.remove(checkpoint_file + '.1')
                 shutil.move(checkpoint_file, checkpoint_file + '.1')
             except ValueError:
                 print('Loading original checkpoint failed, checking backup')
                 os.remove(checkpoint_file)
-                checkpoint = load_arhmm_checkpoint(checkpoint_file2, train_data,
-                                model_parameters['groups'], model_parameters['separate_trans'])
+                checkpoint = load_arhmm_checkpoint(checkpoint_file2, train_data)
             arhmm = checkpoint.pop('model')
             print('On iteration', checkpoint['iter'])
         else:
