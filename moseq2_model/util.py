@@ -119,7 +119,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             raise ValueError('Cannot save {} type'.format(type(item)))
 
 
-def load_arhmm_checkpoint(filename: str, data: dict) -> dict:
+def load_arhmm_checkpoint(filename: str) -> dict:
     '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
     Args:
         filename: path that specifies the checkpoint
@@ -132,7 +132,6 @@ def load_arhmm_checkpoint(filename: str, data: dict) -> dict:
         a dict containing the model with reloaded data, and associated training data
     '''
     mdl_dict = joblib.load(filename)
-    nlags = mdl_dict['model'].nlags
     # find a states file
     states_file = [f + '-states' for f in [filename, filename[:-2]] if os.path.exists(f + '-states')]
     states = joblib.load(states_file[0])
