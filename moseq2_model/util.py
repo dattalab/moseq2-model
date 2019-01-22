@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import joblib
 import scipy.io
@@ -132,9 +133,12 @@ def load_arhmm_checkpoint(filename: str, data: dict) -> dict:
     '''
     mdl_dict = joblib.load(filename)
     nlags = mdl_dict['model'].nlags
-    for s, t in zip(mdl_dict['model'].states_list, data.values()):
-        # remove the first 3 frames because the model already does this
-        s.data = t[3:]
+    # find a states file
+    states_file = [f + '-states' for f in [filename, filename[:-2]] if os.path.exists(f + '-states')]
+    states = joblib.load(states_file[0])
+
+    for s, t in zip(mdl_dict['model'].states_list, states):
+        s.data = t
     return mdl_dict
 
 
@@ -145,7 +149,15 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
         arhmm: a dictionary containing the model obj, training iteration number,
                log-likelihoods of each training step, and labels for each step
     '''
-    arhmm['model'] = copy_model(arhmm.pop('model'))
+    mdl = arhmm.pop('model')
+    if not os.path.exists(filename + '-states'):
+        _tmp = []
+        # now grab the stateslist to feed back into the arhmm
+        for s in mdl.states_list:
+            _tmp += [s.data]
+        joblib.dump(_tmp, filename + '-states', compress=('lzma', 4))
+
+    arhmm['model'] = copy_model(mdl)
     joblib.dump(arhmm, filename, compress=('zlib', 4))
 
 

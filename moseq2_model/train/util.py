@@ -29,7 +29,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
             for seq_itr in range(len(seq_list)):
                 seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
             labels.append(seq_list)
-        if save_progress is not None and (itr + 1) % save_progress == 0:
+        if save_progress is not None and ((itr + 1) % save_progress == 0 or itr == 0):
             # move around the checkpoints
             if os.path.exists(filename):
                 if os.path.exists(filename + '.1'):
