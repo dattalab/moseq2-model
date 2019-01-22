@@ -175,7 +175,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     checkpoint_file = _tmp + '-checkpoint.arhmm'
     checkpoint_file2 = checkpoint_file + '.1'
 
-
+    # TODO: add checkpoint support for different restarts
     for i in range(restarts):
         # look for model checkpoint
         if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file2):
