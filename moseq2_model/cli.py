@@ -187,7 +187,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 if os.path.exists(checkpoint_file + '.1'):
                     os.remove(checkpoint_file + '.1')
                 shutil.move(checkpoint_file, checkpoint_file + '.1')
-            except FileNotFoundError:
+            except (FileNotFoundError, ValueError):
                 print('Loading original checkpoint failed, checking backup')
                 if os.path.exists(checkpoint_file):
                     os.remove(checkpoint_file)
