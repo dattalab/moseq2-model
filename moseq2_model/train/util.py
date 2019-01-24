@@ -20,7 +20,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
     filename = os.path.splitext(filename)[0] + '-checkpoint.arhmm'
     start = kwargs.pop('iter', 0)
 
-    for itr in progressbar(range(start, num_iter), cli=cli, **kwargs):
+    for itr in progressbar(range(start, num_iter), cli=cli, initial=start, **kwargs):
         model.resample_model(num_procs=ncpus)
         if (np.mod(itr+1, save_every) == 0 or
                 np.mod(itr+1, num_iter) == 0):
