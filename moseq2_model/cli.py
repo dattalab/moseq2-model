@@ -10,7 +10,7 @@ from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
-                               load_arhmm_checkpoint, save_arhmm_states)
+                               load_arhmm_checkpoint)
 
 orig_init = click.core.Option.__init__
 

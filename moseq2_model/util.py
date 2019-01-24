@@ -136,7 +136,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     nlags = mdl_dict['model'].nlags
 
     for s, t in zip(mdl_dict['model'].states_list, train_data.values()):
-        s.data = AR_striding(t, nlags)
+        s.data = AR_striding(t.astype('float32'), nlags)
 
     return mdl_dict
 
