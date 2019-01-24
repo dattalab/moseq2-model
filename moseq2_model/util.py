@@ -6,6 +6,7 @@ import h5py
 from copy import deepcopy
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
+from autoregressive.util import AR_striding
 
 
 # grab matlab data
@@ -119,7 +120,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             raise ValueError('Cannot save {} type'.format(type(item)))
 
 
-def load_arhmm_checkpoint(filename: str, states_file: str) -> dict:
+def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
     Args:
         filename: path that specifies the checkpoint
@@ -132,19 +133,19 @@ def load_arhmm_checkpoint(filename: str, states_file: str) -> dict:
         a dict containing the model with reloaded data, and associated training data
     '''
     mdl_dict = joblib.load(filename)
-    states = joblib.load(states_file)
+    nlags = mdl_dict['model'].nlags
 
-    for s, t in zip(mdl_dict['model'].states_list, states):
-        s.data = t
+    for s, t in zip(mdl_dict['model'].states_list, train_data.values()):
+        s.data = AR_striding(t, nlags)
 
     return mdl_dict
 
-def save_arhmm_states(filename:str, arhmm):
-    _tmp = []
-    # now grab the stateslist to feed back into the arhmm
-    for s in arhmm.states_list:
-        _tmp += [s.data]
-    joblib.dump(_tmp, filename, compress=('zlib', 4))
+# def save_arhmm_states(filename:str, arhmm):
+#     _tmp = []
+#     # now grab the stateslist to feed back into the arhmm
+#     for s in arhmm.states_list:
+#         _tmp += [s.data]
+#     joblib.dump(_tmp, filename, compress=('zlib', 4))
 
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):

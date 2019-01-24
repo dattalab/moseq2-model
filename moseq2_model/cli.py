@@ -175,7 +175,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     _tmp = os.path.splitext(dest_file)[0]
     checkpoint_file = _tmp + '-checkpoint.arhmm'
     checkpoint_file2 = checkpoint_file + '.1'
-    states_file = os.path.join(os.path.dirname(dest_file), 'final-model.states')
+    # states_file = os.path.join(os.path.dirname(dest_file), 'final-model.states')
 
     # TODO: add checkpoint support for different restarts
     for i in range(restarts):
@@ -183,7 +183,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file2):
             print('Loading checkpoint')
             try:
-                checkpoint = load_arhmm_checkpoint(checkpoint_file, states_file)
+                checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
                 if os.path.exists(checkpoint_file + '.1'):
                     os.remove(checkpoint_file + '.1')
                 shutil.move(checkpoint_file, checkpoint_file + '.1')
@@ -191,15 +191,15 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 print('Loading original checkpoint failed, checking backup')
                 if os.path.exists(checkpoint_file):
                     os.remove(checkpoint_file)
-                checkpoint = load_arhmm_checkpoint(checkpoint_file2, states_file)
+                checkpoint = load_arhmm_checkpoint(checkpoint_file2, train_data)
             arhmm = checkpoint.pop('model')
             print('On iteration', checkpoint['iter'])
         else:
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
             checkpoint = dict(iter=0)
 
-        if save_model_progress is not None and not os.path.exists(states_file):
-            save_arhmm_states(states_file, arhmm)
+        # if save_model_progress is not None and not os.path.exists(states_file):
+        #     save_arhmm_states(states_file, arhmm)
         
         arhmm, loglikes_sample, labels_sample = train_model(
             model=arhmm,
