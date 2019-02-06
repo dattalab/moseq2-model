@@ -42,6 +42,6 @@ setup(
                       'pyhsmm', 'joblib==0.11',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm',
                       'pybasicbayes @ https://github.com/mattjj/pybasicbayes.git@master',
-                      'pyhsmm-autoregressive @ https://github.com/mattjj/pyhsmm-autoregressive.git@master'],
+                      'autoregressive @ https://github.com/mattjj/pyhsmm-autoregressive.git@master'],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )
