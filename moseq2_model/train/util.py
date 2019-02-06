@@ -19,6 +19,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
     filename = kwargs.pop('filename', 'model.arhmm')
     filename = os.path.splitext(filename)[0] + '-checkpoint.arhmm'
     start = kwargs.pop('iter', 0)
+    e_step = kwargs.pop('e_step', False)
     kwargs['initial'] = start
 
     for itr in progressbar(range(start, num_iter), cli=cli, **kwargs):
@@ -31,13 +32,20 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
                 seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
             labels.append(seq_list)
         if save_progress is not None and ((itr + 1) % save_progress == 0 or itr == 0):
+            save_data = {
+                'iter': itr + 1,
+                'model': model,
+                'log_likelihoods': log_likelihoods,
+                'labels': labels}
+            if e_step:
+                save_data['expected_states'] = run_e_step(model)
+
             # move around the checkpoints
             if os.path.exists(filename):
                 if os.path.exists(filename + '.1'):
                     os.remove(filename + '.1')
                 shutil.move(filename, filename + '.1')
-            save_arhmm_checkpoint(filename, {'iter': itr + 1, 'model': model,
-                'log_likelihoods': log_likelihoods, 'labels': labels})
+            save_arhmm_checkpoint(filename, save_data)
 
     labels_cat = []
 
@@ -76,6 +84,11 @@ def whiten_each(data_dict, center=True):
 
     return data_dict
     #return OrderedDict((k, whiten_all(OrderedDict([k,v]), center=center)) for k, v in data_dict.items())
+
+
+def run_e_step(arhmm):
+    arhmm._E_step()
+    return [s.expected_states for s in arhmm.states_list]
 
 
 # taken from syllables by @alewbw

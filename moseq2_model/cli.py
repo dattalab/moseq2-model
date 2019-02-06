@@ -8,7 +8,7 @@ import numpy as np
 from copy import deepcopy
 from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
-from moseq2_model.train.util import train_model, whiten_all, whiten_each
+from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint)
 
@@ -71,8 +71,9 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
+@click.option('--e-step', is_flag=True, help="Compute the expected states for each animal")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, restarts, var_name,
+                num_iter, restarts, var_name, e_step,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
                 kappa, gamma, alpha, nu, nlags, separate_trans, robust, save_model_progress):
 
@@ -175,7 +176,6 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     _tmp = os.path.splitext(dest_file)[0]
     checkpoint_file = _tmp + '-checkpoint.arhmm'
     checkpoint_file2 = checkpoint_file + '.1'
-    # states_file = os.path.join(os.path.dirname(dest_file), 'final-model.states')
 
     # TODO: add checkpoint support for different restarts
     for i in range(restarts):
@@ -197,9 +197,6 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         else:
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
             checkpoint = dict(iter=0)
-
-        # if save_model_progress is not None and not os.path.exists(states_file):
-        #     save_arhmm_states(states_file, arhmm)
         
         arhmm, loglikes_sample, labels_sample = train_model(
             model=arhmm,
@@ -213,6 +210,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             ncpus=ncpus,
             file=sys.stdout,
             save_progress=save_model_progress,
+            e_step=e_step,
             filename=dest_file, **checkpoint
         )
 
@@ -230,6 +228,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     # if we save the model, don't use copy_model which strips out the data and potentially
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
+    if e_step:
+        expected_states = run_e_step(arhmm)
 
     if save_model:
         save_model = copy_model(arhmm)
@@ -254,6 +254,9 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'hold_out_list': hold_out_list,
         'train_list': train_list
         }
+
+    if e_step:
+        export_dict['expected_states'] = expected_states
 
     save_dict(filename=dest_file, obj_to_save=export_dict)
 

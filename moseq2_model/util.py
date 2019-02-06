@@ -76,20 +76,20 @@ def save_dict(filename, obj_to_save=None):
     # pickles, only load as we need them
 
     if filename.endswith('.mat'):
-        print('Saving MAT file '+filename)
+        print('Saving MAT file', filename)
         scipy.io.savemat(filename, mdict=obj_to_save)
     elif filename.endswith('.z'):
-        print('Saving compressed pickle '+filename)
-        joblib.dump(obj_to_save, filename, compress=3)
+        print('Saving compressed pickle', filename)
+        joblib.dump(obj_to_save, filename, compress=('zlib', 4))
     elif filename.endswith('.pkl') | filename.endswith('.p'):
-        print('Saving pickle '+filename)
+        print('Saving pickle', filename)
         joblib.dump(obj_to_save, filename, compress=0)
     elif filename.endswith('.h5'):
-        print('Saving h5 file '+filename)
+        print('Saving h5 file', filename)
         with h5py.File(filename, 'w') as f:
             recursively_save_dict_contents_to_group(f, obj_to_save)
     else:
-        raise ValueError('Did understand filetype')
+        raise ValueError('Did not understand filetype')
 
 
 # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
@@ -139,13 +139,6 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
         s.data = AR_striding(t.astype('float32'), nlags)
 
     return mdl_dict
-
-# def save_arhmm_states(filename:str, arhmm):
-#     _tmp = []
-#     # now grab the stateslist to feed back into the arhmm
-#     for s in arhmm.states_list:
-#         _tmp += [s.data]
-#     joblib.dump(_tmp, filename, compress=('zlib', 4))
 
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
