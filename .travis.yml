@@ -5,7 +5,7 @@ python:
 # - 3.7 enable once supported by travis
 # get the dependencies
 install:
-  - pip install . --process-dependency-links
+  - pip install .
 # install what we need for testing
 before_install:
   - pip install pytest codecov
