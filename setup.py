@@ -39,7 +39,7 @@ setup(
     platforms='any',
     python_requires='>=3.6',
     install_requires=['future', 'h5py', 'click', 'numpy==1.14.5',
-                      'pyhsmm', 'autoregressive', 'joblib==0.11',
+                      'pyhsmm', 'autoregressive', 'joblib==0.13.1',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm'],
     dependency_links=['git+https://github.com/mattjj/pybasicbayes.git@master#egg=pybasicbayes-1',
                       'git+https://github.com/mattjj/pyhsmm-autoregressive.git@master#egg=autoregressive-1'],
