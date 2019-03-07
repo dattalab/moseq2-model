@@ -21,6 +21,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs)
     start = kwargs.pop('iter', 0)
     e_step = kwargs.pop('e_step', False)
     kwargs['initial'] = start
+    expected_states = kwargs.pop('expected_states', None)
 
     for itr in progressbar(range(start, num_iter), cli=cli, **kwargs):
         model.resample_model(num_procs=ncpus)

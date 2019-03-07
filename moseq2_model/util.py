@@ -150,7 +150,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
     '''
     mdl = arhmm.pop('model')
     arhmm['model'] = copy_model(mdl)
-    joblib.dump(arhmm, filename, compress=('zlib', 4))
+    joblib.dump(arhmm, filename, compress=('zlib', 5))
 
 
 def load_dict_from_hdf5(filename):
