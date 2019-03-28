@@ -62,6 +62,23 @@ def whiten_each(data_dict, center=True):
     #return OrderedDict((k, whiten_all(OrderedDict([k,v]), center=center)) for k, v in data_dict.items())
 
 
+def zscore_each(data_dict, center=True):
+    for k, v in data_dict.items():
+        tmp_dict = zscore_all(OrderedDict([(k, v)]), center=center)
+        data_dict[k] = tmp_dict[k]
+
+    return data_dict
+
+
+def zscore_all(data_dict, center=True):
+    valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in data_dict.values()])
+    mu, sig = valid_scores.mean(axis=0), valid_scores.std(axis=0)
+
+    for k, v in data_dict.items():
+        data_dict[k] = (v - mu) / sig
+
+    return data_dict
+
 # taken from syllables by @alewbw
 def get_crosslikes(arhmm, frame_by_frame=False):
     all_CLs = defaultdict(list)

@@ -64,6 +64,7 @@ def count_frames(input_file, var_name):
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--alpha", "-g", type=float, default=5.7, help="Alpha")
+@click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise for regularization" )
 @click.option("--nu", type=float, default=4, help="Nu (only applicable if robust set to true)")
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
@@ -71,7 +72,7 @@ def count_frames(input_file, var_name):
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, restarts, var_name,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
-                kappa, gamma, alpha, nu, nlags, separate_trans, robust):
+                kappa, gamma, alpha, noise_level, nu, nlags, separate_trans, robust):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -89,8 +90,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     click.echo("Entering modeling training")
 
     run_parameters = deepcopy(locals())
-    data_dict, data_metadata = load_pcs(filename=input_file, var_name=var_name,
-                                        npcs=npcs, load_groups=separate_trans)
+    data_dict, data_metadata = load_pcs(filename=input_file,
+                                        var_name=var_name,
+                                        npcs=npcs,
+                                        load_groups=separate_trans)
     all_keys = list(data_dict.keys())
     nkeys = len(all_keys)
     compute_heldouts = False
@@ -153,6 +156,11 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         data_dict = whiten_each(data_dict)
     else:
         click.echo('Not whitening the data')
+
+    if noise_level > 0:
+        click.echo('Using {} STD AWGN'.format(noise_level))
+        for k, v in data_dict:
+            data_dict[k] = v + np.random.randn(*v.shape) * noise_level
 
     if compute_heldouts:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
