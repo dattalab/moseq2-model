@@ -159,7 +159,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     if noise_level > 0:
         click.echo('Using {} STD AWGN'.format(noise_level))
-        for k, v in data_dict:
+        for k, v in data_dict.items():
             data_dict[k] = v + np.random.randn(*v.shape) * noise_level
 
     if compute_heldouts:
