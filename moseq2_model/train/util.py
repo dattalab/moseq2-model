@@ -16,7 +16,6 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
         model.resample_model(num_procs=ncpus)
         # append resample stats to a file
         if (itr + 1) % save_every == 0:
-            print('time to save a model! getting labels')
             save_dict = {
                 (itr + 1): {
                     'iter': itr + 1,
@@ -24,10 +23,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                     'labels': get_labels_from_model(model)
                 }
             }
-            print('got labels!')
-            print('saving')
             append_resample(save_file, save_dict)
-            print('saved!')
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
             save_data = {
