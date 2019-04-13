@@ -129,7 +129,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
         groups (optional: default - None): a list of groups each mouse is a part of.
             Only used if `separate_trans` is `True`
         separate_trans (optional: default - False): a bool flag to tell the model
-            to use separate transition matrices 
+            to use separate transition matrices
     Returns:
         a dict containing the model with reloaded data, and associated training data
     '''
@@ -145,7 +145,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
     '''Save an arhmm checkpoint and strip out data used to train the model
     Args:
-        filename: path that specifies the checkpoint 
+        filename: path that specifies the checkpoint
         arhmm: a dictionary containing the model obj, training iteration number,
                log-likelihoods of each training step, and labels for each step
     '''

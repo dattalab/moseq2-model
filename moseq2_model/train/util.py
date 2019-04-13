@@ -6,7 +6,7 @@ from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resampl
 
 # based on moseq by @mattjj and @alexbw
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                chkpt_file=None, start=0, e_step=False, save_file=None, progress_kws={}):
+                chkpt_file=None, start=0, save_file=None, progress_kws={}):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
@@ -16,6 +16,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
         model.resample_model(num_procs=ncpus)
         # append resample stats to a file
         if (itr + 1) % save_every == 0:
+            print('time to save a model! getting labels')
             save_dict = {
                 (itr + 1): {
                     'iter': itr + 1,
@@ -23,10 +24,10 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                     'labels': get_labels_from_model(model)
                 }
             }
-            # add expected states if flag is set
-            if e_step:
-                save_dict['expected_states'] = run_e_step(model)
+            print('got labels!')
+            print('saving')
             append_resample(save_file, save_dict)
+            print('saved!')
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
             save_data = {
