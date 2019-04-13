@@ -1,5 +1,3 @@
-import os
-import shutil
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
@@ -8,11 +6,11 @@ from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resampl
 
 # based on moseq by @mattjj and @alexbw
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                chkpt_file=None, start=0, e_step=False, progress_kws={}):
+                chkpt_file=None, start=0, e_step=False, save_file=None, progress_kws={}):
 
     # per conversations w/ @mattjj, the fast class of models use openmp no need
     # for "extra" parallelism
-    checkpoint = chkpt_file is not None
+    checkpoint = checkpoint_freq is not None
 
     for itr in progressbar(range(start, num_iter), **progress_kws):
         model.resample_model(num_procs=ncpus)
@@ -28,7 +26,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
             # add expected states if flag is set
             if e_step:
                 save_dict['expected_states'] = run_e_step(model)
-            append_resample('tmp', save_dict)
+            append_resample(save_file, save_dict)
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
             save_data = {
@@ -37,7 +35,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
             }
             # move around the checkpoints
             if chkpt_file.exists():
-                chkpt_file.rename(chkpt_file + '.1')
+                chkpt_file.rename(chkpt_file.as_posix() + '.1')
             save_arhmm_checkpoint(chkpt_file, save_data)
 
     return model, model.log_likelihood(), get_labels_from_model(model)

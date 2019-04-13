@@ -178,11 +178,9 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     labels = []
     heldout_ll = []
     save_parameters = []
-    # _tmp = os.path.splitext(dest_file)[0]
-    # checkpoint_file = _tmp + '-checkpoint.arhmm'
-    # checkpoint_file2 = checkpoint_file + '.1'
-    checkpoint_file = dest_file.parent / dest_file.stem + '-checkpoint.arhmm'
-    checkpoint_file_backup = checkpoint_file + '.1'
+    checkpoint_file = dest_file.parent.joinpath(dest_file.stem + '-checkpoint.arhmm')
+    checkpoint_file_backup = Path(checkpoint_file.as_posix() + '.1')
+    resample_save_file = dest_file.parent.joinpath(dest_file.stem + '-resamples.p')
 
     # look for model checkpoint
     if checkpoint_file.exists() or checkpoint_file_backup.exists():
@@ -209,13 +207,14 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'disable': not progressbar,
         'initial': itr
     }
-        
+
     arhmm, loglikes_sample, labels_sample = train_model(
         model=arhmm,
         save_every=save_every,
         num_iter=num_iter,
         ncpus=ncpus,
         checkpoint_freq=checkpoint_freq,
+        save_file=resample_save_file,
         e_step=e_step,
         chkpt_file=checkpoint_file,
         start=itr,
