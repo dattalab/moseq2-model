@@ -1,4 +1,5 @@
 import os
+import pickle
 import numpy as np
 import joblib
 import scipy.io
@@ -153,25 +154,55 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
     joblib.dump(arhmm, filename, compress=('zlib', 5))
 
 
+def append_resample(filename, label_dict: dict):
+    '''Adds the labels from a resampling iteration to a pickle file
+    Args:
+        label_dict: a dictionary with a single key/value pair, where the
+            key is the sampling iteration and the value contains a dict of:
+            (labels, a log likelihood val, and expected states if the flag is set)
+            from each mouse
+    '''
+    with open(filename, 'ab+') as f:
+        pickle.dump(label_dict, f)
+
+
 def load_dict_from_hdf5(filename):
+    """ A convenience function to load the entire contents of an h5 file
+    into a dictionary
     """
-    ....
-    """
-    with h5py.File(filename, 'r') as h5file:
-        return recursively_load_dict_contents_from_group(h5file, '/')
+    return h5_to_dict(filename, '/')
 
 
-def recursively_load_dict_contents_from_group(h5file, path):
-    """
-    ....
-    """
+def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     ans = {}
-    for key, item in h5file[path].items():
-        if isinstance(item, h5py._hl.dataset.Dataset):
-            ans[key] = item[()]
-        elif isinstance(item, h5py._hl.group.Group):
-            ans[key] = recursively_load_dict_contents_from_group(h5file, path + key + '/')
+    if isinstance(file[path], h5py._hl.dataset.Dataset):
+        # only use the final path key to add to `ans`
+        ans[path.split('/')[-1]] = file[path][()]
+    else:
+        for key, item in file[path].items():
+            if isinstance(item, h5py.Dataset):
+                ans[key] = item[()]
+            elif isinstance(item, h5py.Group):
+                ans[key] = _load_h5_to_dict(file, '/'.join([path, key]))
     return ans
+
+
+def h5_to_dict(h5file, path: str) -> dict:
+    '''
+    Args:
+        h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
+        path: path to the base dataset within the h5 file
+    Returns:
+        a dict with h5 file contents with the same path structure
+    '''
+    if isinstance(h5file, str):
+        with h5py.File(h5file, 'r') as f:
+            out = _load_h5_to_dict(f, path)
+    elif isinstance(h5file, (h5py.File, h5py.Group)):
+        out = _load_h5_to_dict(h5file, path)
+    else:
+        raise Exception('file input not understood - need h5 file path or file object')
+    return out
 
 
 def load_data_from_matlab(filename, var_name="features", npcs=10):
