@@ -256,7 +256,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     if e_step:
         export_dict['expected_states'] = expected_states
 
-    save_dict(filename=dest_file, obj_to_save=export_dict)
+    save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
 
 if __name__ == '__main__':
