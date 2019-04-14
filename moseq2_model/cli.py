@@ -68,14 +68,13 @@ def count_frames(input_file, var_name):
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--alpha", "-g", type=float, default=5.7, help="Alpha")
 @click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise for regularization" )
-@click.option("--nu", type=float, default=4, help="Nu (only applicable if robust set to true)")
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
 @click.option('--e-step', default=True, type=bool, help="Compute the expected states for each animal")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step, save_every, save_model, max_states,
-                progressbar, npcs, whiten, kappa, gamma, alpha, noise_level, nu,
+                progressbar, npcs, whiten, kappa, gamma, alpha, noise_level,
                 nlags, separate_trans, robust, checkpoint_freq):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
@@ -141,7 +140,6 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'separate_trans': separate_trans,
         'robust': robust,
         'max_states': max_states,
-        'nu': nu
     }
 
     if separate_trans:
