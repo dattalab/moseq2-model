@@ -71,7 +71,7 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
-@click.option('--e-step', default=True, type=bool, help="Compute the expected states for each animal")
+@click.option('--e-step', is_flag=True, help="Compute the expected states for each animal")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step, save_every, save_model, max_states,
                 progressbar, npcs, whiten, kappa, gamma, alpha, noise_level,
