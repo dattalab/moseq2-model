@@ -1,7 +1,6 @@
 import click
 import os
 import sys
-import shutil
 import random
 import warnings
 import numpy as np
@@ -23,6 +22,7 @@ def new_init(self, *args, **kwargs):
 
 click.core.Option.__init__ = new_init
 
+
 @click.group()
 def cli():
     pass
@@ -34,13 +34,13 @@ def cli():
 def count_frames(input_file, var_name):
 
     data_dict, _ = load_pcs(filename=input_file, var_name=var_name,
-                                        npcs=10, load_groups=False)
+                            npcs=10, load_groups=False)
     total_frames = 0
     for v in data_dict.values():
         idx = (~np.isnan(v)).all(axis=1)
         total_frames += np.sum(idx)
 
-    print('Total frames: {}'.format(total_frames))
+    print('Total frames:', total_frames)
 
 
 # this is the entry point for learning models over Kubernetes, expose all
@@ -63,11 +63,13 @@ def count_frames(input_file, var_name):
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
 @click.option("--checkpoint-freq", type=int, default=None, help='checkpoint the training after N iterations')
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
-@click.option("--whiten", "-w", type=click.Choice(['each', 'all', 'none']), default='all', help="Whiten (e)each (a)ll or (n)o whitening")
+@click.option("--whiten", "-w", type=click.Choice(['each', 'all', 'none']),
+              default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--alpha", "-g", type=float, default=5.7, help="Alpha")
-@click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise for regularization" )
+@click.option("--noise-level", type=float, default=0,
+              help="Additive white gaussian noise for regularization")
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
@@ -128,8 +130,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         train_list = all_keys
 
     if ncpus > len(train_list):
-        warnings.warn('Setting ncpus to {}, ncpus must be <= nkeys in dataset, {}'.format(nkeys, len(train_list)))
         ncpus = len(train_list)
+        warnings.warn(f'Setting ncpus to {nkeys}, ncpus must be <= nkeys in dataset, {len(train_list)}')
 
     # use a list of dicts, with everything formatted ready to go
     model_parameters = {
@@ -233,6 +235,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     # if we save the model, don't use copy_model which strips out the data and potentially
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
     if e_step:
+        print('Running E step...')
         expected_states = run_e_step(arhmm)
 
     # TODO:  just compute cross-likes at the end and potentially dump the model (what else
