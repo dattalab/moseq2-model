@@ -61,7 +61,7 @@ def count_frames(input_file, var_name):
 @click.option("--save-model", is_flag=True, help="Save model object at the end of training")
 @click.option("--max-states", "-m", type=int, default=100, help="Maximum number of states")
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
-@click.option("--checkpoint-freq", type=int, default=None, help='checkpoint the training after N iterations')
+@click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=click.Choice(['each', 'all', 'none']),
               default='all', help="Whiten (e)each (a)ll or (n)o whitening")
@@ -91,6 +91,9 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     if save_every < 0:
         click.echo("Will only save the last iteration of the model")
         save_every = num_iter + 1
+
+    if checkpoint_freq < 0:
+        checkpoint_freq = num_iter + 1
 
     click.echo("Entering modeling training")
 
