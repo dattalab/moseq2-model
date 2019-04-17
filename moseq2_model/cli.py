@@ -170,13 +170,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         hold_out_list = list(test_data.keys())
     else:
         train_data = data_dict
-        test_data = None
         train_list = list(data_dict.keys())
-        test_list = None
 
     loglikes = []
     labels = []
-    heldout_ll = []
     save_parameters = []
     checkpoint_file = dest_file.parent.joinpath(dest_file.stem + '-checkpoint.arhmm')
     checkpoint_file_backup = Path(checkpoint_file.as_posix() + '.1')
@@ -220,13 +217,17 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         progress_kws=progressbar_kws,
     )
 
-    if test_data and separate_trans:
-        click.echo("Computing held out likelihoods with separate transition matrix...")
-        [heldout_ll.append(arhmm.log_likelihood(v, group_id=data_metadata['groups'][i]))
-            for i, (k, v) in enumerate(test_data.items())]
-    elif test_data:
-        click.echo("Computing held out likelihoods...")
-        [heldout_ll.append(arhmm.log_likelihood(v)) for k, v in test_data.items()]
+    click.echo('Computing likelihoods on each training dataset...')
+    train_ll = [arhmm.log_likelihood(v) for v in train_data.values()]
+    heldout_ll = []
+
+    if hold_out and separate_trans:
+        click.echo('Computing held out likelihoods with separate transition matrix...')
+        heldout_ll += [arhmm.log_likelihood(v, group_id=data_metadata['groups'][i])
+                       for i, v in enumerate(test_data.values())]
+    elif hold_out:
+        click.echo('Computing held out likelihoods...')
+        heldout_ll += [arhmm.log_likelihood(v) for v in test_data.values()]
 
     loglikes.append(loglikes_sample)
     labels.append(labels_sample)
@@ -251,7 +252,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'metadata': data_metadata,
         'model': copy_model(arhmm) if save_model else None,
         'hold_out_list': hold_out_list,
-        'train_list': train_list
+        'train_list': train_list,
+        'train_ll': train_ll
         }
 
     if e_step:
