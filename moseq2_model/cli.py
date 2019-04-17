@@ -226,8 +226,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     if hold_out and separate_trans:
         click.echo('Computing held out likelihoods with separate transition matrix...')
-        heldout_ll += [arhmm.log_likelihood(v, group_id=data_metadata['groups'][i])
-                       for i, v in enumerate(test_data.values())]
+        heldout_ll += [arhmm.log_likelihood(v, group_id=g) for g, v in
+                       zip(data_metadata['groups'], test_data.values())]
     elif hold_out:
         click.echo('Computing held out likelihoods...')
         heldout_ll += [arhmm.log_likelihood(v) for v in test_data.values()]

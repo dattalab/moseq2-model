@@ -49,16 +49,16 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             if var_name in dsets:
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
-                if isinstance(tmp, h5py._hl.dataset.Dataset):
+                if isinstance(tmp, h5py.Dataset):
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
-                elif isinstance(tmp, h5py._hl.group.Group):
+                elif isinstance(tmp, h5py.Group):
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
                     if 'groups' in dsets:
-                        metadata['groups'] = [f['groups/{}'.format(key)][()] for key in tmp.keys()]
+                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
-                raise IOError('Could not find dataset name {} in {}'.format(var_name, filename))
+                raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
             if 'uuids' in dsets:
                 metadata['uuids'] = f['uuid'][()]
