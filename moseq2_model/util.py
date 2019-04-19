@@ -42,23 +42,24 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 
     elif filename.endswith('.h5'):
         with h5py.File(filename, 'r') as f:
-            dsets = f.keys()
-
-            if var_name in dsets:
+            if var_name in f:
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
+                print(len(tmp))
                 if isinstance(tmp, h5py.Dataset):
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
                 elif isinstance(tmp, h5py.Group):
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
-                    if 'groups' in dsets:
+                    if 'groups' in f:
                         metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
+                    elif load_groups:
+                        metadata['groups'] = list(range(len(tmp)))
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
                 raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
-            if 'uuids' in dsets:
+            if 'uuids' in f:
                 metadata['uuids'] = f['uuid'][()]
             elif h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
