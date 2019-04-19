@@ -13,8 +13,6 @@ from autoregressive.util import AR_striding
 # grab matlab data
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
 
-    # TODO: trim pickles down to right number of pcs
-
     metadata = {
         'uuids': None,
         'groups': [],
