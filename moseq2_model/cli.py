@@ -10,7 +10,7 @@ from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
-                               load_arhmm_checkpoint)
+                               load_arhmm_checkpoint, flush_print)
 
 orig_init = click.core.Option.__init__
 
@@ -40,7 +40,7 @@ def count_frames(input_file, var_name):
         idx = (~np.isnan(v)).all(axis=1)
         total_frames += np.sum(idx)
 
-    print('Total frames:', total_frames)
+    flush_print('Total frames:', total_frames)
 
 
 # this is the entry point for learning models over Kubernetes, expose all
@@ -110,7 +110,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         for v in data_dict.values():
             idx = (~np.isnan(v)).all(axis=1)
             total_frames += np.sum(idx)
-        print(f'Setting kappa to the number of frames: {total_frames}')
+        flush_print(f'Setting kappa to the number of frames: {total_frames}')
         kappa = total_frames
 
     if hold_out and nkeys >= nfolds:
@@ -184,17 +184,17 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     # look for model checkpoint
     if checkpoint_file.exists() or checkpoint_file_backup.exists():
-        print('Loading checkpoint')
+        flush_print('Loading checkpoint')
         try:
             checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
         except (FileNotFoundError, ValueError):
-            print('Loading original checkpoint failed, checking backup')
+            flush_print('Loading original checkpoint failed, checking backup')
             if checkpoint_file.exists():
                 checkpoint_file.unlink()
             checkpoint = load_arhmm_checkpoint(checkpoint_file_backup, train_data)
         arhmm = checkpoint.pop('model')
         itr = checkpoint.pop('iter')
-        print('On iteration', itr)
+        flush_print('On iteration', itr)
     else:
         arhmm = ARHMM(data_dict=train_data, **model_parameters)
         itr = 0
@@ -239,7 +239,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     # if we save the model, don't use copy_model which strips out the data and potentially
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
     if e_step:
-        print('Running E step...')
+        flush_print('Running E step...')
         expected_states = run_e_step(arhmm)
 
     # TODO:  just compute cross-likes at the end and potentially dump the model (what else

@@ -3,7 +3,7 @@ from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from moseq2_model.util import merge_dicts
+from moseq2_model.util import merge_dicts, flush_print
 import warnings
 
 
@@ -71,28 +71,28 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
     # TODO: return initialization parameters for saving downstream
 
     if separate_trans and not robust:
-        print('Using model class FastARWeakLimitStickyHDPHMMSeparateTrans')
+        flush_print('Using model class FastARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and not robust:
-        print('Using model class FastARWeakLimitStickyHDPHMM')
+        flush_print('Using model class FastARWeakLimitStickyHDPHMM')
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and robust:
-        print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
+        flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif separate_trans and robust:
-        print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
+        flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
     # add ze data
 
     for index, (data_name, data) in enumerate(data_dict.items()):
-        print('Adding data from key {}'.format(str(data_name)))
+        flush_print('Adding data from key {}'.format(str(data_name)))
         if separate_trans:
-            print('Group ID: {}'.format(str(groups[index])))
+            flush_print('Group ID: {}'.format(str(groups[index])))
             model.add_data(data, group_id=groups[index])
         else:
             model.add_data(data)

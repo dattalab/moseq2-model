@@ -5,9 +5,13 @@ import joblib
 import scipy.io
 import h5py
 from copy import deepcopy
+from functools import partial
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
 from autoregressive.util import AR_striding
+
+
+flush_print = partial(print, flush=True)
 
 
 # grab matlab data
