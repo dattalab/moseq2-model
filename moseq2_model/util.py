@@ -45,7 +45,6 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             if var_name in f:
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
-                print(len(tmp))
                 if isinstance(tmp, h5py.Dataset):
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
                 elif isinstance(tmp, h5py.Group):
