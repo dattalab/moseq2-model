@@ -221,7 +221,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     )
 
     click.echo('Computing likelihoods on each training dataset...')
-    train_ll = [arhmm.log_likelihood(v) for v in train_data.values()]
+    if separate_trans:
+        train_ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(data_metadata['groups'], train_data.values())]
+    else:
+        train_ll = [arhmm.log_likelihood(v) for v in train_data.values()]
     heldout_ll = []
 
     if hold_out and separate_trans:
