@@ -1,4 +1,5 @@
-import subprocess, sys
+import subprocess
+import sys
 from setuptools import setup, find_packages
 
 # testing w/o 'scikit-learn == 0.16.1','scikit-image',works okay but leaving here for reference
@@ -6,13 +7,13 @@ from setuptools import setup, find_packages
 # I've hardcorded the dependency links to use very high version numbers, hope it doesn't break anything!
 # note that you will need to pass the option --process-dependency-links for this to work correctly
 
-install = lambda pkg: subprocess.check_call([sys.executable, '-m', 'pip', 'install', pkg])
+def install(package):
+    subprocess.call([sys.executable, "-m", "pip", "install", package])
+
 
 try:
     import numpy
 except ImportError:
-    #pip.main(['install', 'numpy==1.13.0'])
-    #pip.main(['install', 'numpy'])
     install('numpy')
 
 try:
@@ -38,7 +39,7 @@ setup(
     packages=find_packages(exclude='docs'),
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['future', 'h5py', 'click', 'numpy==1.14.5',
+    install_requires=['future', 'h5py', 'click', 'numpy',
                       'pyhsmm', 'autoregressive', 'joblib==0.13.1',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm'],
     dependency_links=['git+https://github.com/mattjj/pybasicbayes.git@master#egg=pybasicbayes-1',
