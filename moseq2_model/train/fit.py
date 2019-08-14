@@ -88,7 +88,7 @@ class MoseqModel:
             self.label_history = []
             self.ll_history = []
 
-        self.arhmm = ARHMM(X, **self.params)
+        arhmm = ARHMM(data_dict=X, **self.params)
 
         progressbar = tqdm_notebook if in_nb else tqdm
 
@@ -97,18 +97,20 @@ class MoseqModel:
             display(lbl)
         
         for _ in progressbar(range(self.iters), disable=silence):
-            self.arhmm.resample_model(num_procs=self.cpus)
-            labels = get_labels_from_model(self.arhmm)
+            arhmm.resample_model(num_procs=self.cpus)
+            labels = get_labels_from_model(arhmm)
             self.df = pd.concat([to_df(l, u) for u, l in zip(X, labels)])
 
             if self.history:
                 _dur = self.get_median_duration().mean() / 30
                 self.label_history.append(self.df)
-                self.ll_history.append(self.arhmm.log_likelihood())
+                self.ll_history.append(arhmm.log_likelihood())
                 self.dur_history.append(_dur)
             
             if not silence and in_nb and self.history:
                 lbl.value = f'median duration: {self.dur_history[-1]:0.3f}s -- log-likelihood: {self.ll_history[-1]:0.3E}'
+
+        self.arhmm = arhmm
         
         return self
 
