@@ -25,7 +25,7 @@ def _in_notebook():
 
 
 def _ensure_odict(data):
-    if isinstance(data, (list, tuple)):
+    if isinstance(data, (list, tuple, np.ndarray)):
         data = OrderedDict(enumerate(data))
     elif isinstance(data, dict):
         data = OrderedDict(data)
