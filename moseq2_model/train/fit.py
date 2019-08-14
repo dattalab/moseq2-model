@@ -51,7 +51,8 @@ class MoseqModel:
             'nlags': 3,
             'max_states': 100,
             'robust': False,
-            'groups': None
+            'groups': None,
+            'separate_trans': False
         }
 
         self.cpus = n_cpus
@@ -80,7 +81,7 @@ class MoseqModel:
         return self
     
     def fit(self, X, y=None):
-        X = _ensure_odict(X)
+        # X = _ensure_odict(X)
         in_nb = _in_notebook()
         silence = self.params['silent']
         if self.history:
@@ -88,7 +89,7 @@ class MoseqModel:
             self.label_history = []
             self.ll_history = []
 
-        arhmm = ARHMM(data_dict=X, **self.params)
+        arhmm = ARHMM(data_dict=deepcopy(_ensure_odict(X)), **self.params)
 
         progressbar = tqdm_notebook if in_nb else tqdm
 
@@ -99,11 +100,11 @@ class MoseqModel:
         for _ in progressbar(range(self.iters), disable=silence):
             arhmm.resample_model(num_procs=self.cpus)
             labels = get_labels_from_model(arhmm)
-            self.df = pd.concat([to_df(l, u) for u, l in zip(X, labels)])
+            self.df = pd.concat([to_df(l, u) for u, l in enumerate(labels)])
 
             if self.history:
                 _dur = self.get_median_duration().mean() / 30
-                self.label_history.append(self.df)
+                self.label_history.append(self.df.copy())
                 self.ll_history.append(arhmm.log_likelihood())
                 self.dur_history.append(_dur)
             
