@@ -61,6 +61,7 @@ class MoseqModel:
         self.optimal_duration = optimal_duration * 30
         self.params = merge(self.default_params, model_params)
         self.history = history
+        self.rho = self.params['kappa'] / (self.params['kappa'] + self.params['alpha'])
 
         if history:
             self.dur_history = []
@@ -74,14 +75,13 @@ class MoseqModel:
 
     def set_params(self, **model_params):
         if self.scale_kappa and 'alpha' in model_params:
-            alpha_ratio = model_params['alpha'] / self.params['alpha']
-            new_kappa = self.params['kappa'] * alpha_ratio
+            new_kappa = (model_params['alpha'] / (1 - self.rho)) - model_params['alpha']
             model_params['kappa'] = new_kappa
         self.params = merge(self.params, model_params)
         return self
     
     def fit(self, X, y=None):
-        # X = _ensure_odict(X)
+        X = _ensure_odict(X)
         in_nb = _in_notebook()
         silence = self.params['silent']
         if self.history:
