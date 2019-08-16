@@ -70,7 +70,7 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
-@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, restarts, var_name,
