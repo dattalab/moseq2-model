@@ -9,6 +9,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from moseq2_model.train.util import train_model, whiten_all, whiten_each
 from moseq2_model.util import save_dict, load_pcs, get_parameters_from_model, copy_model
+from ruamel.yaml import YAML
 
 orig_init = click.core.Option.__init__
 
@@ -69,15 +70,18 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
+@click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, restarts, var_name,
                 save_every, save_model, max_states, model_progress, npcs, whiten,
-                kappa, gamma, alpha, noise_level, nu, nlags, separate_trans, robust):
+                kappa, gamma, alpha, noise_level, nu, nlags, separate_trans, robust,
+                index, default_group):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
 
-    if not(os.path.dirname(dest_file)):
+    if not os.path.dirname(dest_file):
         dest_file = os.path.join('./', dest_file)
 
     if not os.access(os.path.dirname(dest_file), os.W_OK):
@@ -85,7 +89,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     if save_every < 0:
         click.echo("Will only save the last iteration of the model")
-        save_every = num_iter+1
+        save_every = num_iter + 1
 
     click.echo("Entering modeling training")
 
@@ -94,6 +98,22 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                                         var_name=var_name,
                                         npcs=npcs,
                                         load_groups=separate_trans)
+
+    # if we have an index file, strip out the groups, match to the scores uuids
+    if os.path.exists(index):
+        yml = YAML(typ="rt")
+        with open(index, "r") as f:
+            yml_metadata = yml.load(f.read())["files"]
+            yml_groups = [_["group"] for _ in yml_metadata]
+            yml_uuids = [_["uuid"] for _ in yml_metadata]
+
+        data_metadata["groups"] = []
+        for uuid in data_metadata["uuids"]:
+            if uuid in yml_uuids:
+                data_metadata["groups"].append(yml_groups[yml_uuids.index(uuid)])
+            else:
+                data_metadata["groups"].append(default_group)
+
     all_keys = list(data_dict.keys())
     nkeys = len(all_keys)
     compute_heldouts = False
