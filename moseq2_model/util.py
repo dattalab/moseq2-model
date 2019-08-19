@@ -47,9 +47,9 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
                 if isinstance(tmp, h5py._hl.dataset.Dataset):
-                    data_dict = OrderedDict([(1, tmp.value[:, :npcs])])
+                    data_dict = OrderedDict([(1, tmp[:, :npcs])])
                 elif isinstance(tmp, h5py._hl.group.Group):
-                    data_dict = OrderedDict([(k, v.value[:, :npcs]) for k, v in tmp.items()])
+                    data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
                     if 'groups' in dsets:
                         metadata['groups'] = [f['groups/{}'.format(key)].value for key in tmp.keys()]
                 else:
