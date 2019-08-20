@@ -26,9 +26,32 @@ def test_learn_model():
     input_dir = 'tests/test_data/'
 
     runner = CliRunner()
+    learn_params = ['-h', # FLAG
+                    '--hold-out-seed', -1,
+                    '--nfolds', 5,
+                    '-c', 0,
+                    '-n', 100,
+                    '-r', 1,
+                    '--var-name', 'scores',
+                    '-s', -1,
+                    '--save-model', # FLAG
+                    '-m', 100,
+                    '-p', True,
+                    '--npcs', 10,
+                    '-w', 'all',
+                    '-k', None,
+                    '-g', 1e3,
+                    '--noise-level', 0,
+                    '--nu', 4,
+                    '--nlags', 3,
+                    '--separate-trans', # FLAG
+                    '--robust', # FLAG
+                    #'-i', 'moseq-index.yaml',
+                    '--default-group', 'n/a',
+                    os.path.join(input_dir, 'pca_scores.h5'),
+                    os.path.join(input_dir, 'test_trained_model.p')]
 
-    result = runner.invoke(learn_model, [os.path.join(input_dir, 'pca_scores.h5'),
-                                         os.path.join(input_dir, 'test_trained_model.p')])
+    result = runner.invoke(learn_model, learn_params)
 
     assert(os.path.exists(os.path.join(input_dir, 'test_trained_model.p') == True))
     os.remove(os.path.join(input_dir, 'test_trained_model.p'))
