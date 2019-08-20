@@ -29,7 +29,7 @@ def test_learn_model():
     learn_params = ['-h', # FLAG
                     '--hold-out-seed', -1,
                     '--nfolds', 5,
-                    '-c', 0,
+                    '-c', 2,
                     '-n', 100,
                     '-r', 1,
                     '--var-name', 'scores',
@@ -44,10 +44,10 @@ def test_learn_model():
                     '--noise-level', 0,
                     '--nu', 4,
                     '--nlags', 3,
-                    '--separate-trans', # FLAG
-                    '--robust', # FLAG
+                    #'--separate-trans', # FLAG
+                    #'--robust', # FLAG
                     #'-i', 'moseq-index.yaml',
-                    '--default-group', 'n/a',
+                    #'--default-group', 'n/a',
                     os.path.join(input_dir, 'pca_scores.h5'),
                     os.path.join(input_dir, 'test_trained_model.p')]
 

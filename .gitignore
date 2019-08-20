@@ -88,3 +88,5 @@ ENV/
 .spyderproject
 
 # Rope project settings
+
+tests/test_data/mock_model.p
