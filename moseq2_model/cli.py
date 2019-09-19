@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 from pathlib import Path
 from copy import deepcopy
+from cytoolz import pluck
 from ruamel.yaml import YAML
 from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
@@ -112,8 +113,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         yml = YAML(typ="rt")
         with open(index, "r") as f:
             yml_metadata = yml.load(f)["files"]
-            yml_groups = [_["group"] for _ in yml_metadata]
-            yml_uuids = [_["uuid"] for _ in yml_metadata]
+            yml_groups, yml_uuids = zip(*pluck(['group', 'uuid'], yml_metadata))
 
         data_metadata["groups"] = []
         for uuid in data_metadata["uuids"]:

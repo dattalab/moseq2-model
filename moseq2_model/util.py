@@ -5,6 +5,7 @@ import joblib
 import scipy.io
 import h5py
 from copy import deepcopy
+from cytoolz import first
 from functools import partial
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
@@ -15,6 +16,12 @@ flush_print = partial(print, flush=True)
 
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
+    '''Load the princpal component scores for modeling
+    Args:
+        filename: path to the file that contains PC scores
+        var_name: key where the pc scores are stored within ``filename`` 
+
+    '''
 
     metadata = {
         'uuids': None,
@@ -34,7 +41,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
-        if isinstance(list(data_dict.values())[0], tuple):
+        if isinstance(first(data_dict.values()), tuple):
             print('Detected tuple')
             for k, v in data_dict.items():
                 data_dict[k] = v[0][:, :npcs]
@@ -62,6 +69,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
             if 'uuids' in f:
+                # TODO: make sure uuids is in f, and not uuid
                 metadata['uuids'] = f['uuid'][()]
             elif h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
@@ -89,6 +97,7 @@ def save_dict(filename, obj_to_save=None):
     elif filename.endswith('.h5'):
         print('Saving h5 file', filename)
         with h5py.File(filename, 'w') as f:
+            # TODO: rename this function to be consistent with the other repos
             recursively_save_dict_contents_to_group(f, obj_to_save)
     else:
         raise ValueError('Did not understand filetype')
