@@ -1,16 +1,20 @@
+import os
+import pickle
 import numpy as np
 import joblib
-import copy
 import scipy.io
 import h5py
+from copy import deepcopy
+from functools import partial
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
+from autoregressive.util import AR_striding
 
 
-# grab matlab data
+flush_print = partial(print, flush=True)
+
+
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
-
-    # TODO: trim pickles down to right number of pcs
 
     metadata = {
         'uuids': None,
@@ -41,33 +45,29 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 
     elif filename.endswith('.h5'):
         with h5py.File(filename, 'r') as f:
-            dsets = f.keys()
-
-            if var_name in dsets:
+            if var_name in f:
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
-                if isinstance(tmp, h5py._hl.dataset.Dataset):
+                if isinstance(tmp, h5py.Dataset):
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
-                elif isinstance(tmp, h5py._hl.group.Group):
+                elif isinstance(tmp, h5py.Group):
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
-                    if 'groups' in dsets:
-                        metadata['groups'] = [f['groups/{}'.format(key)].value for key in tmp.keys()]
+                    if 'groups' in f:
+                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
+                    elif load_groups:
+                        metadata['groups'] = list(range(len(tmp)))
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
-                raise IOError('Could not find dataset name {} in {}'.format(var_name, filename))
+                raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
-            if 'uuids' in dsets:
-                metadata['uuids'] = f['uuid'].value
+            if 'uuids' in f:
+                metadata['uuids'] = f['uuid'][()]
             elif h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
 
-            # if 'groups' in dsets:
-            #     print('Found groups in groups')
-            #     metadata['groups'] = f['groups'].value
-
     else:
-        raise ValueError('Did understand filetype')
+        raise ValueError('Did not understand filetype')
 
     return data_dict, metadata
 
@@ -78,20 +78,20 @@ def save_dict(filename, obj_to_save=None):
     # pickles, only load as we need them
 
     if filename.endswith('.mat'):
-        print('Saving MAT file '+filename)
+        print('Saving MAT file', filename)
         scipy.io.savemat(filename, mdict=obj_to_save)
     elif filename.endswith('.z'):
-        print('Saving compressed pickle '+filename)
-        joblib.dump(obj_to_save, filename, compress=3)
+        print('Saving compressed pickle', filename)
+        joblib.dump(obj_to_save, filename, compress=('zlib', 4))
     elif filename.endswith('.pkl') | filename.endswith('.p'):
-        print('Saving pickle '+filename)
+        print('Saving pickle', filename)
         joblib.dump(obj_to_save, filename, compress=0)
     elif filename.endswith('.h5'):
-        print('Saving h5 file '+filename)
+        print('Saving h5 file', filename)
         with h5py.File(filename, 'w') as f:
             recursively_save_dict_contents_to_group(f, obj_to_save)
     else:
-        raise ValueError('Did understand filetype')
+        raise ValueError('Did not understand filetype')
 
 
 # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
@@ -109,7 +109,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
         if isinstance(item, np.ndarray) and item.dtype == np.object:
             dt = h5py.special_dtype(vlen=item.flat[0].dtype)
             h5file.create_dataset(path+key, item.shape, dtype=dt, compression='gzip')
-            for tup, idx in np.ndenumerate(item):
+            for tup, _ in np.ndenumerate(item):
                 if item[tup] is not None:
                     h5file[path+key][tup] = np.array(item[tup]).ravel()
         elif isinstance(item, (np.ndarray, list)):
@@ -122,25 +122,88 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
             raise ValueError('Cannot save {} type'.format(type(item)))
 
 
+def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
+    '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
+    Args:
+        filename: path that specifies the checkpoint
+        data: an OrderedDict that contains the training data
+        groups (optional: default - None): a list of groups each mouse is a part of.
+            Only used if `separate_trans` is `True`
+        separate_trans (optional: default - False): a bool flag to tell the model
+            to use separate transition matrices
+    Returns:
+        a dict containing the model with reloaded data, and associated training data
+    '''
+    mdl_dict = joblib.load(filename)
+    nlags = mdl_dict['model'].nlags
+
+    for s, t in zip(mdl_dict['model'].states_list, train_data.values()):
+        s.data = AR_striding(t.astype('float32'), nlags)
+
+    return mdl_dict
+
+
+def save_arhmm_checkpoint(filename: str, arhmm: dict):
+    '''Save an arhmm checkpoint and strip out data used to train the model
+    Args:
+        filename: path that specifies the checkpoint
+        arhmm: a dictionary containing the model obj, training iteration number,
+               log-likelihoods of each training step, and labels for each step
+    '''
+    mdl = arhmm.pop('model')
+    arhmm['model'] = copy_model(mdl)
+    joblib.dump(arhmm, filename, compress=('zlib', 5))
+
+
+def append_resample(filename, label_dict: dict):
+    '''Adds the labels from a resampling iteration to a pickle file
+    Args:
+        label_dict: a dictionary with a single key/value pair, where the
+            key is the sampling iteration and the value contains a dict of:
+            (labels, a log likelihood val, and expected states if the flag is set)
+            from each mouse
+    '''
+    with open(filename, 'ab+') as f:
+        pickle.dump(label_dict, f)
+
+
 def load_dict_from_hdf5(filename):
+    """ A convenience function to load the entire contents of an h5 file
+    into a dictionary
     """
-    ....
-    """
-    with h5py.File(filename, 'r') as h5file:
-        return recursively_load_dict_contents_from_group(h5file, '/')
+    return h5_to_dict(filename, '/')
 
 
-def recursively_load_dict_contents_from_group(h5file, path):
-    """
-    ....
-    """
+def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     ans = {}
-    for key, item in h5file[path].items():
-        if isinstance(item, h5py._hl.dataset.Dataset):
-            ans[key] = item.value
-        elif isinstance(item, h5py._hl.group.Group):
-            ans[key] = recursively_load_dict_contents_from_group(h5file, path + key + '/')
+    if isinstance(file[path], h5py._hl.dataset.Dataset):
+        # only use the final path key to add to `ans`
+        ans[path.split('/')[-1]] = file[path][()]
+    else:
+        for key, item in file[path].items():
+            if isinstance(item, h5py.Dataset):
+                ans[key] = item[()]
+            elif isinstance(item, h5py.Group):
+                ans[key] = _load_h5_to_dict(file, '/'.join([path, key]))
     return ans
+
+
+def h5_to_dict(h5file, path: str) -> dict:
+    '''
+    Args:
+        h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
+        path: path to the base dataset within the h5 file
+    Returns:
+        a dict with h5 file contents with the same path structure
+    '''
+    if isinstance(h5file, str):
+        with h5py.File(h5file, 'r') as f:
+            out = _load_h5_to_dict(f, path)
+    elif isinstance(h5file, (h5py.File, h5py.Group)):
+        out = _load_h5_to_dict(h5file, path)
+    else:
+        raise Exception('file input not understood - need h5 file path or file object')
+    return out
 
 
 def load_data_from_matlab(filename, var_name="features", npcs=10):
@@ -152,7 +215,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
             score_tmp = f[var_name]
             for i in range(len(score_tmp)):
                 tmp = f[score_tmp[i][0]]
-                score_to_add = tmp.value
+                score_to_add = tmp[()]
                 data_dict[i] = score_to_add[:npcs, :].T
 
     return data_dict
@@ -178,20 +241,19 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
 
 # per Scott's suggestion
-def copy_model(self):
+def copy_model(model_obj):
     tmp = []
 
     # make a deep copy of the data-less version
-
-    for s in self.states_list:
+    for s in model_obj.states_list:
         tmp.append(s.data)
         s.data = None
 
-    cp = copy.deepcopy(self)
+    cp = deepcopy(model_obj)
 
     # now put the data back in
 
-    for s, t in zip(self.states_list, tmp):
+    for s, t in zip(model_obj.states_list, tmp):
         s.data = t
 
     return cp
