@@ -81,6 +81,20 @@ def zscore_all(data_dict, center=True):
 
 # taken from syllables by @alewbw
 def get_crosslikes(arhmm, frame_by_frame=False):
+    '''Gets the cross-likelihoods, a measure of confidence in the model's
+    segmentation, for each syllable a model learns.
+
+    Args:
+        arhmm: the ARHMM model object fit to your data
+        frame_by_frame (bool): if True, the cross-likelihoods will be computed for
+            each frame
+
+    Returns:
+        all_CLs: a dictionary containing cross-likelihoods for each syllable pair.
+            if ``frame_by_frame=True``, it will contain a value for each frame
+        CL: the average cross-likelihood for each syllable pair
+    '''
+
     all_CLs = defaultdict(list)
     Nstates = arhmm.num_states
 
@@ -90,9 +104,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
                 likes = s.aBl[s.stateseq == j]
                 for i in range(Nstates):
                     all_CLs[(i, j)].append(likes[:, i] - likes[:, j])
-        all_CLs = defaultdict(
-            list,
-            {k: np.concatenate(v) for k, v in all_CLs.items()})
+        all_CLs = {k: np.concatenate(v) for k, v in all_CLs.items()}
     else:
         for s in arhmm.states_list:
             for j in range(Nstates):
