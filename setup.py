@@ -39,7 +39,7 @@ setup(
     packages=find_packages(exclude='docs'),
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['future', 'h5py', 'click', 'numpy',
+    install_requires=['future', 'h5py', 'click', 'numpy', 'pandas',
                       'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
                       'joblib==0.13.1', 'cytoolz', 'ipywidgets',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm',
