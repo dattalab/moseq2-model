@@ -1,39 +1,44 @@
+import os
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
-from moseq2_model.util import progressbar
+from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
+def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
+                checkpoint_file=None, start=0, save_file=None, progress_kwargs={}):
 
-# based on moseq by @mattjj and @alexbw
-def train_model(model, num_iter=100, save_every=1, ncpus=1, cli=False, **kwargs):
+    checkpoint = checkpoint_freq is not None
 
-    # per conversations w/ @mattjj, the fast class of models use openmp no need
-    # for "extra" parallelism
+    for itr in progressbar(range(start, num_iter), **progress_kwargs):
 
-    log_likelihoods = []
-    labels = []
-
-    for itr in progressbar(range(num_iter), cli=cli, **kwargs):
         model.resample_model(num_procs=ncpus)
-        if (np.mod(itr+1, save_every) == 0 or
-                np.mod(itr+1, num_iter) == 0):
-            log_likelihoods.append(model.log_likelihood())
-            seq_list = [s.stateseq for s in model.states_list]
-            for seq_itr in range(len(seq_list)):
-                seq_list[seq_itr] = np.append(np.repeat(-5, model.nlags), seq_list[seq_itr])
-            labels.append(seq_list)
+        # append resample stats to a file
+        if (itr + 1) % save_every == 0:
+            save_dict = {
+                (itr + 1): {
+                    'iter': itr + 1,
+                    'log_likelihoods': model.log_likelihood(),
+                    'labels': get_labels_from_model(model)
+                }
+            }
+            append_resample(save_file, save_dict)
+        # checkpoint if needed
+        if checkpoint and ((itr + 1) % checkpoint_freq == 0):
+            save_data = {
+                'iter': itr + 1,
+                'model': model,
+            }
+            # move around the checkpoints
+            if os.path.exists(checkpoint_file):
+                checkpoint_file = checkpoint_file + '.1'
+            save_arhmm_checkpoint(checkpoint_file, save_data)
 
-    labels_cat = []
-
-    for i in range(len(labels[0])):
-        labels_cat.append(np.array([tmp[i] for tmp in labels], dtype=np.int16))
-
-    return model, log_likelihoods, labels_cat
+    return model, model.log_likelihood(), get_labels_from_model(model)
 
 
-# simple function for grabbing model labels across the dict
 def get_labels_from_model(model):
-    cat_labels = [s.stateseq for s in model.states_list]
+    '''grabs the model labels for each training dataset and places them in a list'''
+    cat_labels = [np.append(np.repeat(-5, model.nlags), s.stateseq) for s in model.states_list]
     return cat_labels
 
 
@@ -61,6 +66,16 @@ def whiten_each(data_dict, center=True):
     return data_dict
     #return OrderedDict((k, whiten_all(OrderedDict([k,v]), center=center)) for k, v in data_dict.items())
 
+def run_e_step(arhmm):
+    '''computes the expected states for each training dataset and places them in a list'''
+    arhmm._E_step()
+    return [s.expected_states for s in arhmm.states_list]
+
+def run_e_step(arhmm):
+    '''computes the expected states for each training dataset and places them in a list'''
+    arhmm._E_step()
+    return [s.expected_states for s in arhmm.states_list]
+
 
 def zscore_each(data_dict, center=True):
     for k, v in data_dict.items():
@@ -78,6 +93,7 @@ def zscore_all(data_dict, center=True):
         data_dict[k] = (v - mu) / sig
 
     return data_dict
+
 
 # taken from syllables by @alewbw
 def get_crosslikes(arhmm, frame_by_frame=False):
