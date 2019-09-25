@@ -33,13 +33,13 @@ except ImportError:
 
 setup(
     name='moseq2_model',
-    version='0.1.3',
+    version='0.2.1',
     author='Datta Lab',
     description='Modeling for the best',
     packages=find_packages(exclude='docs'),
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['future', 'h5py', 'click', 'numpy', 'scipy',
+    install_requires=['future', 'h5py', 'click', 'numpy', 'scipy', 'sklearn',
                       'pyhsmm', 'joblib==0.13.1', 'cytoolz',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
