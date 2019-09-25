@@ -1,15 +1,21 @@
 import click
 import os
 import sys
-from moseq2_model.train.models import ARHMM
-import numpy as np
 import random
 import warnings
-from collections import OrderedDict
+import numpy as np
+from pathlib import Path
 from copy import deepcopy
-from moseq2_model.train.util import train_model, whiten_all, whiten_each
-from moseq2_model.util import save_dict, load_pcs, get_parameters_from_model, copy_model
+from cytoolz import pluck
+from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
+from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
+                               load_arhmm_checkpoint, flush_print)
 from ruamel.yaml import YAML
+from collections import OrderedDict
+from moseq2_model.train.models import ARHMM
+from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
+from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
+                               load_arhmm_checkpoint, flush_print)
 
 def count_frames_command(input_file, var_name):
 
@@ -24,16 +30,17 @@ def count_frames_command(input_file, var_name):
     return True
 
 def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, restarts, var_name,
-                save_every, save_model, max_states, model_progress, npcs, whiten,
-                kappa, gamma, alpha, noise_level, nu, nlags, separate_trans, robust,
-                index, default_group):
+                num_iter, var_name, e_step,
+                save_every, save_model, max_states, npcs, whiten, progressbar,
+                kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
+                checkpoint_freq, index, default_group):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
+    dest_file = os.path.realpath(dest_file)
 
-    if not os.path.dirname(dest_file):
-        dest_file = os.path.join('./', dest_file)
+    # if not os.path.dirname(dest_file):
+    #     dest_file = os.path.join('./', dest_file)
 
     if not os.access(os.path.dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
@@ -41,6 +48,9 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
     if save_every < 0:
         click.echo("Will only save the last iteration of the model")
         save_every = num_iter + 1
+
+    if checkpoint_freq < 0:
+        checkpoint_freq = num_iter + 1
 
     click.echo("Entering modeling training")
 
@@ -54,9 +64,8 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
     if os.path.exists(index):
         yml = YAML(typ="rt")
         with open(index, "r") as f:
-            yml_metadata = yml.load(f.read())["files"]
-            yml_groups = [_["group"] for _ in yml_metadata]
-            yml_uuids = [_["uuid"] for _ in yml_metadata]
+            yml_metadata = yml.load(f)["files"]
+            yml_groups, yml_uuids = zip(*pluck(['group', 'uuid'], yml_metadata))
 
         data_metadata["groups"] = []
         for uuid in data_metadata["uuids"]:
@@ -67,22 +76,20 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
 
     all_keys = list(data_dict.keys())
     nkeys = len(all_keys)
-    compute_heldouts = False
 
     if kappa is None:
         total_frames = 0
         for v in data_dict.values():
             idx = (~np.isnan(v)).all(axis=1)
             total_frames += np.sum(idx)
-
-        print('Setting kappa to the number of frames: {}'.format(total_frames))
+        flush_print(f'Setting kappa to the number of frames: {total_frames}')
         kappa = total_frames
 
     if hold_out and nkeys >= nfolds:
-        click.echo("Will hold out 1 fold of "+str(nfolds))
+        click.echo(f"Will hold out 1 fold of {nfolds}")
 
         if hold_out_seed >= 0:
-            click.echo("Settings random seed to "+str(hold_out_seed))
+            click.echo(f"Settings random seed to {hold_out_seed}")
             splits = np.array_split(random.Random(hold_out_seed).sample(list(range(nkeys)), nkeys), nfolds)
         else:
             warnings.warn("Random seed not set, will choose a different test set each time this is run...")
@@ -92,17 +99,16 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         train_list = [k for k in all_keys if k not in hold_out_list]
         click.echo("Holding out "+str(hold_out_list))
         click.echo("Training on "+str(train_list))
-        compute_heldouts = True
     else:
+        hold_out = False
         hold_out_list = None
         train_list = all_keys
 
     if ncpus > len(train_list):
-        warnings.warn('Setting ncpus to {}, ncpus must be <= nkeys in dataset, {}'.format(nkeys, len(train_list)))
         ncpus = len(train_list)
+        warnings.warn(f'Setting ncpus to {nkeys}, ncpus must be <= nkeys in dataset, {len(train_list)}')
 
     # use a list of dicts, with everything formatted ready to go
-
     model_parameters = {
         'gamma': gamma,
         'alpha': alpha,
@@ -111,7 +117,6 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         'separate_trans': separate_trans,
         'robust': robust,
         'max_states': max_states,
-        'nu': nu
     }
 
     if separate_trans:
@@ -133,61 +138,88 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         for k, v in data_dict.items():
             data_dict[k] = v + np.random.randn(*v.shape) * noise_level
 
-    if compute_heldouts:
+    if hold_out:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
         train_list = list(train_data.keys())
         hold_out_list = list(test_data.keys())
     else:
         train_data = data_dict
-        test_data = None
         train_list = list(data_dict.keys())
-        test_list = None
 
     loglikes = []
     labels = []
-    heldout_ll = []
     save_parameters = []
 
-    for i in range(restarts):
+    checkpoint_file = dest_file+'-checkpoint.arhmm'
+    # back-up file
+    checkpoint_file_backup = dest_file + '-checkpoint_backup.arhmm'
+    resample_save_file = dest_file + '-resamples.p'
+
+    if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file_backup):
+        flush_print('Loading Checkpoint')
+        try:
+            checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
+        except (FileNotFoundError, ValueError):
+            flush_print('Loading original checkpoint failed, checking backup')
+            if os.path.exists(checkpoint_file_backup):
+                checkpoint_file = checkpoint_file_backup
+            checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
+        arhmm = checkpoint.pop('model')
+        itr = checkpoint.pop('iter')
+        flush_print('On iteration', itr)
+    else:
         arhmm = ARHMM(data_dict=train_data, **model_parameters)
-        [arhmm, loglikes_sample, labels_sample] = \
-            train_model(model=arhmm,
-                        save_every=save_every,
-                        num_iter=num_iter,
-                        cli=True,
-                        leave=False,
-                        disable=not model_progress,
-                        total=num_iter*restarts,
-                        initial=i*num_iter,
-                        ncpus=ncpus,
-                        file=sys.stdout)
+        itr = 0
 
-        if test_data and separate_trans:
-            click.echo("Computing held out likelihoods with separate transition matrix...")
-            [heldout_ll.append(arhmm.log_likelihood(v, group_id=data_metadata['groups'][i]))
-                for i, (k, v) in enumerate(test_data.items())]
-        elif test_data:
-            click.echo("Computing held out likelihoods...")
-            [heldout_ll.append(arhmm.log_likelihood(v)) for k, v in test_data.items()]
+    progressbar_kwargs = {
+        'total': num_iter,
+        'cli': True,
+        'file': sys.stdout,
+        'leave': False,
+        'disable': not progressbar,
+        'initial': itr
+    }
 
-        loglikes.append(loglikes_sample)
-        labels.append(labels_sample)
-        save_parameters.append(get_parameters_from_model(arhmm))
+    arhmm, loglikes_sample, labels_sample = train_model(
+        model=arhmm,
+        save_every=save_every,
+        num_iter=num_iter,
+        ncpus=ncpus,
+        checkpoint_freq=checkpoint_freq,
+        save_file=resample_save_file,
+        chkpt_file=checkpoint_file,
+        start=itr,
+        progress_kwargs=progressbar_kwargs,
+    )
+
+    click.echo('Computing likelihoods on each training dataset...')
+    if separate_trans:
+        train_ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(data_metadata['groups'], train_data.values())]
+    else:
+        train_ll = [arhmm.log_likelihood(v) for v in train_data.values()]
+    heldout_ll = []
+
+    if hold_out and separate_trans:
+        click.echo('Computing held out likelihoods with separate transition matrix...')
+        heldout_ll += [arhmm.log_likelihood(v, group_id=g) for g, v in
+                       zip(data_metadata['groups'], test_data.values())]
+    elif hold_out:
+        click.echo('Computing held out likelihoods...')
+        heldout_ll += [arhmm.log_likelihood(v) for v in test_data.values()]
+
+    loglikes.append(loglikes_sample)
+    labels.append(labels_sample)
+    save_parameters.append(get_parameters_from_model(arhmm))
 
     # if we save the model, don't use copy_model which strips out the data and potentially
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
-
-    if save_model:
-        save_model = copy_model(arhmm)
-    else:
-        save_model = None
+    if e_step:
+        flush_print('Running E step...')
+        expected_states = run_e_step(arhmm)
 
     # TODO:  just compute cross-likes at the end and potentially dump the model (what else
     # would we want the model for hm?), though hard drive space is cheap, recomputing models is not...
-
-    # TODO: decision time, we could just save the model and strip out the parameters later,
-    # would be much more lightweight, right now we're being too redundant
 
     export_dict = {
         'loglikes': loglikes,
@@ -197,10 +229,14 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         'model_parameters': save_parameters,
         'run_parameters': run_parameters,
         'metadata': data_metadata,
-        'model': save_model,
+        'model': copy_model(arhmm) if save_model else None,
         'hold_out_list': hold_out_list,
-        'train_list': train_list
-        }
+        'train_list': train_list,
+        'train_ll': train_ll
+    }
 
-    save_dict(filename=dest_file, obj_to_save=export_dict)
+    if e_step:
+        export_dict['expected_states'] = expected_states
+
+    save_dict(filename=str(dest_file), obj_to_save=export_dict)
     return True

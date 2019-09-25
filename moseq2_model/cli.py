@@ -6,6 +6,7 @@ import warnings
 import numpy as np
 from pathlib import Path
 from copy import deepcopy
+from cytoolz import pluck
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
@@ -188,17 +189,6 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         for k, v in data_dict.items():
             data_dict[k] = v + np.random.randn(*v.shape) * noise_level
 
-    '''
-    if compute_heldouts:
-        train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
-        test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
-        train_list = list(train_data.keys())
-        hold_out_list = list(test_data.keys())
-    else:
-        train_data = data_dict
-        train_list = list(data_dict.keys())
-        test_list = None
-    '''
 
     if hold_out:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
