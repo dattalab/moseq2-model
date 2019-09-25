@@ -3,9 +3,14 @@ import joblib
 import copy
 import scipy.io
 import h5py
+from copy import deepcopy
+from cytoolz import first
+from functools import partial
 from tqdm import tqdm_notebook, tqdm
 from collections import OrderedDict
+from autoregressive.util import AR_striding
 
+flush_print = partial(print, flush=True)
 
 # grab matlab data
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
@@ -121,6 +126,48 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
         else:
             raise ValueError('Cannot save {} type'.format(type(item)))
 
+def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
+    '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
+    Args:
+        filename: path that specifies the checkpoint
+        data: an OrderedDict that contains the training data
+        groups (optional: default - None): a list of groups each mouse is a part of.
+            Only used if `separate_trans` is `True`
+        separate_trans (optional: default - False): a bool flag to tell the model
+            to use separate transition matrices
+    Returns:
+        a dict containing the model with reloaded data, and associated training data
+    '''
+    mdl_dict = joblib.load(filename)
+    nlags = mdl_dict['model'].nlags
+
+    for s, t in zip(mdl_dict['model'].states_list, train_data.values()):
+        s.data = AR_striding(t.astype('float32'), nlags)
+
+    return mdl_dict
+
+def save_arhmm_checkpoint(filename: str, arhmm: dict):
+    '''Save an arhmm checkpoint and strip out data used to train the model
+    Args:
+        filename: path that specifies the checkpoint
+        arhmm: a dictionary containing the model obj, training iteration number,
+               log-likelihoods of each training step, and labels for each step
+    '''
+    mdl = arhmm.pop('model')
+    arhmm['model'] = copy_model(mdl)
+    joblib.dump(arhmm, filename, compress=('zlib', 5))
+
+
+def append_resample(filename, label_dict: dict):
+    '''Adds the labels from a resampling iteration to a pickle file
+    Args:
+        label_dict: a dictionary with a single key/value pair, where the
+            key is the sampling iteration and the value contains a dict of:
+            (labels, a log likelihood val, and expected states if the flag is set)
+            from each mouse
+    '''
+    with open(filename, 'ab+') as f:
+        pickle.dump(label_dict, f)
 
 def load_dict_from_hdf5(filename):
     """

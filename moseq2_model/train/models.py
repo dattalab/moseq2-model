@@ -3,7 +3,7 @@ from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from moseq2_model.util import merge_dicts
+from moseq2_model.util import merge_dicts, flush_print
 import warnings
 
 
@@ -33,17 +33,12 @@ def _get_empirical_ar_params(train_datas, params):
     # E_{IW}[S] = S_0 / (nu_0 - datadimension - 1)
     obs_params["S_0"] = obs_distn.sigma * (params["nu_0"] - datadimension - 1)
 
-    # make sure to include nu if we're using the tAR model
-    if 'nu' in params.keys():
-        obs_params['nu'] = params['nu']
-
     return obs_params
 
-
-def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4, alpha=5.7,
+def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
-          separate_trans=False, groups=None, robust=False):
+          separate_trans=False, groups=None, robust=False, silent=False):
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
@@ -66,10 +61,6 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4, alpha=5.7,
         'init_state_distn': 'uniform'
         }
 
-    # accomodate SL's new RobustAutogression code 10/14/2018
-    # if robust:
-    #     default_obs_hypparams['nu'] = nu
-
     obs_hypparams = merge_dicts(default_obs_hypparams, obs_hypparams)
     model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)
 
@@ -79,28 +70,34 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, nu=4, alpha=5.7,
     # TODO: return initialization parameters for saving downstream
 
     if separate_trans and not robust:
-        print('Using model class FastARWeakLimitStickyHDPHMMSeparateTrans')
+        if not silent:
+            flush_print('Using model class FastARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and not robust:
-        print('Using model class FastARWeakLimitStickyHDPHMM')
+        if not silent:
+            flush_print('Using model class FastARWeakLimitStickyHDPHMM')
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and robust:
-        print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
+        if not silent:
+            flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif separate_trans and robust:
-        print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
+        if not silent:
+            flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
     # add ze data
 
     for index, (data_name, data) in enumerate(data_dict.items()):
-        print('Adding data from key {}'.format(str(data_name)))
+        if not silent:
+            flush_print(f'Adding data from key {data_name}')
         if separate_trans:
-            print('Group ID: {}'.format(str(groups[index])))
+            if not silent:
+                flush_print('Group ID: {}'.format(str(groups[index])))
             model.add_data(data, group_id=groups[index])
         else:
             model.add_data(data)
