@@ -12,7 +12,7 @@ from moseq2_model.train.util import train_model, get_labels_from_model,\
     whiten_all, whiten_each, zscore_each, zscore_all, get_crosslikes, slices_from_indicators, rleslices
 
 def test_get_labels_from_model():
-    model = joblib.load('tests/test_data/mock_model.p')
+    #model = joblib.load('tests/test_data/mock_model.p')
     cat_labels = [s.stateseq for s in model.states_list]
 
 
