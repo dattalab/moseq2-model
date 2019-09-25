@@ -39,7 +39,7 @@ setup(
     packages=find_packages(exclude='docs'),
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['future', 'h5py', 'click', 'numpy',
+    install_requires=['future', 'h5py', 'click', 'numpy', 'scipy',
                       'pyhsmm', 'joblib==0.13.1', 'cytoolz',
                       'hdf5storage', 'ruamel.yaml>=0.15.0', 'tqdm',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
