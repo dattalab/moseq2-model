@@ -10,6 +10,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     checkpoint = checkpoint_freq is not None
 
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
+
         model.resample_model(num_procs=ncpus)
         # append resample stats to a file
         if (itr + 1) % save_every == 0:
@@ -70,6 +71,12 @@ def run_e_step(arhmm):
     arhmm._E_step()
     return [s.expected_states for s in arhmm.states_list]
 
+def run_e_step(arhmm):
+    '''computes the expected states for each training dataset and places them in a list'''
+    arhmm._E_step()
+    return [s.expected_states for s in arhmm.states_list]
+
+
 def zscore_each(data_dict, center=True):
     for k, v in data_dict.items():
         tmp_dict = zscore_all(OrderedDict([(k, v)]), center=center)
@@ -86,6 +93,7 @@ def zscore_all(data_dict, center=True):
         data_dict[k] = (v - mu) / sig
 
     return data_dict
+
 
 # taken from syllables by @alewbw
 def get_crosslikes(arhmm, frame_by_frame=False):

@@ -18,6 +18,7 @@ def syll_onset(labels: np.ndarray) -> np.ndarray:
 
 def syll_duration(labels: np.ndarray) -> np.ndarray:
     '''Computes the duration of each syllable
+
     >>> syll_duration(np.array([1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3]))
     array([3, 4, 5])
     '''
@@ -32,6 +33,7 @@ def syll_id(labels: np.ndarray) -> np.ndarray:
         labels: array of syllable labels for a mouse
     Returns:
         an array of compressed labels
+
     >>> syll_id(np.array([1, 1, 1, 2, 2, 2, 3, 3, 3]))
     array([1, 2, 3])
     '''
@@ -53,3 +55,4 @@ def to_df(labels, uuid) -> pd.DataFrame:
     })
 
     return df
+

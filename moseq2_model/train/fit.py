@@ -113,7 +113,6 @@ class MoseqModel:
                 lbl.value = f'median duration: {self.dur_history[-1]:0.3f}s -- log-likelihood: {self.ll_history[-1]:0.3E}'
 
         self.arhmm = arhmm
-
         return self
 
     def partial_fit(self, X):
