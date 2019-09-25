@@ -1,18 +1,16 @@
+import os
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
-
-# based on moseq by @mattjj and @alexbw
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                chkpt_file=None, start=0, save_file=None, progress_kws={}):
+                checkpoint_file=None, start=0, save_file=None, progress_kwargs={}):
 
-    # per conversations w/ @mattjj, the fast class of models use openmp no need
-    # for "extra" parallelism
     checkpoint = checkpoint_freq is not None
 
-    for itr in progressbar(range(start, num_iter), **progress_kws):
+    for itr in progressbar(range(start, num_iter), **progress_kwargs):
+
         model.resample_model(num_procs=ncpus)
         # append resample stats to a file
         if (itr + 1) % save_every == 0:
@@ -31,14 +29,13 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 'model': model,
             }
             # move around the checkpoints
-            if chkpt_file.exists():
-                chkpt_file.rename(chkpt_file.as_posix() + '.1')
-            save_arhmm_checkpoint(chkpt_file, save_data)
+            if os.path.exists(checkpoint_file):
+                checkpoint_file = checkpoint_file + '.1'
+            save_arhmm_checkpoint(checkpoint_file, save_data)
 
     return model, model.log_likelihood(), get_labels_from_model(model)
 
 
-# simple function for grabbing model labels across the dict
 def get_labels_from_model(model):
     '''grabs the model labels for each training dataset and places them in a list'''
     cat_labels = [np.append(np.repeat(-5, model.nlags), s.stateseq) for s in model.states_list]
@@ -69,6 +66,10 @@ def whiten_each(data_dict, center=True):
     return data_dict
     #return OrderedDict((k, whiten_all(OrderedDict([k,v]), center=center)) for k, v in data_dict.items())
 
+def run_e_step(arhmm):
+    '''computes the expected states for each training dataset and places them in a list'''
+    arhmm._E_step()
+    return [s.expected_states for s in arhmm.states_list]
 
 def run_e_step(arhmm):
     '''computes the expected states for each training dataset and places them in a list'''

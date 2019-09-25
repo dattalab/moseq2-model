@@ -35,7 +35,6 @@ def _get_empirical_ar_params(train_datas, params):
 
     return obs_params
 
-
 def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,

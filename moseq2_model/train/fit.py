@@ -16,9 +16,10 @@ from ipywidgets import Label
 from IPython.display import display
 from tqdm import tqdm, tqdm_notebook
 
+
 def _in_notebook():
     '''determine if this function was executed in a jupyter notebook
-    
+
     Returns:
         a boolean describing the presence of a jupyter notebook'''
     return 'ipykernel' in sys.modules
@@ -34,7 +35,7 @@ def _ensure_odict(data):
 
 class MoseqModel:
     def __init__(self, max_iters=100, n_cpus=1, optimal_duration=0.4,
-                 scale_kappa_w_alpha=True, history=True, **model_params): 
+                 scale_kappa_w_alpha=True, history=True, **model_params):
         '''
         Args:
             max_iters: number of iterations to train AR-HMM
@@ -79,7 +80,7 @@ class MoseqModel:
             model_params['kappa'] = new_kappa
         self.params = merge(self.params, model_params)
         return self
-    
+
     def fit(self, X, y=None):
         X = _ensure_odict(X)
         in_nb = _in_notebook()
@@ -96,7 +97,7 @@ class MoseqModel:
         if not silence and in_nb:
             lbl = Label('duration: ll:')
             display(lbl)
-        
+
         for _ in progressbar(range(self.iters), disable=silence):
             arhmm.resample_model(num_procs=self.cpus)
             labels = get_labels_from_model(arhmm)
@@ -107,12 +108,11 @@ class MoseqModel:
                 self.label_history.append(self.df.copy())
                 self.ll_history.append(arhmm.log_likelihood())
                 self.dur_history.append(_dur)
-            
+
             if not silence and in_nb and self.history:
                 lbl.value = f'median duration: {self.dur_history[-1]:0.3f}s -- log-likelihood: {self.ll_history[-1]:0.3E}'
 
         self.arhmm = arhmm
-        
         return self
 
     def partial_fit(self, X):
