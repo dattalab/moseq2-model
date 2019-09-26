@@ -11,6 +11,7 @@ from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
 from ruamel.yaml import YAML
+import ruamel.yaml as yaml
 from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
@@ -29,13 +30,15 @@ def count_frames_command(input_file, var_name):
     print('Total frames: {}'.format(total_frames))
     return True
 
-def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, var_name, e_step,
-                save_every, save_model, max_states, npcs, whiten, progressbar,
-                kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                checkpoint_freq, index, default_group):
 
-    # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
+def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
+                max_states, npcs, kappa, gamma, alpha,
+                separate_trans, robust, checkpoint_freq):
+
+    with open(config_file, 'r') as f:
+        config_data = yaml.safe_load(f)
+
+    # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
     dest_file = os.path.realpath(dest_file)
 
@@ -45,7 +48,7 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
     if not os.access(os.path.dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
 
-    if save_every < 0:
+    if config_data['save_every'] < 0:
         click.echo("Will only save the last iteration of the model")
         save_every = num_iter + 1
 
@@ -54,9 +57,9 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
 
     click.echo("Entering modeling training")
 
-    run_parameters = deepcopy(locals())
+    run_parameters = deepcopy(config_data)
     data_dict, data_metadata = load_pcs(filename=input_file,
-                                        var_name=var_name,
+                                        var_name=config_data['var_name'],
                                         npcs=npcs,
                                         load_groups=separate_trans)
 
@@ -72,7 +75,7 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
             if uuid in yml_uuids:
                 data_metadata["groups"].append(yml_groups[yml_uuids.index(uuid)])
             else:
-                data_metadata["groups"].append(default_group)
+                data_metadata["groups"].append(config_data['default_group'])
 
     all_keys = list(data_dict.keys())
     nkeys = len(all_keys)
@@ -88,9 +91,9 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
     if hold_out and nkeys >= nfolds:
         click.echo(f"Will hold out 1 fold of {nfolds}")
 
-        if hold_out_seed >= 0:
-            click.echo(f"Settings random seed to {hold_out_seed}")
-            splits = np.array_split(random.Random(hold_out_seed).sample(list(range(nkeys)), nkeys), nfolds)
+        if config_data['hold_out_seed'] >= 0:
+            click.echo(f"Settings random seed to {config_data['hold_out_seed']}")
+            splits = np.array_split(random.Random(config_data['hold_out_seed']).sample(list(range(nkeys)), nkeys), nfolds)
         else:
             warnings.warn("Random seed not set, will choose a different test set each time this is run...")
             splits = np.array_split(random.sample(list(range(nkeys)), nkeys), nfolds)
@@ -104,8 +107,9 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         hold_out_list = None
         train_list = all_keys
 
-    if ncpus > len(train_list):
+    if config_data['ncpus'] > len(train_list):
         ncpus = len(train_list)
+        config_data['ncpus'] = ncpus
         warnings.warn(f'Setting ncpus to {nkeys}, ncpus must be <= nkeys in dataset, {len(train_list)}')
 
     # use a list of dicts, with everything formatted ready to go
@@ -113,7 +117,7 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         'gamma': gamma,
         'alpha': alpha,
         'kappa': kappa,
-        'nlags': nlags,
+        'nlags': config_data['nlags'],
         'separate_trans': separate_trans,
         'robust': robust,
         'max_states': max_states,
@@ -124,19 +128,19 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
     else:
         model_parameters['groups'] = None
 
-    if whiten[0].lower() == 'a':
+    if config_data['whiten'][0].lower() == 'a':
         click.echo('Whitening the training data using the whiten_all function')
         data_dict = whiten_all(data_dict)
-    elif whiten[0].lower() == 'e':
+    elif config_data['whiten'][0].lower() == 'e':
         click.echo('Whitening the training data using the whiten_each function')
         data_dict = whiten_each(data_dict)
     else:
         click.echo('Not whitening the data')
 
-    if noise_level > 0:
-        click.echo('Using {} STD AWGN'.format(noise_level))
+    if config_data['noise_level'] > 0:
+        click.echo('Using {} STD AWGN'.format(config_data['noise_level']))
         for k, v in data_dict.items():
-            data_dict[k] = v + np.random.randn(*v.shape) * noise_level
+            data_dict[k] = v + np.random.randn(*v.shape) * config_data['noise_level']
 
     if hold_out:
         train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
@@ -177,7 +181,7 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         'cli': True,
         'file': sys.stdout,
         'leave': False,
-        'disable': not progressbar,
+        'disable': not config_data['progressbar'],
         'initial': itr
     }
 
@@ -185,7 +189,7 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         model=arhmm,
         save_every=save_every,
         num_iter=num_iter,
-        ncpus=ncpus,
+        ncpus=config_data['ncpus'],
         checkpoint_freq=checkpoint_freq,
         save_file=resample_save_file,
         checkpoint_file=checkpoint_file,
@@ -214,7 +218,7 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
 
     # if we save the model, don't use copy_model which strips out the data and potentially
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
-    if e_step:
+    if config_data['e_step']:
         flush_print('Running E step...')
         expected_states = run_e_step(arhmm)
 
@@ -229,13 +233,13 @@ def learn_model_command(input_file, dest_file, hold_out, hold_out_seed, nfolds, 
         'model_parameters': save_parameters,
         'run_parameters': run_parameters,
         'metadata': data_metadata,
-        'model': copy_model(arhmm) if save_model else None,
+        'model': copy_model(arhmm) if config_data['save_model'] else None,
         'hold_out_list': hold_out_list,
         'train_list': train_list,
         'train_ll': train_ll
     }
 
-    if e_step:
+    if config_data['e_step']:
         export_dict['expected_states'] = expected_states
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
