@@ -118,8 +118,6 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         'alpha': alpha,
         'kappa': kappa,
         'nlags': config_data['nlags'],
-        'separate_trans': separate_trans,
-        'robust': robust,
         'max_states': max_states,
     }
 

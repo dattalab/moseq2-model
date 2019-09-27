@@ -71,7 +71,7 @@ def count_frames(input_file, var_name):
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
-@click.option("--alpha", "-g", type=float, default=5.7, help="Alpha")
+@click.option("--alpha", "-a", type=float, default=5.7, help="Alpha")
 @click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise for regularization" )
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
@@ -165,8 +165,6 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'alpha': alpha,
         'kappa': kappa,
         'nlags': nlags,
-        'separate_trans': separate_trans,
-        'robust': robust,
         'max_states': max_states,
     }
 
