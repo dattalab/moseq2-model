@@ -240,7 +240,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         ncpus=ncpus,
         checkpoint_freq=checkpoint_freq,
         save_file=resample_save_file,
-        chkpt_file=checkpoint_file,
+        checkpoint_file=checkpoint_file,
         start=itr,
         progress_kwargs=progressbar_kwargs,
     )
