@@ -71,11 +71,6 @@ def run_e_step(arhmm):
     arhmm._E_step()
     return [s.expected_states for s in arhmm.states_list]
 
-def run_e_step(arhmm):
-    '''computes the expected states for each training dataset and places them in a list'''
-    arhmm._E_step()
-    return [s.expected_states for s in arhmm.states_list]
-
 
 def zscore_each(data_dict, center=True):
     for k, v in data_dict.items():
