@@ -79,7 +79,6 @@ def count_frames(input_file, var_name):
 @click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
-@click.option('--e-step', is_flag=True, help="Compute the expected state values for each animal")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
                 save_every, save_model, max_states, npcs, whiten, progressbar,
