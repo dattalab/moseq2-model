@@ -3,7 +3,8 @@ from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from moseq2_model.util import merge_dicts, flush_print
+from moseq2_model.util import flush_print
+from cytoolz import merge
 import warnings
 
 
@@ -61,8 +62,8 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         'init_state_distn': 'uniform'
         }
 
-    obs_hypparams = merge_dicts(default_obs_hypparams, obs_hypparams)
-    model_hypparams = merge_dicts(default_model_hypparams, model_hypparams)
+    obs_hypparams = merge(default_obs_hypparams, obs_hypparams)
+    model_hypparams = merge(default_model_hypparams, model_hypparams)
 
     if empirical_bayes:
         obs_hypparams = _get_empirical_ar_params(list(data_dict.values()), obs_hypparams)

@@ -128,6 +128,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
         else:
             raise ValueError('Cannot save {} type'.format(type(item)))
 
+
 def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
     Args:
@@ -341,8 +342,3 @@ def is_named_tuple(variable):
         return False
 
     return all(type(n) == str for n in f)
-
-
-# taken from moseq by @mattjj and @alexbw
-def merge_dicts(base_dict, clobbering_dict):
-    return dict(base_dict, **clobbering_dict)
