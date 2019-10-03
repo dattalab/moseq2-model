@@ -241,4 +241,5 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         export_dict['expected_states'] = expected_states
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
-    return True
+
+    return 'ARHMM Trained Successfully.'
