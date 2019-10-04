@@ -32,8 +32,11 @@ def count_frames_command(input_file, var_name):
 
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
-                max_states, npcs, kappa, gamma, alpha,
+                max_states, npcs, kappa,
                 separate_trans, robust, checkpoint_freq):
+
+    alpha = 5.7
+    gamma = 1e3
 
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
