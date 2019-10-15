@@ -122,6 +122,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         'kappa': kappa,
         'nlags': config_data['nlags'],
         'max_states': max_states,
+        'separate_trans': separate_trans
     }
 
     if separate_trans:
