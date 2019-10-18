@@ -163,6 +163,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'gamma': gamma,
         'alpha': alpha,
         'kappa': kappa,
+        'robust': robust,
         'nlags': nlags,
         'max_states': max_states,
     }
