@@ -33,7 +33,7 @@ def count_frames_command(input_file, var_name):
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa,
-                separate_trans, robust, checkpoint_freq):
+                separate_trans, robust, checkpoint_freq, output_directory=None):
 
     alpha = 5.7
     gamma = 1e3
@@ -43,7 +43,11 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
     # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
-    dest_file = os.path.realpath(dest_file)
+    if output_directory is None:
+        dest_file = os.path.realpath(dest_file)
+    else:
+        dest_file = os.path.join(output_directory, dest_file)
+
 
     # if not os.path.dirname(dest_file):
     #     dest_file = os.path.join('./', dest_file)
