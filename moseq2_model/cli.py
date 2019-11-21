@@ -16,6 +16,7 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
+import matplotlib.pyplot as plt
 
 orig_init = click.core.Option.__init__
 
@@ -196,6 +197,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     else:
         train_data = data_dict
         train_list = list(data_dict.keys())
+        test_data = None
+        hold_out_list = None
 
     loglikes = []
     labels = []
@@ -231,7 +234,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'initial': itr
     }
 
-    arhmm, loglikes_sample, labels_sample = train_model(
+    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
         model=arhmm,
         save_every=save_every,
         num_iter=num_iter,
@@ -241,7 +244,28 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         checkpoint_file=checkpoint_file,
         start=itr,
         progress_kwargs=progressbar_kwargs,
+        num_sessions=len(train_data.values()),
+        val_data=test_data,
+        separate_trans=separate_trans,
     )
+
+    print("Iteration Training Syllable Likelihoods")
+    print(iter_lls, len(iter_lls))
+
+    if test_data is not None:
+        print("Iteration Validation Syllable Likelihoods\n", iter_holls, len(iter_holls))
+
+    ## Graph training summary
+    iterations = [i for i in range(len(iter_lls))]
+    plt.plot(iterations, iter_lls, color='b')
+    plt.plot(iterations, iter_holls, color='r')
+    plt.legend(['train ll', 'validation ll'])
+    plt.xlabel('Iterations')
+    plt.ylabel('Log-Likelihood')
+    plt.title('ARHMM Training Summary')
+
+    plt.savefig('training_summary.png')
+
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:

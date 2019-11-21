@@ -5,13 +5,38 @@ from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                checkpoint_file=None, start=0, save_file=None, progress_kwargs={}):
+                checkpoint_file=None, start=0, save_file=None, progress_kwargs={}, num_sessions=1, val_data=None, separate_trans=False):
 
     checkpoint = checkpoint_freq is not None
 
+    iter_lls = []
+    iter_holls = []
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
 
         model.resample_model(num_procs=ncpus)
+        if not separate_trans:
+            train_ll = model.log_likelihood()/num_sessions
+            print(train_ll)
+            iter_lls.append(train_ll)
+            '''
+        else:
+            train_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, train_data.values())]
+            print(train_ll)
+            print(get_labels_from_model(model))
+            iter_lls.append(train_ll)
+            '''
+        if val_data is not None:
+            if not separate_trans:
+                val_ll = [model.log_likelihood(v) for v in val_data.values()]
+                print(val_ll)
+                iter_holls.append(val_ll)
+                '''
+            else:
+                val_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, val_data.values())]
+                print(val_ll)
+                print(get_labels_from_model(model))
+                iter_holls.append(val_ll)
+                '''
         # append resample stats to a file
         if (itr + 1) % save_every == 0:
             save_dict = {
@@ -33,7 +58,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 checkpoint_file = checkpoint_file + '.1'
             save_arhmm_checkpoint(checkpoint_file, save_data)
 
-    return model, model.log_likelihood(), get_labels_from_model(model)
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
 
 
 def get_labels_from_model(model):

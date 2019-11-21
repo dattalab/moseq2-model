@@ -17,6 +17,7 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
+import matplotlib.pyplot as plt
 
 def count_frames_command(input_file, var_name):
 
@@ -113,6 +114,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         hold_out = False
         hold_out_list = None
         train_list = all_keys
+        test_data = None
 
     if config_data['ncpus'] > len(train_list):
         ncpus = len(train_list)
@@ -192,17 +194,37 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         'initial': itr
     }
 
-    arhmm, loglikes_sample, labels_sample = train_model(
+    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
         model=arhmm,
         save_every=save_every,
         num_iter=num_iter,
-        ncpus=config_data['ncpus'],
+        ncpus=ncpus,
         checkpoint_freq=checkpoint_freq,
         save_file=resample_save_file,
         checkpoint_file=checkpoint_file,
         start=itr,
         progress_kwargs=progressbar_kwargs,
+        num_sessions=len(train_data.values()),
+        val_data=test_data,
+        separate_trans=separate_trans,
     )
+
+    print("Iteration Training Syllable Likelihoods")
+    print(iter_lls, len(iter_lls))
+
+    if test_data is not None:
+        print("Iteration Validation Syllable Likelihoods\n", iter_holls, len(iter_holls))
+
+    ## Graph training summary
+    iterations = [i for i in range(len(iter_lls))]
+    plt.plot(iterations, iter_lls, color='b')
+    plt.plot(iterations, iter_holls, color='r')
+    plt.legend(['train ll', 'validation ll'])
+    plt.xlabel('Iterations')
+    plt.ylabel('Log-Likelihood')
+    plt.title('ARHMM Training Summary')
+
+    plt.savefig('training_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:
