@@ -12,52 +12,54 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     iter_lls = []
     iter_holls = []
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
-
-        model.resample_model(num_procs=ncpus)
-        if not separate_trans:
-            train_ll = model.log_likelihood()/num_sessions
-            print(train_ll)
-            iter_lls.append(train_ll)
-            '''
-        else:
-            train_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, train_data.values())]
-            print(train_ll)
-            print(get_labels_from_model(model))
-            iter_lls.append(train_ll)
-            '''
-        if val_data is not None:
+        try:
+            model.resample_model(num_procs=ncpus)
             if not separate_trans:
-                val_ll = [model.log_likelihood(v) for v in val_data.values()]
-                val_ll = sum(val_ll)/num_sessions
-                print(val_ll)
-                iter_holls.append(val_ll)
+                train_ll = model.log_likelihood()/num_sessions
+                print(train_ll)
+                iter_lls.append(train_ll)
                 '''
             else:
-                val_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, val_data.values())]
-                print(val_ll)
+                train_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, train_data.values())]
+                print(train_ll)
                 print(get_labels_from_model(model))
-                iter_holls.append(val_ll)
+                iter_lls.append(train_ll)
                 '''
-        # append resample stats to a file
-        if (itr + 1) % save_every == 0:
-            save_dict = {
-                (itr + 1): {
-                    'iter': itr + 1,
-                    'log_likelihoods': model.log_likelihood(),
-                    'labels': get_labels_from_model(model)
+            if val_data is not None:
+                if not separate_trans:
+                    val_ll = [model.log_likelihood(v) for v in val_data.values()]
+                    val_ll = sum(val_ll)/num_sessions
+                    print(val_ll)
+                    iter_holls.append(val_ll)
+                    '''
+                else:
+                    val_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, val_data.values())]
+                    print(val_ll)
+                    print(get_labels_from_model(model))
+                    iter_holls.append(val_ll)
+                    '''
+            # append resample stats to a file
+            if (itr + 1) % save_every == 0:
+                save_dict = {
+                    (itr + 1): {
+                        'iter': itr + 1,
+                        'log_likelihoods': model.log_likelihood(),
+                        'labels': get_labels_from_model(model)
+                    }
                 }
-            }
-            append_resample(save_file, save_dict)
-        # checkpoint if needed
-        if checkpoint and ((itr + 1) % checkpoint_freq == 0):
-            save_data = {
-                'iter': itr + 1,
-                'model': model,
-            }
-            # move around the checkpoints
-            if os.path.exists(checkpoint_file):
-                checkpoint_file = checkpoint_file + '.1'
-            save_arhmm_checkpoint(checkpoint_file, save_data)
+                append_resample(save_file, save_dict)
+            # checkpoint if needed
+            if checkpoint and ((itr + 1) % checkpoint_freq == 0):
+                save_data = {
+                    'iter': itr + 1,
+                    'model': model,
+                }
+                # move around the checkpoints
+                if os.path.exists(checkpoint_file):
+                    checkpoint_file = checkpoint_file + '.1'
+                save_arhmm_checkpoint(checkpoint_file, save_data)
+        except:
+            break
 
     return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
 

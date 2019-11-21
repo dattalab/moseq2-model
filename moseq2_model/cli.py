@@ -296,11 +296,12 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     plt.legend(legend)
     plt.xlabel('Iterations')
     plt.ylabel('Log-Likelihood')
-    plt.title('ARHMM Training Summary')
 
     if hold_out:
+        plt.title('ARHMM Training Summary With '+str(nfolds), ' Folds')
         plt.savefig('train_heldout_summary.png')
     else:
+        plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
         plt.savefig('train_validation_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
