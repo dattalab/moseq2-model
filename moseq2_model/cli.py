@@ -70,6 +70,7 @@ def count_frames(input_file, var_name):
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
+@click.option("--percent-split", type=int, default=20, help="Training-validation split percentage")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--alpha", "-a", type=float, default=5.7, help="Alpha")
@@ -82,7 +83,7 @@ def count_frames(input_file, var_name):
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
-                save_every, save_model, max_states, npcs, whiten, progressbar,
+                save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
                 kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
                 checkpoint_freq, index, default_group):
 
@@ -200,6 +201,18 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         test_data = None
         hold_out_list = None
 
+        training_data = OrderedDict()
+        validation_data = OrderedDict()
+
+
+        for k, v in train_data.items():
+            # train values
+            #print(v[int(v.shape[0]/10):], len(v[int(v.shape[0]/10):]))
+            training_data[k] = np.asarray(v[int(v.shape[0] * (percent_split/100)):])
+
+            # validation values
+            validation_data[k] = np.asarray(v[-int(v.shape[0] * (percent_split/100)):])
+
     loglikes = []
     labels = []
     save_parameters = []
@@ -222,8 +235,12 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         itr = checkpoint.pop('iter')
         flush_print('On iteration', itr)
     else:
-        arhmm = ARHMM(data_dict=train_data, **model_parameters)
-        itr = 0
+        if hold_out:
+            arhmm = ARHMM(data_dict=train_data, **model_parameters)
+            itr = 0
+        else:
+            arhmm = ARHMM(data_dict=training_data, **model_parameters)
+            itr = 0
 
     progressbar_kwargs = {
         'total': num_iter,
@@ -234,20 +251,36 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'initial': itr
     }
 
-    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
-        model=arhmm,
-        save_every=save_every,
-        num_iter=num_iter,
-        ncpus=ncpus,
-        checkpoint_freq=checkpoint_freq,
-        save_file=resample_save_file,
-        checkpoint_file=checkpoint_file,
-        start=itr,
-        progress_kwargs=progressbar_kwargs,
-        num_sessions=len(train_data.values()),
-        val_data=test_data,
-        separate_trans=separate_trans,
-    )
+    if hold_out:
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=ncpus,
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_sessions=len(train_data.values()),
+            val_data=test_data,
+            separate_trans=separate_trans,
+        )
+    else:
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=ncpus,
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_sessions=len(training_data.values()),
+            val_data=validation_data,
+            separate_trans=separate_trans,
+        )
 
     print("Iteration Training Syllable Likelihoods")
     print(iter_lls, len(iter_lls))
@@ -259,13 +292,16 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     iterations = [i for i in range(len(iter_lls))]
     plt.plot(iterations, iter_lls, color='b')
     plt.plot(iterations, iter_holls, color='r')
-    plt.legend(['train ll', 'validation ll'])
+    legend = ['Train LL', 'Validation LL']
+    plt.legend(legend)
     plt.xlabel('Iterations')
     plt.ylabel('Log-Likelihood')
     plt.title('ARHMM Training Summary')
 
-    plt.savefig('training_summary.png')
-
+    if hold_out:
+        plt.savefig('train_heldout_summary.png')
+    else:
+        plt.savefig('train_validation_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:

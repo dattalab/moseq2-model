@@ -34,7 +34,7 @@ def count_frames_command(input_file, var_name):
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa,
-                separate_trans, robust, checkpoint_freq, output_directory=None):
+                separate_trans, robust, checkpoint_freq, percent_split=20, output_directory=None):
 
     alpha = 5.7
     gamma = 1e3
@@ -160,6 +160,17 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         train_data = data_dict
         train_list = list(data_dict.keys())
 
+        training_data = OrderedDict()
+        validation_data = OrderedDict()
+
+        for k, v in train_data.items():
+            # train values
+            # print(v[int(v.shape[0]/10):], len(v[int(v.shape[0]/10):]))
+            training_data[k] = np.asarray(v[int(v.shape[0] * (percent_split / 100)):])
+
+            # validation values
+            validation_data[k] = np.asarray(v[-int(v.shape[0] * (percent_split / 100)):])
+
     loglikes = []
     labels = []
     save_parameters = []
@@ -224,7 +235,10 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     plt.ylabel('Log-Likelihood')
     plt.title('ARHMM Training Summary')
 
-    plt.savefig('training_summary.png')
+    if hold_out:
+        plt.savefig('train_heldout_summary.png')
+    else:
+        plt.savefig('train_validation_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:
