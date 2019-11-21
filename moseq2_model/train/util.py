@@ -28,7 +28,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
         if val_data is not None:
             if not separate_trans:
                 val_ll = [model.log_likelihood(v) for v in val_data.values()]
-                #val_ll = sum(val_ll)
+                val_ll = sum(val_ll)/num_sessions
                 print(val_ll)
                 iter_holls.append(val_ll)
                 '''
