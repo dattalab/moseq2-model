@@ -133,7 +133,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     }
 
     if separate_trans:
-        model_parameters['groups'] = list(set(data_metadata['groups']))
+        model_parameters['groups'] = data_metadata['groups']
     else:
         model_parameters['groups'] = None
 
@@ -229,7 +229,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
-            groups=model_parameters['groups']
+            groups=list(set(model_parameters['groups']))
         )
     else:
         arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
@@ -246,7 +246,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             train_data=training_data,
             val_data=validation_data,
             separate_trans=separate_trans,
-            groups=model_parameters['groups']
+            groups=list(set(model_parameters['groups']))
         )
 
         ## Graph training summary
