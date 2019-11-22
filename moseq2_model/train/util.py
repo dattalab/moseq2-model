@@ -14,11 +14,11 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
         try:
             model.resample_model(num_procs=ncpus)
-            if not separate_trans:
-                train_ll = model.log_likelihood()/sum(num_frames)
-                print(train_ll)
-                iter_lls.append(train_ll)
-                '''
+            #if not separate_trans:
+            train_ll = model.log_likelihood()/sum(num_frames)
+            print(train_ll)
+            iter_lls.append(train_ll)
+            '''
             else:
                 train_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, train_data.values())]
                 print(train_ll)
@@ -26,11 +26,11 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 iter_lls.append(train_ll)
                 '''
             if val_data is not None:
-                if not separate_trans:
-                    val_ll = sum([(model.log_likelihood(v)/len(v)) for v in val_data.values()])/len(val_data.values())
-                    print(val_ll)
-                    iter_holls.append(val_ll)
-                    '''
+                #if not separate_trans:
+                val_ll = sum([(model.log_likelihood(v)/len(v)) for v in val_data.values()])/len(val_data.values())
+                print(val_ll)
+                iter_holls.append(val_ll)
+                '''
                 else:
                     val_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, val_data.values())]
                     print(val_ll)
