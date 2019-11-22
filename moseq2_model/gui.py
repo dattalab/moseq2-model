@@ -167,16 +167,19 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         validation_data = OrderedDict()
 
         nt_frames = []
+        nv_frames = []
 
         for k, v in train_data.items():
             # train values
-            # print(v[int(v.shape[0]/10):], len(v[int(v.shape[0]/10):]))
-            training_data[k] = np.asarray(v[int(v.shape[0] * (percent_split / 100)):])
+            training_data[k] = np.asarray(v[0:int((v.shape[0] * ((100 - percent_split) / 100)) - 1)])
             nt_frames.append(training_data[k].shape[0])
 
+            val_start_idx = int(v.shape[0] * ((100 - percent_split) / 100)) - 1
             # validation values
-            validation_data[k] = np.asarray(v[-int(v.shape[0] * (percent_split / 100)):])
+            validation_data[k] = np.asarray(v[val_start_idx:])
+            nv_frames.append(validation_data[k].shape[0])
 
+    print(nt_frames, nv_frames)
     loglikes = []
     labels = []
     save_parameters = []
@@ -250,12 +253,15 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     plt.xlabel('Iterations')
     plt.ylabel('Log-Likelihood')
 
+    img_path = ''
     if hold_out:
+        img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
         plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
-        plt.savefig(os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png'))
+        plt.savefig(img_path)
     else:
+        img_path = os.path.join(os.path.dirname(dest_file), 'train_validation_summary.png')
         plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
-        plt.savefig(os.path.join(os.path.dirname(dest_file), 'train_validation_summary.png'))
+        plt.savefig(img_path)
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:
@@ -304,4 +310,4 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
-    return 'ARHMM Trained Successfully.'
+    return img_path

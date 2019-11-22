@@ -207,16 +207,20 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
 
         nt_frames = []
+        nv_frames = []
 
         for k, v in train_data.items():
             # train values
-            #print(v[int(v.shape[0]/10):], len(v[int(v.shape[0]/10):]))
-            training_data[k] = np.asarray(v[int(v.shape[0] * (percent_split/100)):])
+            training_data[k] = np.asarray(v[0:int((v.shape[0] * ((100-percent_split)/100))-1)])
             nt_frames.append(training_data[k].shape[0])
 
+            val_start_idx = int(v.shape[0] * ((100-percent_split)/100))-1
             # validation values
-            validation_data[k] = np.asarray(v[-int(v.shape[0] * (percent_split/100)):])
+            validation_data[k] = np.asarray(v[val_start_idx:])
+            nv_frames.append(validation_data[k].shape[0])
 
+
+    print(nt_frames, nv_frames)
     loglikes = []
     labels = []
     save_parameters = []
@@ -300,7 +304,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         plt.savefig('train_heldout_summary.png')
     else:
         plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
-        plt.savefig('train_validation_summary.png')
+        plt.savefig(f'train_val{percent_split}p_split_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:
