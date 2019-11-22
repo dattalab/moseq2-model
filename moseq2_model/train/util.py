@@ -20,9 +20,13 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 print(train_ll)
                 iter_lls.append(train_ll)
             else:
-                train_ll = [model.log_likelihood(v, group_id=g)/len(v) for g, v in zip(groups, train_data.values())]
-                print(train_ll)
-                iter_lls.append(train_ll)
+                group_lls = []
+                for g in groups:
+                    train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
+                    group_lls.append(sum(train_ll)/len(train_ll))
+
+                print(group_lls)
+                iter_lls.append(group_lls)
 
             #if val_data is not None:
             if not separate_trans:
@@ -30,9 +34,12 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 print(val_ll)
                 iter_holls.append(val_ll)
             else:
-                val_ll = [model.log_likelihood(v, group_id=g)/len(v) for g, v in zip(groups, val_data.values())]
-                print(val_ll)
-                iter_holls.append(val_ll)
+                group_lls = []
+                for g in groups:
+                    val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
+                    group_lls.append(sum(val_ll)/len(val_ll))
+                print(group_lls)
+                iter_holls.append(group_lls)
 
             # append resample stats to a file
             if (itr + 1) % save_every == 0:
