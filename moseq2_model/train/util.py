@@ -12,6 +12,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
 
     iter_lls = []
     iter_holls = []
+    group_idx = ['default']
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
         try:
             model.resample_model(num_procs=ncpus)
@@ -21,9 +22,11 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 iter_lls.append(train_ll)
             else:
                 group_lls = []
+                group_idx = []
                 for g in groups:
                     train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
                     group_lls.append(sum(train_ll)/len(train_ll))
+                    group_idx.append(g)
 
                 print(group_lls)
                 iter_lls.append(group_lls)
@@ -64,7 +67,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
         except:
             break
 
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, list(set(group_idx))
 
 
 def get_labels_from_model(model):

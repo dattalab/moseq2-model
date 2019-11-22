@@ -179,7 +179,6 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             validation_data[k] = np.asarray(v[val_start_idx:])
             nv_frames.append(validation_data[k].shape[0])
 
-    print(nt_frames, nv_frames)
     loglikes = []
     labels = []
     save_parameters = []
@@ -215,7 +214,12 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     }
 
     if hold_out:
-        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
+        if model_parameters['groups'] == None:
+            temp = []
+        else:
+            temp = list(set(model_parameters['groups']))
+
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
             model=arhmm,
             save_every=save_every,
             num_iter=num_iter,
@@ -229,10 +233,14 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
-            groups=list(set(model_parameters['groups']))
+            groups=temp
         )
     else:
-        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
+        if model_parameters['groups'] == None:
+            temp = []
+        else:
+            temp = list(set(model_parameters['groups']))
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
             model=arhmm,
             save_every=save_every,
             num_iter=num_iter,
@@ -246,35 +254,38 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             train_data=training_data,
             val_data=validation_data,
             separate_trans=separate_trans,
-            groups=list(set(model_parameters['groups']))
+            groups=temp
         )
 
-        ## Graph training summary
-        iterations = [i for i in range(len(iter_lls))]
-        legend = []
-        if len(iter_lls[0]) == 1:
-            plt.plot(iterations, iter_lls, color='b')
-        else:
-            for i in range(len(iter_lls[0])):
-                lw = 10 - 8 * i / len(iter_lls[0])
-                ls = ['-', '--', '-.', ':'][i % 4]
-                tmp = list(set([o[i] for o in iter_holls]))
-                plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
-                tmp = []
-                legend.append(f'train group {i + 1}')
+    ## Graph training summary
+    iterations = [i for i in range(len(iter_lls))]
+    legend = []
+    if len(group_idx) == 1:
+        plt.plot(iterations, iter_lls, color='b')
+    else:
+        for i, g in enumerate(group_idx):
+            lw = 10 - 8 * i / len(iter_lls[0])
+            ls = ['-', '--', '-.', ':'][i % 4]
+            tmp = list(set([o[i] for o in iter_holls]))
+            plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
+            tmp = []
+            legend.append(f'train: {g} LL')
 
-        if len(iter_holls[0]) == 1:
-            plt.plot(iterations, iter_holls, color='r')
-            plt.legend(['train ll', 'validation ll'])
-        else:
-            for i in range(len(iter_holls[0])):
-                lw = 5 - 3 * i / len(iter_holls[0])
-                ls = ['-', '--', '-.', ':'][i % 4]
-                tmp = list(set([o[i] for o in iter_holls]))
-                plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
-                tmp = []
-                legend.append(f'val group {i + 1}')
-            plt.legend(legend)
+    if len(group_idx) == 1:
+        plt.plot(iterations, iter_holls, color='r')
+        plt.legend(['train LL', 'validation LL'])
+    else:
+        for i, g in enumerate(group_idx):
+            lw = 5 - 3 * i / len(iter_holls[0])
+            ls = ['-', '--', '-.', ':'][i % 4]
+            tmp = list(set([o[i] for o in iter_holls]))
+            plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
+            tmp = []
+            legend.append(f'val: {g} LL')
+        plt.legend(legend)
+
+    plt.ylabel('Average Syllable Log-Likelihood')
+    plt.xlabel('Iterations')
 
     img_path = ''
     if hold_out:
@@ -287,6 +298,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         plt.savefig(img_path)
 
     click.echo('Computing likelihoods on each training dataset...')
+
     if separate_trans:
         train_ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(data_metadata['groups'], train_data.values())]
     else:
