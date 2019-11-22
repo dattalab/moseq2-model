@@ -172,7 +172,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     }
 
     if separate_trans:
-        model_parameters['groups'] = data_metadata['groups']
+        model_parameters['groups'] = list(set(data_metadata['groups']))
     else:
         model_parameters['groups'] = None
 

@@ -133,7 +133,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     }
 
     if separate_trans:
-        model_parameters['groups'] = data_metadata['groups']
+        model_parameters['groups'] = list(set(data_metadata['groups']))
     else:
         model_parameters['groups'] = None
 
