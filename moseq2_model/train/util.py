@@ -5,7 +5,8 @@ from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                checkpoint_file=None, start=0, save_file=None, progress_kwargs={}, num_frames=[1], val_data=None, separate_trans=False):
+                checkpoint_file=None, start=0, save_file=None, progress_kwargs={},
+                num_frames=[1], train_data=None, val_data=None, separate_trans=False, groups=None):
 
     checkpoint = checkpoint_freq is not None
 
@@ -14,29 +15,25 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
         try:
             model.resample_model(num_procs=ncpus)
-            #if not separate_trans:
-            train_ll = model.log_likelihood()/sum(num_frames)
-            print(train_ll)
-            iter_lls.append(train_ll)
-            '''
-            else:
-                train_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, train_data.values())]
+            if not separate_trans:
+                train_ll = model.log_likelihood()/sum(num_frames)
                 print(train_ll)
-                print(get_labels_from_model(model))
                 iter_lls.append(train_ll)
-                '''
-            if val_data is not None:
-                #if not separate_trans:
-                val_ll = sum([(model.log_likelihood(v)/len(v)) for v in val_data.values()])/len(val_data.values())
+            else:
+                train_ll = [model.log_likelihood(v, group_id=g)/len(v) for g, v in zip(groups, train_data.values())]
+                print(train_ll)
+                iter_lls.append(train_ll)
+
+            #if val_data is not None:
+            if not separate_trans:
+                val_ll = [model.log_likelihood(v)/len(v) for v in val_data.values()]
                 print(val_ll)
                 iter_holls.append(val_ll)
-                '''
-                else:
-                    val_ll = [model.log_likelihood(v, group_id=g) for g, v in zip(groups, val_data.values())]
-                    print(val_ll)
-                    print(get_labels_from_model(model))
-                    iter_holls.append(val_ll)
-                    '''
+            else:
+                val_ll = [model.log_likelihood(v, group_id=g)/len(v) for g, v in zip(groups, val_data.values())]
+                print(val_ll)
+                iter_holls.append(val_ll)
+
             # append resample stats to a file
             if (itr + 1) % save_every == 0:
                 save_dict = {

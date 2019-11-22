@@ -168,6 +168,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'robust': robust,
         'nlags': nlags,
         'max_states': max_states,
+        'separate_trans': separate_trans
     }
 
     if separate_trans:
@@ -271,8 +272,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             start=itr,
             progress_kwargs=progressbar_kwargs,
             num_frames=nt_frames,
+            train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
+            groups=model_parameters['groups']
         )
     else:
         arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
@@ -286,18 +289,38 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             start=itr,
             progress_kwargs=progressbar_kwargs,
             num_frames=nt_frames,
+            train_data=training_data,
             val_data=validation_data,
             separate_trans=separate_trans,
+            groups=model_parameters['groups']
         )
 
-    ## Graph training summary
-    iterations = [i for i in range(len(iter_lls))]
-    plt.plot(iterations, iter_lls, color='b')
-    plt.plot(iterations, iter_holls, color='r')
-    legend = ['Train LL', 'Validation LL']
-    plt.legend(legend)
-    plt.xlabel('Iterations')
-    plt.ylabel('Log-Likelihood')
+        ## Graph training summary
+        iterations = [i for i in range(len(iter_lls))]
+        legend = []
+        if len(iter_lls[0]) == 1:
+            plt.plot(iterations, iter_lls, color='b')
+        else:
+            for i in range(len(iter_lls[0])):
+                lw = 10 - 8 * i / len(iter_lls[0])
+                ls = ['-', '--', '-.', ':'][i % 4]
+                tmp = list(set([o[i] for o in iter_holls]))
+                plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
+                tmp = []
+                legend.append(f'train group {i+1}')
+
+        if len(iter_holls[0]) == 1:
+            plt.plot(iterations, iter_holls, color='r')
+            plt.legend(['train ll', 'validation ll'])
+        else:
+            for i in range(len(iter_holls[0])):
+                lw = 5 - 3 * i / len(iter_holls[0])
+                ls = ['-', '--', '-.', ':'][i % 4]
+                tmp = list(set([o[i] for o in iter_holls]))
+                plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
+                tmp = []
+                legend.append(f'val group {i+1}')
+            plt.legend(legend)
 
     if hold_out:
         plt.title('ARHMM Training Summary With '+str(nfolds)+ ' Folds')
