@@ -156,17 +156,23 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
         train_list = list(train_data.keys())
         hold_out_list = list(test_data.keys())
+        nt_frames = [len(v) for v in train_data.values()]
     else:
         train_data = data_dict
         train_list = list(data_dict.keys())
+        test_data = None
+        hold_out_list = None
 
         training_data = OrderedDict()
         validation_data = OrderedDict()
+
+        nt_frames = []
 
         for k, v in train_data.items():
             # train values
             # print(v[int(v.shape[0]/10):], len(v[int(v.shape[0]/10):]))
             training_data[k] = np.asarray(v[int(v.shape[0] * (percent_split / 100)):])
+            nt_frames.append(training_data[k].shape[0])
 
             # validation values
             validation_data[k] = np.asarray(v[-int(v.shape[0] * (percent_split / 100)):])
@@ -205,26 +211,36 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         'initial': itr
     }
 
-    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
-        model=arhmm,
-        save_every=save_every,
-        num_iter=num_iter,
-        ncpus=ncpus,
-        checkpoint_freq=checkpoint_freq,
-        save_file=resample_save_file,
-        checkpoint_file=checkpoint_file,
-        start=itr,
-        progress_kwargs=progressbar_kwargs,
-        num_sessions=len(train_data.values()),
-        val_data=test_data,
-        separate_trans=separate_trans,
-    )
-
-    print("Iteration Training Syllable Likelihoods")
-    print(iter_lls, len(iter_lls))
-
-    if test_data is not None:
-        print("Iteration Validation Syllable Likelihoods\n", iter_holls, len(iter_holls))
+    if hold_out:
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=ncpus,
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_frames=nt_frames,
+            val_data=test_data,
+            separate_trans=separate_trans,
+        )
+    else:
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=ncpus,
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_frames=nt_frames,
+            val_data=validation_data,
+            separate_trans=separate_trans,
+        )
 
     ## Graph training summary
     iterations = [i for i in range(len(iter_lls))]
@@ -235,11 +251,11 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     plt.ylabel('Log-Likelihood')
 
     if hold_out:
-        plt.title('ARHMM Training Summary With '+str(nfolds), ' Folds')
-        plt.savefig('train_heldout_summary.png')
+        plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
+        plt.savefig(os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png'))
     else:
         plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
-        plt.savefig('train_validation_summary.png')
+        plt.savefig(os.path.join(os.path.dirname(dest_file), 'train_validation_summary.png'))
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:
