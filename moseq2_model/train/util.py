@@ -23,10 +23,18 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
             else:
                 group_lls = []
                 group_idx = []
-                for g in groups:
-                    train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
-                    group_lls.append(sum(train_ll)/len(train_ll))
-                    group_idx.append(g)
+                if type(groups) == tuple:
+                    for g in groups[0]:
+                        if g != 'n/a':
+                            train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
+                            group_lls.append(sum(train_ll)/len(train_ll))
+                            group_idx.append(g)
+                else:
+                    for g in groups:
+                        if g != 'n/a':
+                            train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
+                            group_lls.append(sum(train_ll)/len(train_ll))
+                            group_idx.append(g)
 
                 print(group_lls)
                 iter_lls.append(group_lls)
@@ -34,13 +42,23 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
             #if val_data is not None:
             if not separate_trans:
                 val_ll = [model.log_likelihood(v)/len(v) for v in val_data.values()]
+                if len(val_ll) > 1:
+                    val_ll = sum(val_ll)/len(val_ll)
                 print(val_ll)
                 iter_holls.append(val_ll)
             else:
                 group_lls = []
-                for g in groups:
-                    val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
-                    group_lls.append(sum(val_ll)/len(val_ll))
+                if type(groups) == tuple:
+                    for g in groups[1]:
+                        if g != 'n/a':
+                            val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
+                            group_lls.append(sum(val_ll)/len(val_ll))
+                else:
+                    for g in groups:
+                        if g != 'n/a':
+                            val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
+                            group_lls.append(sum(val_ll)/len(val_ll))
+
                 print(group_lls)
                 iter_holls.append(group_lls)
 

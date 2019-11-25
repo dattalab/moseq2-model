@@ -97,9 +97,10 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         if not silent:
             flush_print(f'Adding data from key {data_name}')
         if separate_trans:
-            if not silent:
-                flush_print('Group ID: {}'.format(str(groups[index])))
-            model.add_data(data, group_id=groups[index])
+            if groups[index] != 'n/a':
+                if not silent:
+                    flush_print('Group ID: {}'.format(str(groups[index])))
+                    model.add_data(data, group_id=groups[index])
         else:
             model.add_data(data)
 

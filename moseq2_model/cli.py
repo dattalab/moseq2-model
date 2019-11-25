@@ -110,7 +110,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=var_name,
                                         npcs=npcs,
-                                        load_groups=separate_trans)
+                                        load_groups=True)
 
     # if we have an index file, strip out the groups, match to the scores uuids
     if os.path.exists(index):
@@ -127,6 +127,15 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 data_metadata["groups"].append(default_group)
 
     all_keys = list(data_dict.keys())
+    groups = list(data_metadata['groups'])
+
+    for i in range(len(all_keys)):
+        if groups[i] == 'n/a':
+            del data_dict[all_keys[i]]
+            data_metadata['groups'].remove(groups[i])
+            data_metadata['uuids'].remove(all_keys[i])
+            all_keys.remove(all_keys[i])
+
     nkeys = len(all_keys)
 
     if kappa is None:
@@ -262,7 +271,15 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         if model_parameters['groups'] == None:
             temp = []
         else:
-            temp = list(set(model_parameters['groups']))
+            hold_g = []
+            train_g = []
+            # remove held out group
+            for i in range(len(all_keys)):
+                if all_keys[i] in hold_out_list:
+                    hold_g.append(data_metadata['groups'][i])
+                else:
+                    train_g.append(data_metadata['groups'][i])
+
 
         arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
             model=arhmm,
@@ -278,7 +295,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
-            groups=temp
+            groups=(train_g, hold_g)
         )
     else:
         if model_parameters['groups'] == None:
@@ -318,7 +335,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             legend.append(f'train: {g} LL')
 
     if len(group_idx) == 1:
-        plt.plot(iterations, iter_holls, color='r')
+        plt.plot(iterations, iter_holls, color='r', ls='--')
         plt.legend(['train LL', 'validation LL'])
     else:
         for i, g in enumerate(group_idx):
