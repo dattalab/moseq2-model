@@ -34,7 +34,7 @@ def count_frames_command(input_file, var_name):
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa,
-                separate_trans, robust, checkpoint_freq, percent_split=20, output_directory=None):
+                separate_trans, robust, checkpoint_freq, percent_split=20, verbose=False, output_directory=None):
 
     alpha = 5.7
     gamma = 1e3
@@ -249,7 +249,8 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
-            groups=(train_g, hold_g)
+            groups=(train_g, hold_g),
+            verbose=verbose
         )
     else:
         if model_parameters['groups'] == None:
@@ -270,7 +271,8 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
             train_data=training_data,
             val_data=validation_data,
             separate_trans=separate_trans,
-            groups=temp
+            groups=temp,
+            verbose=verbose
         )
 
     ## Graph training summary

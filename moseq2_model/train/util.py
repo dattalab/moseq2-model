@@ -6,7 +6,7 @@ from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resampl
 
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, save_file=None, progress_kwargs={},
-                num_frames=[1], train_data=None, val_data=None, separate_trans=False, groups=None):
+                num_frames=[1], train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
 
     checkpoint = checkpoint_freq is not None
 
@@ -18,7 +18,8 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
             model.resample_model(num_procs=ncpus)
             if not separate_trans:
                 train_ll = model.log_likelihood()/sum(num_frames)
-                print(train_ll)
+                if verbose:
+                    print(train_ll)
                 iter_lls.append(train_ll)
             else:
                 group_lls = []
@@ -36,7 +37,8 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                             group_lls.append(sum(train_ll)/len(train_ll))
                             group_idx.append(g)
 
-                print(group_lls)
+                if verbose:
+                    print(group_lls)
                 iter_lls.append(group_lls)
 
             #if val_data is not None:
@@ -44,7 +46,8 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 val_ll = [model.log_likelihood(v)/len(v) for v in val_data.values()]
                 if len(val_ll) > 1:
                     val_ll = sum(val_ll)/len(val_ll)
-                print(val_ll)
+                if verbose:
+                    print(val_ll)
                 iter_holls.append(val_ll)
             else:
                 group_lls = []
@@ -58,8 +61,8 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                         if g != 'n/a':
                             val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
                             group_lls.append(sum(val_ll)/len(val_ll))
-
-                print(group_lls)
+                if verbose:
+                    print(group_lls)
                 iter_holls.append(group_lls)
 
             # append resample stats to a file

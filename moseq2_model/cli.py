@@ -81,11 +81,12 @@ def count_frames(input_file, var_name):
 @click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
+@click.option("--verbose", is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
                 save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
                 kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                checkpoint_freq, index, default_group):
+                checkpoint_freq, index, default_group, verbose):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -295,7 +296,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
-            groups=(train_g, hold_g)
+            groups=(train_g, hold_g),
+            verbose=verbose
         )
     else:
         if model_parameters['groups'] == None:
@@ -317,7 +319,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             train_data=training_data,
             val_data=validation_data,
             separate_trans=separate_trans,
-            groups=temp
+            groups=temp,
+            verbose=verbose
         )
 
     ## Graph training summary
