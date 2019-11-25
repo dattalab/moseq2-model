@@ -329,9 +329,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         for i, g in enumerate(group_idx):
             lw = 10 - 8 * i / len(iter_lls[0])
             ls = ['-', '--', '-.', ':'][i % 4]
-            tmp = list(set([o[i] for o in iter_holls]))
-            plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
-            tmp = []
+
+            plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
             legend.append(f'train: {g} LL')
 
     if len(group_idx) == 1:
@@ -341,9 +340,8 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         for i, g in enumerate(group_idx):
             lw = 5 - 3 * i / len(iter_holls[0])
             ls = ['-', '--', '-.', ':'][i % 4]
-            tmp = list(set([o[i] for o in iter_holls]))
-            plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
-            tmp = []
+
+            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
             legend.append(f'val: {g} LL')
         plt.legend(legend)
 

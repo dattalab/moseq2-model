@@ -282,9 +282,8 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         for i, g in enumerate(group_idx):
             lw = 10 - 8 * i / len(iter_lls[0])
             ls = ['-', '--', '-.', ':'][i % 4]
-            tmp = list(set([o[i] for o in iter_holls]))
-            plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
-            tmp = []
+
+            plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
             legend.append(f'train: {g} LL')
 
     if len(group_idx) == 1:
@@ -294,16 +293,14 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         for i, g in enumerate(group_idx):
             lw = 5 - 3 * i / len(iter_holls[0])
             ls = ['-', '--', '-.', ':'][i % 4]
-            tmp = list(set([o[i] for o in iter_holls]))
-            plt.plot(iterations, tmp, linestyle=ls, linewidth=lw)
-            tmp = []
+
+            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
             legend.append(f'val: {g} LL')
         plt.legend(legend)
 
     plt.ylabel('Average Syllable Log-Likelihood')
     plt.xlabel('Iterations')
 
-    img_path = ''
     if hold_out:
         img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
         plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
