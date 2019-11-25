@@ -270,7 +270,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 
     if hold_out:
         if model_parameters['groups'] == None:
-            temp = []
+            train_g, hold_g = [], []
         else:
             hold_g = []
             train_g = []
@@ -281,7 +281,10 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 else:
                     train_g.append(data_metadata['groups'][i])
 
-
+        if len(train_g) == 0:
+            groupings = None
+        else:
+            groupings = (train_g, hold_g)
         arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
             model=arhmm,
             save_every=save_every,
@@ -296,7 +299,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             train_data=train_data,
             val_data=test_data,
             separate_trans=separate_trans,
-            groups=(train_g, hold_g),
+            groups=groupings,
             verbose=verbose
         )
     else:
