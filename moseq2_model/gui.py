@@ -295,9 +295,12 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         for i, g in enumerate(group_idx):
             lw = 5 - 3 * i / len(iter_holls[0])
             ls = ['-', '--', '-.', ':'][i % 4]
-
-            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-            legend.append(f'val: {g} LL')
+            try:
+                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+            except:
+                plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
         plt.legend(legend)
 
     plt.ylabel('Average Syllable Log-Likelihood')
@@ -308,7 +311,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
         plt.savefig(img_path)
     else:
-        img_path = os.path.join(os.path.dirname(dest_file), 'train_validation_summary.png')
+        img_path = os.path.join(os.path.dirname(dest_file), f'train_val{percent_split}_summary.png')
         plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
         plt.savefig(img_path)
 

@@ -343,9 +343,12 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         for i, g in enumerate(group_idx):
             lw = 5 - 3 * i / len(iter_holls[0])
             ls = ['-', '--', '-.', ':'][i % 4]
-
-            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-            legend.append(f'val: {g} LL')
+            try:
+                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+            except:
+                plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
         plt.legend(legend)
 
     plt.ylabel('Average Syllable Log-Likelihood')
