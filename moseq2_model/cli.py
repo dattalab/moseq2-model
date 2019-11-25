@@ -16,6 +16,7 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
+import matplotlib.pyplot as plt
 
 orig_init = click.core.Option.__init__
 
@@ -69,6 +70,7 @@ def count_frames(input_file, var_name):
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
+@click.option("--percent-split", type=int, default=20, help="Training-validation split percentage")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--alpha", "-a", type=float, default=5.7, help="Alpha")
@@ -79,11 +81,12 @@ def count_frames(input_file, var_name):
 @click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
+@click.option("--verbose", is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
-                save_every, save_model, max_states, npcs, whiten, progressbar,
+                save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
                 kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                checkpoint_freq, index, default_group):
+                checkpoint_freq, index, default_group, verbose):
 
     # TODO: graceful handling of extra parameters:  orchestrating this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
@@ -108,7 +111,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=var_name,
                                         npcs=npcs,
-                                        load_groups=separate_trans)
+                                        load_groups=True)
 
     # if we have an index file, strip out the groups, match to the scores uuids
     if os.path.exists(index):
@@ -125,6 +128,15 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 data_metadata["groups"].append(default_group)
 
     all_keys = list(data_dict.keys())
+    groups = list(data_metadata['groups'])
+
+    for i in range(len(all_keys)):
+        if groups[i] == 'n/a':
+            del data_dict[all_keys[i]]
+            data_metadata['groups'].remove(groups[i])
+            data_metadata['uuids'].remove(all_keys[i])
+            all_keys.remove(all_keys[i])
+
     nkeys = len(all_keys)
 
     if kappa is None:
@@ -166,6 +178,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'robust': robust,
         'nlags': nlags,
         'max_states': max_states,
+        'separate_trans': separate_trans
     }
 
     if separate_trans:
@@ -193,9 +206,29 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
         train_list = list(train_data.keys())
         hold_out_list = list(test_data.keys())
+        nt_frames = [len(v) for v in train_data.values()]
     else:
         train_data = data_dict
         train_list = list(data_dict.keys())
+        test_data = None
+        hold_out_list = None
+
+        training_data = OrderedDict()
+        validation_data = OrderedDict()
+
+
+        nt_frames = []
+        nv_frames = []
+
+        for k, v in train_data.items():
+            # train values
+            training_data[k] = np.asarray(v[0:int((v.shape[0] * ((100-percent_split)/100))-1)])
+            nt_frames.append(training_data[k].shape[0])
+
+            val_start_idx = int(v.shape[0] * ((100-percent_split)/100))-1
+            # validation values
+            validation_data[k] = np.asarray(v[val_start_idx:])
+            nv_frames.append(validation_data[k].shape[0])
 
     loglikes = []
     labels = []
@@ -219,8 +252,12 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         itr = checkpoint.pop('iter')
         flush_print('On iteration', itr)
     else:
-        arhmm = ARHMM(data_dict=train_data, **model_parameters)
-        itr = 0
+        if hold_out:
+            arhmm = ARHMM(data_dict=train_data, **model_parameters)
+            itr = 0
+        else:
+            arhmm = ARHMM(data_dict=training_data, **model_parameters)
+            itr = 0
 
     progressbar_kwargs = {
         'total': num_iter,
@@ -231,17 +268,101 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
         'initial': itr
     }
 
-    arhmm, loglikes_sample, labels_sample = train_model(
-        model=arhmm,
-        save_every=save_every,
-        num_iter=num_iter,
-        ncpus=ncpus,
-        checkpoint_freq=checkpoint_freq,
-        save_file=resample_save_file,
-        checkpoint_file=checkpoint_file,
-        start=itr,
-        progress_kwargs=progressbar_kwargs,
-    )
+    if hold_out:
+        if model_parameters['groups'] == None:
+            train_g, hold_g = [], []
+        else:
+            hold_g = []
+            train_g = []
+            # remove held out group
+            for i in range(len(all_keys)):
+                if all_keys[i] in hold_out_list:
+                    hold_g.append(data_metadata['groups'][i])
+                else:
+                    train_g.append(data_metadata['groups'][i])
+
+        if len(train_g) == 0:
+            groupings = None
+        else:
+            groupings = (train_g, hold_g)
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=ncpus,
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_frames=nt_frames,
+            train_data=train_data,
+            val_data=test_data,
+            separate_trans=separate_trans,
+            groups=groupings,
+            verbose=verbose
+        )
+    else:
+        if model_parameters['groups'] == None:
+            temp = []
+        else:
+            temp = list(set(model_parameters['groups']))
+
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=ncpus,
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_frames=nt_frames,
+            train_data=training_data,
+            val_data=validation_data,
+            separate_trans=separate_trans,
+            groups=temp,
+            verbose=verbose
+        )
+
+    ## Graph training summary
+    iterations = [i for i in range(len(iter_lls))]
+    legend = []
+    if len(group_idx) == 1:
+        plt.plot(iterations, iter_lls, color='b')
+    else:
+        for i, g in enumerate(group_idx):
+            lw = 10 - 8 * i / len(iter_lls[0])
+            ls = ['-', '--', '-.', ':'][i % 4]
+
+            plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
+            legend.append(f'train: {g} LL')
+
+    if len(group_idx) == 1:
+        plt.plot(iterations, iter_holls, color='r', ls='--')
+        plt.legend(['train LL', 'validation LL'])
+    else:
+        for i, g in enumerate(group_idx):
+            lw = 5 - 3 * i / len(iter_holls[0])
+            ls = ['-', '--', '-.', ':'][i % 4]
+            try:
+                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+            except:
+                plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+        plt.legend(legend)
+
+    plt.ylabel('Average Syllable Log-Likelihood')
+    plt.xlabel('Iterations')
+
+    if hold_out:
+        plt.title('ARHMM Training Summary With '+str(nfolds)+ ' Folds')
+        plt.savefig('train_heldout_summary.png')
+    else:
+        plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
+        plt.savefig(f'train_val{percent_split}p_split_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:

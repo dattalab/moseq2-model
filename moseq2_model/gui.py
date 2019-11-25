@@ -17,6 +17,7 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
+import matplotlib.pyplot as plt
 
 def count_frames_command(input_file, var_name):
 
@@ -33,7 +34,7 @@ def count_frames_command(input_file, var_name):
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa,
-                separate_trans, robust, checkpoint_freq, output_directory=None):
+                separate_trans, robust, checkpoint_freq, percent_split=20, verbose=False, output_directory=None):
 
     alpha = 5.7
     gamma = 1e3
@@ -68,7 +69,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=config_data['var_name'],
                                         npcs=npcs,
-                                        load_groups=separate_trans)
+                                        load_groups=True)
 
     # if we have an index file, strip out the groups, match to the scores uuids
     if os.path.exists(index):
@@ -85,6 +86,15 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
                 data_metadata["groups"].append(config_data['default_group'])
 
     all_keys = list(data_dict.keys())
+    groups = list(data_metadata['groups'])
+
+    for i in range(len(all_keys)):
+        if groups[i] == 'n/a':
+            del data_dict[all_keys[i]]
+            data_metadata['groups'].remove(groups[i])
+            data_metadata['uuids'].remove(all_keys[i])
+            all_keys.remove(all_keys[i])
+
     nkeys = len(all_keys)
 
     if kappa is None:
@@ -113,6 +123,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         hold_out = False
         hold_out_list = None
         train_list = all_keys
+        test_data = None
 
     if config_data['ncpus'] > len(train_list):
         ncpus = len(train_list)
@@ -154,9 +165,28 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
         train_list = list(train_data.keys())
         hold_out_list = list(test_data.keys())
+        nt_frames = [len(v) for v in train_data.values()]
     else:
         train_data = data_dict
         train_list = list(data_dict.keys())
+        test_data = None
+        hold_out_list = None
+
+        training_data = OrderedDict()
+        validation_data = OrderedDict()
+
+        nt_frames = []
+        nv_frames = []
+
+        for k, v in train_data.items():
+            # train values
+            training_data[k] = np.asarray(v[0:int((v.shape[0] * ((100 - percent_split) / 100)) - 1)])
+            nt_frames.append(training_data[k].shape[0])
+
+            val_start_idx = int(v.shape[0] * ((100 - percent_split) / 100)) - 1
+            # validation values
+            validation_data[k] = np.asarray(v[val_start_idx:])
+            nv_frames.append(validation_data[k].shape[0])
 
     loglikes = []
     labels = []
@@ -192,19 +222,105 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         'initial': itr
     }
 
-    arhmm, loglikes_sample, labels_sample = train_model(
-        model=arhmm,
-        save_every=save_every,
-        num_iter=num_iter,
-        ncpus=config_data['ncpus'],
-        checkpoint_freq=checkpoint_freq,
-        save_file=resample_save_file,
-        checkpoint_file=checkpoint_file,
-        start=itr,
-        progress_kwargs=progressbar_kwargs,
-    )
+    if hold_out:
+        if model_parameters['groups'] == None:
+            train_g, hold_g = [], []
+        else:
+            hold_g = []
+            train_g = []
+            # remove held out group
+            for i in range(len(all_keys)):
+                if all_keys[i] in hold_out_list:
+                    hold_g.append(data_metadata['groups'][i])
+                else:
+                    train_g.append(data_metadata['groups'][i])
+
+        if len(train_g) == 0:
+            groupings = None
+        else:
+            groupings = (train_g, hold_g)
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=config_data['ncpus'],
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_frames=nt_frames,
+            train_data=train_data,
+            val_data=test_data,
+            separate_trans=separate_trans,
+            groups=groupings,
+            verbose=verbose
+        )
+    else:
+        if model_parameters['groups'] == None:
+            temp = []
+        else:
+            temp = list(set(model_parameters['groups']))
+        arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
+            model=arhmm,
+            save_every=save_every,
+            num_iter=num_iter,
+            ncpus=config_data['ncpus'],
+            checkpoint_freq=checkpoint_freq,
+            save_file=resample_save_file,
+            checkpoint_file=checkpoint_file,
+            start=itr,
+            progress_kwargs=progressbar_kwargs,
+            num_frames=nt_frames,
+            train_data=training_data,
+            val_data=validation_data,
+            separate_trans=separate_trans,
+            groups=temp,
+            verbose=verbose
+        )
+
+    ## Graph training summary
+    iterations = [i for i in range(len(iter_lls))]
+    legend = []
+    if len(group_idx) == 1:
+        plt.plot(iterations, iter_lls, color='b')
+    else:
+        for i, g in enumerate(group_idx):
+            lw = 10 - 8 * i / len(iter_lls[0])
+            ls = ['-', '--', '-.', ':'][i % 4]
+
+            plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
+            legend.append(f'train: {g} LL')
+
+    if len(group_idx) == 1:
+        plt.plot(iterations, iter_holls, color='r', ls='--')
+        plt.legend(['train LL', 'validation LL'])
+    else:
+        for i, g in enumerate(group_idx):
+            lw = 5 - 3 * i / len(iter_holls[0])
+            ls = ['-', '--', '-.', ':'][i % 4]
+            try:
+                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+            except:
+                plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+        plt.legend(legend)
+
+    plt.ylabel('Average Syllable Log-Likelihood')
+    plt.xlabel('Iterations')
+
+    if hold_out:
+        img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
+        plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
+        plt.savefig(img_path)
+    else:
+        img_path = os.path.join(os.path.dirname(dest_file), f'train_val{percent_split}_summary.png')
+        plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
+        plt.savefig(img_path)
 
     click.echo('Computing likelihoods on each training dataset...')
+
     if separate_trans:
         train_ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(data_metadata['groups'], train_data.values())]
     else:
@@ -251,4 +367,4 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
-    return 'ARHMM Trained Successfully.'
+    return img_path

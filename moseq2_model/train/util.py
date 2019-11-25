@@ -5,35 +5,90 @@ from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
 def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                checkpoint_file=None, start=0, save_file=None, progress_kwargs={}):
+                checkpoint_file=None, start=0, save_file=None, progress_kwargs={},
+                num_frames=[1], train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
 
     checkpoint = checkpoint_freq is not None
 
+    iter_lls = []
+    iter_holls = []
+    group_idx = ['default']
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
+        try:
+            model.resample_model(num_procs=ncpus)
+            if not separate_trans:
+                train_ll = model.log_likelihood()/sum(num_frames)
+                if verbose:
+                    print(train_ll)
+                iter_lls.append(train_ll)
+            else:
+                group_lls = []
+                group_idx = []
+                if type(groups) == tuple:
+                    for g in list(set(groups[0])):
+                        if g != 'n/a':
+                            train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
+                            group_lls.append(sum(train_ll)/len(train_ll))
+                            group_idx.append(g)
+                else:
+                    for g in list(set(groups)):
+                        if g != 'n/a':
+                            train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
+                            group_lls.append(sum(train_ll)/len(train_ll))
+                            group_idx.append(g)
 
-        model.resample_model(num_procs=ncpus)
-        # append resample stats to a file
-        if (itr + 1) % save_every == 0:
-            save_dict = {
-                (itr + 1): {
-                    'iter': itr + 1,
-                    'log_likelihoods': model.log_likelihood(),
-                    'labels': get_labels_from_model(model)
+                if verbose:
+                    print(group_lls)
+                iter_lls.append(group_lls)
+
+            #if val_data is not None:
+            if not separate_trans:
+                val_ll = [model.log_likelihood(v)/len(v) for v in val_data.values()]
+                if len(val_ll) > 1:
+                    val_ll = sum(val_ll)/len(val_ll)
+                if verbose:
+                    print(val_ll)
+                iter_holls.append(val_ll)
+            else:
+                group_lls = []
+                if type(groups) == tuple:
+                    for g in list(set(groups[1])):
+                        if g != 'n/a':
+                            val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
+                            group_lls.append(sum(val_ll)/len(val_ll))
+                else:
+                    for g in list(set(groups)):
+                        if g != 'n/a':
+                            val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
+                            group_lls.append(sum(val_ll)/len(val_ll))
+                if verbose:
+                    print(group_lls)
+                iter_holls.append(group_lls)
+
+            # append resample stats to a file
+            if (itr + 1) % save_every == 0:
+                save_dict = {
+                    (itr + 1): {
+                        'iter': itr + 1,
+                        'log_likelihoods': model.log_likelihood(),
+                        'labels': get_labels_from_model(model)
+                    }
                 }
-            }
-            append_resample(save_file, save_dict)
-        # checkpoint if needed
-        if checkpoint and ((itr + 1) % checkpoint_freq == 0):
-            save_data = {
-                'iter': itr + 1,
-                'model': model,
-            }
-            # move around the checkpoints
-            if os.path.exists(checkpoint_file):
-                checkpoint_file = checkpoint_file + '.1'
-            save_arhmm_checkpoint(checkpoint_file, save_data)
+                append_resample(save_file, save_dict)
+            # checkpoint if needed
+            if checkpoint and ((itr + 1) % checkpoint_freq == 0):
+                save_data = {
+                    'iter': itr + 1,
+                    'model': model,
+                }
+                # move around the checkpoints
+                if os.path.exists(checkpoint_file):
+                    checkpoint_file = checkpoint_file + '.1'
+                save_arhmm_checkpoint(checkpoint_file, save_data)
+        except:
+            break
 
-    return model, model.log_likelihood(), get_labels_from_model(model)
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, list(set(group_idx))
 
 
 def get_labels_from_model(model):
