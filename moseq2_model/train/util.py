@@ -27,14 +27,16 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 if type(groups) == tuple:
                     for g in list(set(groups[0])):
                         if g != 'n/a':
-                            train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
-                            group_lls.append(sum(train_ll)/len(train_ll))
+                            train_ll = [model.log_likelihood(v, group_id=g) for v in train_data.values()]
+                            lens = [len(v) for v in train_data.values()]
+                            group_lls.append(sum(train_ll)/sum(lens))
                             group_idx.append(g)
                 else:
                     for g in list(set(groups)):
                         if g != 'n/a':
-                            train_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in train_data.values()]
-                            group_lls.append(sum(train_ll)/len(train_ll))
+                            train_ll = [model.log_likelihood(v, group_id=g) for v in train_data.values()]
+                            lens = [len(v) for v in train_data.values()]
+                            group_lls.append(sum(train_ll)/sum(lens))
                             group_idx.append(g)
 
                 if verbose:
@@ -43,9 +45,12 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
 
             #if val_data is not None:
             if not separate_trans:
-                val_ll = [model.log_likelihood(v)/len(v) for v in val_data.values()]
+                val_ll = [model.log_likelihood(v) for v in val_data.values()]
+                lens = [len(v) for v in val_data.values()]
                 if len(val_ll) > 1:
-                    val_ll = sum(val_ll)/len(val_ll)
+                    val_ll = sum(val_ll)/sum(lens)
+                else:
+                    val_ll = sum(val_ll)/len(val_ll[0])
                 if verbose:
                     print(val_ll)
                 iter_holls.append(val_ll)
@@ -54,13 +59,15 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 if type(groups) == tuple:
                     for g in list(set(groups[1])):
                         if g != 'n/a':
-                            val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
-                            group_lls.append(sum(val_ll)/len(val_ll))
+                            val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
+                            lens = [len(v) for v in val_data.values()]
+                            group_lls.append(sum(val_ll)/sum(lens))
                 else:
                     for g in list(set(groups)):
                         if g != 'n/a':
-                            val_ll = [model.log_likelihood(v, group_id=g)/len(v) for v in val_data.values()]
-                            group_lls.append(sum(val_ll)/len(val_ll))
+                            val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
+                            lens = [len(v) for v in val_data.values()]
+                            group_lls.append(sum(val_ll)/sum(lens))
                 if verbose:
                     print(group_lls)
                 iter_holls.append(group_lls)
