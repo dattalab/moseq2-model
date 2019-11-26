@@ -17,6 +17,7 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                load_arhmm_checkpoint, flush_print)
+from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 
 def count_frames_command(input_file, var_name):
@@ -180,12 +181,12 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
         for k, v in train_data.items():
             # train values
-            training_data[k] = np.asarray(v[0:int((v.shape[0] * ((100 - percent_split) / 100)) - 1)])
+            training_X, testing_X = train_test_split(v, test_size=percent_split / 100, shuffle=False, random_state=0)
+            training_data[k] = training_X
             nt_frames.append(training_data[k].shape[0])
 
-            val_start_idx = int(v.shape[0] * ((100 - percent_split) / 100)) - 1
             # validation values
-            validation_data[k] = np.asarray(v[val_start_idx:])
+            validation_data[k] = testing_X
             nv_frames.append(validation_data[k].shape[0])
 
     loglikes = []

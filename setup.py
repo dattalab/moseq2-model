@@ -42,7 +42,7 @@ setup(
     install_requires=['future', 'h5py', 'click', 'numpy', 'pandas',
                       'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
                       'joblib', 'cytoolz', 'ipywidgets',
-                      'hdf5storage', 'ruamel.yaml', 'tqdm',
+                      'hdf5storage', 'ruamel.yaml', 'tqdm', 'sklearn',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
                       'autoregressive @ git+https://github.com/mattjj/pyhsmm-autoregressive.git@master'],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
