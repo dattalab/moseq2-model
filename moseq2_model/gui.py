@@ -283,30 +283,24 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     ## Graph training summary
     iterations = [i for i in range(len(iter_lls))]
     legend = []
-    if len(group_idx) == 1:
-        plt.plot(iterations, iter_lls, color='b')
-    else:
-        for i, g in enumerate(group_idx):
-            lw = 10 - 8 * i / len(iter_lls[0])
-            ls = ['-', '--', '-.', ':'][i % 4]
 
-            plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
-            legend.append(f'train: {g} LL')
+    for i, g in enumerate(group_idx):
+        lw = 10 - 8 * i / len(iter_lls[0])
+        ls = ['-', '--', '-.', ':'][i % 4]
 
-    if len(group_idx) == 1:
-        plt.plot(iterations, iter_holls, color='r', ls='--')
-        plt.legend(['train LL', 'validation LL'])
-    else:
-        for i, g in enumerate(group_idx):
-            lw = 5 - 3 * i / len(iter_holls[0])
-            ls = ['-', '--', '-.', ':'][i % 4]
-            try:
-                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-                legend.append(f'val: {g} LL')
-            except:
-                plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
-                legend.append(f'val: {g} LL')
-        plt.legend(legend)
+        plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
+        legend.append(f'train: {g} LL')
+
+    for i, g in enumerate(group_idx):
+        lw = 5 - 3 * i / len(iter_holls[0])
+        ls = ['-', '--', '-.', ':'][i % 4]
+        try:
+            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+            legend.append(f'val: {g} LL')
+        except:
+            plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+            legend.append(f'val: {g} LL')
+    plt.legend(legend)
 
     plt.ylabel('Average Syllable Log-Likelihood')
     plt.xlabel('Iterations')
