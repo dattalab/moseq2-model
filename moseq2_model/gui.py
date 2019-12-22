@@ -281,38 +281,53 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         )
 
     ## Graph training summary
-    iterations = [i for i in range(len(iter_lls))]
-    legend = []
+    if verbose:
+        iterations = [i for i in range(len(iter_lls))]
+        legend = []
+        if separate_trans:
+            for i, g in enumerate(group_idx):
+                lw = 10 - 8 * i / len(iter_lls[0])
+                ls = ['-', '--', '-.', ':'][i % 4]
 
-    for i, g in enumerate(group_idx):
-        lw = 10 - 8 * i / len(iter_lls[0])
-        ls = ['-', '--', '-.', ':'][i % 4]
+                plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'train: {g} LL')
 
-        plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
-        legend.append(f'train: {g} LL')
+            for i, g in enumerate(group_idx):
+                lw = 5 - 3 * i / len(iter_holls[0])
+                ls = ['-', '--', '-.', ':'][i % 4]
 
-    for i, g in enumerate(group_idx):
-        lw = 5 - 3 * i / len(iter_holls[0])
-        ls = ['-', '--', '-.', ':'][i % 4]
-        try:
-            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-            legend.append(f'val: {g} LL')
-        except:
-            plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
-            legend.append(f'val: {g} LL')
-    plt.legend(legend)
+                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
+        else:
+            for i, g in enumerate(group_idx):
+                lw = 10 - 8 * i / len(iter_lls)
+                ls = ['-', '--', '-.', ':'][i % 4]
 
-    plt.ylabel('Average Syllable Log-Likelihood')
-    plt.xlabel('Iterations')
+                plt.plot(iterations, np.asarray(iter_lls), linestyle=ls, linewidth=lw)
+                legend.append(f'train: {g} LL')
 
-    if hold_out:
-        img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
-        plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
-        plt.savefig(img_path)
-    else:
-        img_path = os.path.join(os.path.dirname(dest_file), f'train_val{percent_split}_summary.png')
-        plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
-        plt.savefig(img_path)
+            for i, g in enumerate(group_idx):
+                lw = 5 - 3 * i / len(iter_holls)
+                ls = ['-', '--', '-.', ':'][i % 4]
+                try:
+                    plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                    legend.append(f'val: {g} LL')
+                except:
+                    plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+                    legend.append(f'val: {g} LL')
+        plt.legend(legend)
+
+        plt.ylabel('Average Syllable Log-Likelihood')
+        plt.xlabel('Iterations')
+
+        if hold_out:
+            img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
+            plt.title('ARHMM Training Summary With '+str(nfolds)+' Folds')
+            plt.savefig(img_path)
+        else:
+            img_path = os.path.join(os.path.dirname(dest_file), f'train_val{percent_split}_summary.png')
+            plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
+            plt.savefig(img_path)
 
     click.echo('Computing likelihoods on each training dataset...')
 

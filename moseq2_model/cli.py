@@ -82,7 +82,7 @@ def count_frames(input_file, var_name):
 @click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
-@click.option("--verbose", is_flag=True, help="Print syllable log-likelihoods during training.")
+@click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
                 save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
@@ -328,37 +328,52 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
             verbose=verbose
         )
 
-    ## Graph training summary
-    iterations = [i for i in range(len(iter_lls))]
-    legend = []
+    if verbose:
+        iterations = [i for i in range(len(iter_lls))]
+        legend = []
+        if separate_trans:
+            for i, g in enumerate(group_idx):
+                lw = 10 - 8 * i / len(iter_lls[0])
+                ls = ['-', '--', '-.', ':'][i % 4]
 
-    for i, g in enumerate(group_idx):
-        lw = 10 - 8 * i / len(iter_lls[0])
-        ls = ['-', '--', '-.', ':'][i % 4]
+                plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'train: {g} LL')
 
-        plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
-        legend.append(f'train: {g} LL')
+            for i, g in enumerate(group_idx):
+                lw = 5 - 3 * i / len(iter_holls[0])
+                ls = ['-', '--', '-.', ':'][i % 4]
 
-    for i, g in enumerate(group_idx):
-        lw = 5 - 3 * i / len(iter_holls[0])
-        ls = ['-', '--', '-.', ':'][i % 4]
-        try:
-            plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-            legend.append(f'val: {g} LL')
-        except:
-            plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
-            legend.append(f'val: {g} LL')
+                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                legend.append(f'val: {g} LL')
 
-    plt.legend(legend)
-    plt.ylabel('Average Syllable Log-Likelihood')
-    plt.xlabel('Iterations')
+        else:
+            for i, g in enumerate(group_idx):
+                lw = 10 - 8 * i / len(iter_lls)
+                ls = ['-', '--', '-.', ':'][i % 4]
 
-    if hold_out:
-        plt.title('ARHMM Training Summary With '+str(nfolds)+ ' Folds')
-        plt.savefig('train_heldout_summary.png')
-    else:
-        plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
-        plt.savefig(f'train_val{percent_split}p_split_summary.png')
+                plt.plot(iterations, np.asarray(iter_lls), linestyle=ls, linewidth=lw)
+                legend.append(f'train: {g} LL')
+
+            for i, g in enumerate(group_idx):
+                lw = 5 - 3 * i / len(iter_holls)
+                ls = ['-', '--', '-.', ':'][i % 4]
+                try:
+                    plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
+                    legend.append(f'val: {g} LL')
+                except:
+                    plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
+                    legend.append(f'val: {g} LL')
+
+        plt.legend(legend)
+        plt.ylabel('Average Syllable Log-Likelihood')
+        plt.xlabel('Iterations')
+
+        if hold_out:
+            plt.title('ARHMM Training Summary With '+str(nfolds)+ ' Folds')
+            plt.savefig('train_heldout_summary.png')
+        else:
+            plt.title('ARHMM Training Summary With '+str(percent_split)+'% Train-Val Split')
+            plt.savefig(f'train_val{percent_split}p_split_summary.png')
 
     click.echo('Computing likelihoods on each training dataset...')
     if separate_trans:
