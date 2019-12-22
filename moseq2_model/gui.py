@@ -377,4 +377,5 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
-    return img_path
+    if verbose:
+        return img_path
