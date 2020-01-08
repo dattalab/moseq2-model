@@ -294,7 +294,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         )
     else:
         if model_parameters['groups'] == None:
-            temp = ['']
+            temp = []
         else:
             temp = list(set(model_parameters['groups']))
         arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
