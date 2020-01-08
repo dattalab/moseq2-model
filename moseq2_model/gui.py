@@ -102,83 +102,42 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     for i in range(len(subjectNames)):
         print(f'[{i+1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:', i_groups[i], '; Key:', uuids[i])
 
-    while(True):
+    use_keys = []
+    use_groups = []
+    while(len(use_keys) == 0):
         try:
-            input_file_indices = input("Input comma-separated indices of data to include in modeling. Type \"e \" before the first index to exclude data points instead. ")
-            if 'e' not in input_file_indices:
-                if ',' in input_file_indices:
-                    input_file_indices = input_file_indices.split(',')
-                    for i in input_file_indices:
-                        i = int(i.strip())
-                        if i > len(all_keys):
-                            print('invalid index try again.')
-                            input_file_index = []
-                            break
-                    tmp = []
-                    g_tmp = []
-                    for i in input_file_indices:
-                        i = int(i.strip())
-                        print('modeling ', all_keys[i - 1])
-                        tmp.append(all_keys[i - 1])
-                        g_tmp.append(i_groups[i-1])
-                    groups = g_tmp
-                    all_keys = tmp
-                    data_metadata['uuids'] = all_keys
-                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
-                    break
-                elif len(input_file_indices.strip()) == 1:
-                    i = int(input_file_indices.strip())
-                    all_keys = [all_keys[i - 1]]
-                    groups = [i_groups[i-1]]
-                    data_metadata['uuids'] = all_keys
-                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
-                    print('modeling ', all_keys)
-                    break
-                elif input_file_indices == '':
-                    break
+            groups_to_train = input("Input comma-separated names of the groups to model: ")
+            if ',' in groups_to_train:
+                tmp_g = groups_to_train.split(',')
+                for g in tmp_g:
+                    g = g.strip()
+                    for f in index_data['files']:
+                        if f['group'] == g:
+                            if f['uuid'] not in use_keys:
+                                use_keys.append(f['uuid'])
+                            if f['group'] not in use_groups:
+                                use_groups.append(f['group'])
             else:
-                input_file_indices = input_file_indices.strip('e ')
-                if ',' in input_file_indices:
-                    input_file_indices = input_file_indices.split(',')
-                    for i in input_file_indices:
-                        i = int(i.strip())
-                        if i > len(all_keys):
-                            print('invalid index try again.')
-                            input_file_index = []
-                            break
-                    # values to remove
-                    vals = []
-                    for j in input_file_indices:
-                        j = int(j.strip())
-                        print('excluding ', all_keys[j - 1])
-                        vals.append(all_keys[j - 1])
-                    for l, val in enumerate(vals):
-                        all_keys.remove(val)
-                        data_metadata['uuids'].remove(val)
-                        groups.remove(i_groups[l - 1])
-                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
-                    break
-                elif len(input_file_indices.strip()) == 1:
-                    k = int(input_file_indices.strip())
-                    print('excluding ', all_keys[k - 1])
-                    all_keys.remove(all_keys[k - 1])
-                    groups.remove(i_groups[k-1])
-                    data_metadata['uuids'].remove(all_keys[k - 1])
-                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
-                    break
-                elif input_file_indices == '':
-                    print('modeling all data.')
-                    break
+                for f in index_data['files']:
+                    print(f['group'], f['uuid'])
+                    if f['group'] == groups_to_train:
+                        if f['uuid'] not in use_keys:
+                            use_keys.append(f['uuid'])
+                        if f['group'] not in use_groups:
+                            use_groups.append(f['group'])
         except:
-            print('invalid input, try again')
-    print(all_keys)
-
+            print('Group name not found, try again.')
+    all_keys = use_keys
+    groups = use_groups
+    print(groups, all_keys)
     for i in range(len(all_keys)):
         if groups[i] == 'n/a':
             del data_dict[all_keys[i]]
             data_metadata['groups'].remove(groups[i])
             data_metadata['uuids'].remove(all_keys[i])
-            all_keys.remove(all_keys[i])
+        for k in list(data_dict.keys()):
+            if k not in all_keys:
+                del data_dict[k]
 
     nkeys = len(all_keys)
 
