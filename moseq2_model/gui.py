@@ -5,6 +5,7 @@ import random
 import warnings
 import numpy as np
 from pathlib import Path
+import ast
 from copy import deepcopy
 from cytoolz import pluck
 from moseq2_model.train.util import train_model, whiten_all, whiten_each, run_e_step
@@ -50,10 +51,6 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     else:
         dest_file = os.path.join(output_directory, dest_file)
 
-
-    # if not os.path.dirname(dest_file):
-    #     dest_file = os.path.join('./', dest_file)
-
     if not os.access(os.path.dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
 
@@ -88,6 +85,93 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
     all_keys = list(data_dict.keys())
     groups = list(data_metadata['groups'])
+
+    with open(index, 'r') as f:
+        index_data = yaml.safe_load(f)
+    f.close()
+
+    i_groups, uuids = [], []
+    subjectNames, sessionNames = [], []
+    for f in index_data['files']:
+        if f['uuid'] not in uuids:
+            uuids.append(f['uuid'])
+            i_groups.append(f['group'])
+            subjectNames.append(f['metadata']['SubjectName'])
+            sessionNames.append(f['metadata']['SessionName'])
+
+    for i in range(len(subjectNames)):
+        print(f'[{i+1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:', i_groups[i], '; Key:', uuids[i])
+
+    while(True):
+        try:
+            input_file_indices = input("Input comma-separated indices of data to include in modeling. Type \"e \" before the first index to exclude data points instead. ")
+            if 'e' not in input_file_indices:
+                if ',' in input_file_indices:
+                    input_file_indices = input_file_indices.split(',')
+                    for i in input_file_indices:
+                        i = int(i.strip())
+                        if i > len(all_keys):
+                            print('invalid index try again.')
+                            input_file_index = []
+                            break
+                    tmp = []
+                    g_tmp = []
+                    for i in input_file_indices:
+                        i = int(i.strip())
+                        print('modeling ', all_keys[i - 1])
+                        tmp.append(all_keys[i - 1])
+                        g_tmp.append(i_groups[i-1])
+                    groups = g_tmp
+                    all_keys = tmp
+                    data_metadata['uuids'] = all_keys
+                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
+                    break
+                elif len(input_file_indices.strip()) == 1:
+                    i = int(input_file_indices.strip())
+                    all_keys = [all_keys[i - 1]]
+                    groups = [i_groups[i-1]]
+                    data_metadata['uuids'] = all_keys
+                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
+                    print('modeling ', all_keys)
+                    break
+                elif input_file_indices == '':
+                    break
+            else:
+                input_file_indices = input_file_indices.strip('e ')
+                if ',' in input_file_indices:
+                    input_file_indices = input_file_indices.split(',')
+                    for i in input_file_indices:
+                        i = int(i.strip())
+                        if i > len(all_keys):
+                            print('invalid index try again.')
+                            input_file_index = []
+                            break
+                    # values to remove
+                    vals = []
+                    for j in input_file_indices:
+                        j = int(j.strip())
+                        print('excluding ', all_keys[j - 1])
+                        vals.append(all_keys[j - 1])
+                    for l, val in enumerate(vals):
+                        all_keys.remove(val)
+                        data_metadata['uuids'].remove(val)
+                        groups.remove(i_groups[l - 1])
+                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
+                    break
+                elif len(input_file_indices.strip()) == 1:
+                    k = int(input_file_indices.strip())
+                    print('excluding ', all_keys[k - 1])
+                    all_keys.remove(all_keys[k - 1])
+                    groups.remove(i_groups[k-1])
+                    data_metadata['uuids'].remove(all_keys[k - 1])
+                    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
+                    break
+                elif input_file_indices == '':
+                    print('modeling all data.')
+                    break
+        except:
+            print('invalid input, try again')
+    print(all_keys)
 
     for i in range(len(all_keys)):
         if groups[i] == 'n/a':
