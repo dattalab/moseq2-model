@@ -101,7 +101,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
 
     for i in range(len(subjectNames)):
         print(f'[{i+1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:', i_groups[i], '; Key:', uuids[i])
-
+    
     use_keys = []
     use_groups = []
     while(len(use_keys) == 0):
@@ -115,30 +115,22 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
                         if f['group'] == g:
                             if f['uuid'] not in use_keys:
                                 use_keys.append(f['uuid'])
-                            if f['group'] not in use_groups:
-                                use_groups.append(f['group'])
+                                use_groups.append(g)
             else:
                 for f in index_data['files']:
-                    print(f['group'], f['uuid'])
                     if f['group'] == groups_to_train:
                         if f['uuid'] not in use_keys:
                             use_keys.append(f['uuid'])
-                        if f['group'] not in use_groups:
-                            use_groups.append(f['group'])
+                            use_groups.append(groups_to_train)
         except:
             print('Group name not found, try again.')
+    
     all_keys = use_keys
     groups = use_groups
-    print(groups, all_keys)
-    for i in range(len(all_keys)):
-        if groups[i] == 'n/a':
-            del data_dict[all_keys[i]]
-            data_metadata['groups'].remove(groups[i])
-            data_metadata['uuids'].remove(all_keys[i])
-        for k in list(data_dict.keys()):
-            if k not in all_keys:
-                del data_dict[k]
-
+    data_metadata['groups'] = use_groups
+    data_metadata['uuids'] = use_keys
+    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
+    
     nkeys = len(all_keys)
 
     if kappa is None:
@@ -302,7 +294,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
         )
     else:
         if model_parameters['groups'] == None:
-            temp = []
+            temp = ['']
         else:
             temp = list(set(model_parameters['groups']))
         arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
