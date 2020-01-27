@@ -106,7 +106,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     use_groups = []
     while(len(use_keys) == 0):
         try:
-            groups_to_train = input("Input comma-separated names of the groups to model: ")
+            groups_to_train = input("Input comma-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
             if ',' in groups_to_train:
                 tmp_g = groups_to_train.split(',')
                 for g in tmp_g:
@@ -116,6 +116,10 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
                             if f['uuid'] not in use_keys:
                                 use_keys.append(f['uuid'])
                                 use_groups.append(g)
+            elif len(groups_to_train) == 0:
+                for f in index_data['files']:
+                    use_keys.append(f['uuid'])
+                    use_groups.append(f['group'])
             else:
                 for f in index_data['files']:
                     if f['group'] == groups_to_train:
