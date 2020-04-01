@@ -1,4 +1,5 @@
 import os
+import sys
 import numpy as np
 from functools import partial
 from collections import OrderedDict, defaultdict
@@ -35,20 +36,21 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                     'model': model,
                 }
                 # move around the checkpoints
-                if os.path.exists(checkpoint_file):
-                    checkpoint_file = checkpoint_file + '.1'
+                #if os.path.exists(checkpoint_file):
+                #    checkpoint_file = checkpoint_file + '.1'
                 save_arhmm_checkpoint(checkpoint_file, save_data)
         except:
-            print('Error while training model, breaking.')
+            print("Unexpected error:", sys.exc_info()[0])
+            print('Breaking.')
             break
 
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, list(set(group_idx))
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, list(group_idx)
 
 
 def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
+
     if not separate_trans:
         train_ll = model.log_likelihood() / sum(num_frames)
-        #print(train_ll)
         iter_lls.append(train_ll)
     else:
         group_lls = []
@@ -68,18 +70,18 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
                     group_lls.append(sum(train_ll) / sum(lens))
                     group_idx.append(g)
 
-        #print(group_lls)
         iter_lls.append(group_lls)
 
-    # if val_data is not None:
     if not separate_trans:
         val_ll = [model.log_likelihood(v) for v in val_data.values()]
         lens = [len(v) for v in val_data.values()]
         if len(val_ll) > 1:
             val_ll = sum(val_ll) / sum(lens)
         else:
-            val_ll = sum(val_ll) / len(val_ll[0])
-        print(val_ll)
+            try:
+                val_ll = sum(val_ll) / len(val_ll[0])
+            except:
+                val_ll = sum(val_ll) / len(val_ll)
         iter_holls.append(val_ll)
     else:
         group_lls = []
@@ -95,8 +97,8 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
                     val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
                     lens = [len(v) for v in val_data.values()]
                     group_lls.append(sum(val_ll) / sum(lens))
-        print(group_lls)
         iter_holls.append(group_lls)
+
     return iter_lls, iter_holls
 
 def get_labels_from_model(model):
