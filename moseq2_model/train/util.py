@@ -35,9 +35,6 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                     'iter': itr + 1,
                     'model': model,
                 }
-                # move around the checkpoints
-                #if os.path.exists(checkpoint_file):
-                #    checkpoint_file = checkpoint_file + '.1'
                 save_arhmm_checkpoint(checkpoint_file, save_data)
         except:
             print("Unexpected error:", sys.exc_info()[0])

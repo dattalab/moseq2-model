@@ -35,6 +35,15 @@ class TestDataHelpers(TestCase):
             index_data = yaml.safe_load(f)
         f.close()
 
+        with TemporaryDirectory() as tmp:
+            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            with open(stdin.name, 'w') as f:
+                f.write('')
+            f.close()
+
+        sys.stdin = open(stdin.name)
+
+
         all_keys, groups = select_data_to_model(index_data)
 
         assert len(all_keys) == len(groups)
