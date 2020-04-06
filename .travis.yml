@@ -5,7 +5,7 @@ python:
 # - 3.7 enable once supported by travis
 # get the dependencies
 install:
-  - pipenv install
+  - pipenv install --dev --ignore-pipfile --deploy
   - pipenv run pip install -e .
 # install what we need for testing
 before_install:
