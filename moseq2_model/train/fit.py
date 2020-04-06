@@ -69,11 +69,13 @@ class MoseqModel:
             self.label_history = []
             self.ll_history = []
 
+    @classmethod
     def get_params(self, deep=True):
         if deep:
             return deepcopy(self.params)
         return self.params
 
+    @classmethod
     def set_params(self, **model_params):
         if self.scale_kappa and 'alpha' in model_params:
             new_kappa = (model_params['alpha'] / (1 - self.rho)) - model_params['alpha']
@@ -81,6 +83,7 @@ class MoseqModel:
         self.params = merge(self.params, model_params)
         return self
 
+    @classmethod
     def fit(self, X, y=None):
         X = _ensure_odict(X)
         in_nb = _in_notebook()
@@ -115,11 +118,13 @@ class MoseqModel:
         self.arhmm = arhmm
         return self
 
+    @classmethod
     def partial_fit(self, X):
         X = _ensure_odict(X)
         self.arhmm = ARHMM(X, **self.params)
         raise NotImplementedError()
 
+    @classmethod
     def predict(self, X):
         if isinstance(X, (list, tuple)):
             y_pred = [self.arhmm.heldout_viterbi(_x) for _x in X]
@@ -129,9 +134,11 @@ class MoseqModel:
             raise TypeError('Data type not understood - only : (list, tuple, dict, OrderedDict)')
         return y_pred
 
+    @classmethod
     def predict_proba(self):
         raise NotImplementedError()
 
+    @classmethod
     def log_likelihood_score(self, X, reduction=None):
         if isinstance(X, (list, tuple)):
             _lls = map(self.arhmm.log_likelihood, X)
@@ -146,12 +153,15 @@ class MoseqModel:
 
         return _lls
 
+    @classmethod
     def get_median_duration(self):
         return self.df.groupby('uuid').median().dur
 
+    @classmethod
     def duration_score(self):
         dur = self.get_median_duration().mean()
         return -np.abs(dur - self.optimal_duration)
 
+    @classmethod
     def score(self):
         raise NotImplementedError()

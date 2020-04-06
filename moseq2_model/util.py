@@ -57,10 +57,11 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
                 elif isinstance(tmp, h5py.Group):
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
-                    if 'groups' in f:
-                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
-                    elif load_groups:
+                    if load_groups:
                         metadata['groups'] = list(range(len(tmp)))
+                    elif 'groups' in f:
+                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
+
                 else:
                     raise IOError('Could not load data from h5 file')
             else:

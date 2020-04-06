@@ -52,6 +52,7 @@ def process_indexfile(index, config_data, data_metadata):
 def select_data_to_model(index_data):
     use_keys = []
     use_groups = []
+    groups_to_train = ''
     while (len(use_keys) == 0):
         try:
             groups_to_train = input(
@@ -77,11 +78,14 @@ def select_data_to_model(index_data):
                             use_groups.append(groups_to_train)
         except:
             if len(groups_to_train) == 0:
+                for f in index_data['files']:
+                    use_keys.append(f['uuid'])
+                    use_groups.append(f['group'])
                 break
             print('Group name not found, try again.')
 
-        all_keys = use_keys
-        groups = use_groups
+    all_keys = use_keys
+    groups = use_groups
 
     return all_keys, groups
 

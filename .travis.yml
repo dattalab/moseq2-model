@@ -5,12 +5,12 @@ python:
 # - 3.7 enable once supported by travis
 # get the dependencies
 install:
-  - pip install .
+  - pipenv install
+  - pipenv run pip install -e .
 # install what we need for testing
 before_install:
   - pip install --upgrade pip
-  - pip install pytest codecov
-  - pip install "pytest-cov>=2.4.0,<2.6"
+  - pip install pipenv
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # script for tests... (eventually add coveralls)

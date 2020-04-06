@@ -90,3 +90,5 @@ ENV/
 # Rope project settings
 
 .vscode/
+/data/
+/.pytest_cache/
