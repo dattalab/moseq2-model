@@ -14,6 +14,6 @@ before_install:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
 
 # script for tests... (eventually add coveralls)
-script: pytest --cov=./moseq2_model
+script: pipenv run pytest --cov-report xml --cov-report term
 after_success:
   - codecov -t 0920ece4-7a13-4764-9ec2-192f709670ca
