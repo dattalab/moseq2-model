@@ -26,3 +26,4 @@ class TestGUI(TestCase):
                 max_states, npcs, kappa, separate_trans, robust, checkpoint_freq, percent_split, verbose)
 
         assert (os.path.exists(dest_file))
+        os.remove(dest_file)

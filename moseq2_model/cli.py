@@ -25,7 +25,7 @@ def cli():
 def count_frames(input_file, var_name):
 
     data_dict, _ = load_pcs(filename=input_file, var_name=var_name,
-                            npcs=10, load_groups=False)
+                            npcs=10, load_groups=True)
     total_frames = 0
     for v in data_dict.values():
         idx = (~np.isnan(v)).all(axis=1)
@@ -55,7 +55,7 @@ def count_frames(input_file, var_name):
 @click.option("--npcs", type=int, default=10, help="Number of PCs to use")
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
-@click.option("--percent-split", type=int, default=1, help="Training-validation split percentage")
+@click.option("--percent-split", type=int, default=20, help="Training-validation split percentage")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma")
 @click.option("--alpha", "-a", type=float, default=5.7, help="Alpha")

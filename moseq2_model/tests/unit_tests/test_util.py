@@ -1,5 +1,7 @@
+import os
 import numpy as np
 from unittest import TestCase
+from moseq2_model.util import save_dict
 from moseq2_model.util import load_data_from_matlab, load_cell_string_from_matlab, load_pcs
 
 class TestUtils(TestCase):
@@ -7,7 +9,6 @@ class TestUtils(TestCase):
     def test_load_pcs(self):
 
         # first test loading dummy matlab file, then pickle, then h5
-
         pcs, metadata = load_pcs('data/dummy_matlab.mat', load_groups=True)
 
         assert(len(pcs) == 1)
@@ -15,20 +16,23 @@ class TestUtils(TestCase):
         assert(np.all(pcs[0] == 1))
         assert(metadata['groups'][0] == 'test')
 
+        input_data = 'data/test_scores.h5'
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
+
+        assert list(data_dict.keys()) == data_metadata['uuids']
+
 
     def test_save_dict(self):
-        print()
+        input_data = 'data/test_scores.h5'
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
+
+        outfile = 'data/saved_dict.pkl'
+        save_dict(outfile, data_dict)
+
+        assert os.path.exists(outfile)
+        os.remove(outfile)
 
     def test_recursively_save_dict_contents_to_group(self):
-        print()
-
-    def test_load_arhmm_checkpoint(self):
-        print()
-
-    def test_save_arhmm_checkpoint(self):
-        print()
-
-    def test_append_resample(self):
         print()
 
     def test_load_dict_from_hdf5(self):
@@ -44,9 +48,6 @@ class TestUtils(TestCase):
         print()
 
     def test_get_parameters_from_model(self):
-        print()
-
-    def test_progressbar(self):
         print()
 
     def test_list_rank(self):
@@ -68,3 +69,16 @@ class TestUtils(TestCase):
 
         assert(len(groups) == 1)
         assert(groups[0] == 'test')
+
+    def test_load_arhmm_checkpoint(self):
+        print()
+
+    def test_save_arhmm_checkpoint(self):
+        print()
+
+    def test_append_resample(self):
+        print()
+
+    def test_progressbar(self):
+        print()
+

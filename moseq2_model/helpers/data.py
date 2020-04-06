@@ -37,8 +37,19 @@ def process_indexfile(index, config_data, data_metadata):
             if f['uuid'] not in uuids:
                 uuids.append(f['uuid'])
                 i_groups.append(f['group'])
-                subjectNames.append(f['metadata']['SubjectName'])
-                sessionNames.append(f['metadata']['SessionName'])
+                try:
+                    subjectNames.append(f['metadata']['SubjectName'])
+                    sessionNames.append(f['metadata']['SessionName'])
+                except:
+                    f['metadata'] = {}
+                    f['metadata']['SubjectName'] = 'default'
+                    f['metadata']['SessionName'] = 'default'
+                    subjectNames.append(f['metadata']['SubjectName'])
+                    sessionNames.append(f['metadata']['SessionName'])
+
+        with open(index, 'w') as f:
+            yaml.safe_dump(index_data, f)
+        f.close()
 
         for i in range(len(subjectNames)):
             print(f'[{i + 1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:',
@@ -77,15 +88,18 @@ def select_data_to_model(index_data):
                             use_keys.append(f['uuid'])
                             use_groups.append(groups_to_train)
         except:
+
             if len(groups_to_train) == 0:
                 for f in index_data['files']:
                     use_keys.append(f['uuid'])
                     use_groups.append(f['group'])
+                all_keys = use_keys
+                groups = use_groups
                 break
             print('Group name not found, try again.')
 
-    all_keys = use_keys
-    groups = use_groups
+        all_keys = use_keys
+        groups = use_groups
 
     return all_keys, groups
 
