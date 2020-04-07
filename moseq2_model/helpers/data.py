@@ -60,44 +60,50 @@ def process_indexfile(index, config_data, data_metadata):
     return index_data, data_metadata
 
 
-def select_data_to_model(index_data):
+def select_data_to_model(index_data, gui=False):
     use_keys = []
     use_groups = []
-    groups_to_train = ''
-    while (len(use_keys) == 0):
-        try:
-            groups_to_train = input(
-                "Input comma-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
-            if ',' in groups_to_train:
-                tmp_g = groups_to_train.split(',')
-                for g in tmp_g:
-                    g = g.strip()
+    if gui:
+        groups_to_train = ''
+        while (len(use_keys) == 0):
+            try:
+                groups_to_train = input(
+                    "Input comma-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
+                if ',' in groups_to_train:
+                    tmp_g = groups_to_train.split(',')
+                    for g in tmp_g:
+                        g = g.strip()
+                        for f in index_data['files']:
+                            if f['group'] == g:
+                                if f['uuid'] not in use_keys:
+                                    use_keys.append(f['uuid'])
+                                    use_groups.append(g)
+                elif len(groups_to_train) == 0:
                     for f in index_data['files']:
-                        if f['group'] == g:
+                        use_keys.append(f['uuid'])
+                        use_groups.append(f['group'])
+                else:
+                    for f in index_data['files']:
+                        if f['group'] == groups_to_train:
                             if f['uuid'] not in use_keys:
                                 use_keys.append(f['uuid'])
-                                use_groups.append(g)
-            elif len(groups_to_train) == 0:
-                for f in index_data['files']:
-                    use_keys.append(f['uuid'])
-                    use_groups.append(f['group'])
-            else:
-                for f in index_data['files']:
-                    if f['group'] == groups_to_train:
-                        if f['uuid'] not in use_keys:
-                            use_keys.append(f['uuid'])
-                            use_groups.append(groups_to_train)
-        except:
+                                use_groups.append(groups_to_train)
+            except:
+                if len(groups_to_train) == 0:
+                    for f in index_data['files']:
+                        use_keys.append(f['uuid'])
+                        use_groups.append(f['group'])
+                    all_keys = use_keys
+                    groups = use_groups
+                    break
+                print('Group name not found, try again.')
 
-            if len(groups_to_train) == 0:
-                for f in index_data['files']:
-                    use_keys.append(f['uuid'])
-                    use_groups.append(f['group'])
-                all_keys = use_keys
-                groups = use_groups
-                break
-            print('Group name not found, try again.')
-
+            all_keys = use_keys
+            groups = use_groups
+    else:
+        for f in index_data['files']:
+            use_keys.append(f['uuid'])
+            use_groups.append(f['group'])
         all_keys = use_keys
         groups = use_groups
 
@@ -254,3 +260,4 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
             plt.savefig(img_path)
 
         return img_path
+

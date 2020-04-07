@@ -7,7 +7,7 @@ import h5py
 from copy import deepcopy
 from cytoolz import first
 from functools import partial
-from tqdm import tqdm_notebook, tqdm
+from tqdm.auto import tqdm
 from collections import OrderedDict
 from autoregressive.util import AR_striding
 
@@ -312,10 +312,7 @@ def progressbar(*args, **kwargs):
     if cli:
         return tqdm(*args, **kwargs)
     else:
-        try:
-            return tqdm_notebook(*args, **kwargs)
-        except Exception:
-            return tqdm(*args, **kwargs)
+        return tqdm(*args, **kwargs)
 
 
 def list_rank(chk_list):

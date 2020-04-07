@@ -17,31 +17,33 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
         try:
             model.resample_model(num_procs=ncpus)
-            if verbose:
-                iter_lls, iter_holls = get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls)
-            # append resample stats to a file
-            if (itr + 1) % save_every == 0:
-                save_dict = {
-                    (itr + 1): {
-                        'iter': itr + 1,
-                        'log_likelihoods': model.log_likelihood(),
-                        'labels': get_labels_from_model(model)
-                    }
-                }
-                append_resample(save_file, save_dict)
-            # checkpoint if needed
-            if checkpoint and ((itr + 1) % checkpoint_freq == 0):
-                save_data = {
-                    'iter': itr + 1,
-                    'model': model,
-                }
-                save_arhmm_checkpoint(checkpoint_file, save_data)
         except:
             print("Unexpected error:", sys.exc_info()[0])
             print('Breaking.')
             break
+        if verbose:
+            iter_lls, iter_holls = get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls)
+        # append resample stats to a file
+        if (itr + 1) % save_every == 0:
+            save_dict = {
+                (itr + 1): {
+                    'iter': itr + 1,
+                    'log_likelihoods': model.log_likelihood(),
+                    'labels': get_labels_from_model(model)
+                }
+            }
+            append_resample(save_file, save_dict)
+        # checkpoint if needed
+        if checkpoint and ((itr + 1) % checkpoint_freq == 0):
+            save_data = {
+                'iter': itr + 1,
+                'model': model,
+            }
+            save_arhmm_checkpoint(checkpoint_file, save_data)
 
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, list(group_idx)
+    if groups != None:
+        group_idx = groups
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
 
 
 def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
@@ -142,7 +144,7 @@ def zscore_each(data_dict, center=True):
     return data_dict
 
 
-def zscore_all(data_dict, center=True):
+def zscore_all(data_dict, npcs=10, center=True):
     valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in data_dict.values()])
     mu, sig = valid_scores.mean(axis=0), valid_scores.std(axis=0)
 

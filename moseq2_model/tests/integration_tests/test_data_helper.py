@@ -28,7 +28,6 @@ class TestDataHelpers(TestCase):
 
     def test_select_data_to_model(self):
 
-
         index_path = 'data/test_index.yaml'
 
         with open(index_path, 'r') as f:
@@ -36,29 +35,21 @@ class TestDataHelpers(TestCase):
         f.close()
 
         with TemporaryDirectory() as tmp:
-            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
-            with open(stdin.name, 'w') as f:
-                f.write('')
-            f.close()
 
-        sys.stdin = open(stdin.name)
+            all_keys, groups = select_data_to_model(index_data)
 
+            assert len(all_keys) == len(groups)
 
-        all_keys, groups = select_data_to_model(index_data)
-
-        assert len(all_keys) == len(groups)
-
-        with TemporaryDirectory() as tmp:
             stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
             with open(stdin.name, 'w') as f:
                 f.write('default')
             f.close()
 
-        sys.stdin = open(stdin.name)
+            sys.stdin = open(stdin.name)
 
-        all_keys, groups = select_data_to_model(index_data)
-        assert len(all_keys) == len(groups) == 1
-        assert groups[0] == 'default'
+            all_keys, groups = select_data_to_model(index_data, gui=True)
+            assert len(all_keys) == len(groups) == 1
+            assert groups[0] == 'default'
 
     def test_prepare_model_metadata(self):
 
