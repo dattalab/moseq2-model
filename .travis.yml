@@ -3,16 +3,13 @@ language: python
 python:
   - 3.6
 # - 3.7 enable once supported by travis
-# get the dependencies
-install:
-  - pipenv install --dev --ignore-pipfile --deploy
-  - pipenv run pip install -e .
 # install what we need for testing
 before_install:
   - pip install --upgrade pip
   - pip install pipenv
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
-
+install:
+  - pipenv install --dev --ignore-pipfile --deploy
 before_script:
   - make
 script:
