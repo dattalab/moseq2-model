@@ -26,7 +26,7 @@ class TestDataHelpers(TestCase):
         index_data, data_metadata = process_indexfile(index_path, config_data, data_metadata)
         assert (len(index_data['files']) == len(data_metadata['uuids']))
 
-    def test_select_data_to_model(self):
+    def _select_data_to_model(self):
 
         index_path = 'data/test_index.yaml'
 
