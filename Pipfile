@@ -21,6 +21,7 @@ future = "*"
 joblib = "*"
 sklearn = "*"
 cytoolz = "*"
+setuptools = "*"
 ipywidgets = "*"
 matplotlib = "*"
 statsmodels = "*"
@@ -28,8 +29,11 @@ hdf5storage = "*"
 ruamel_yaml = "*"
 scikit-image = "*"
 scikit-learn = "*"
-moseq2-model = {editable = true, path = "."}
 opencv-python = "*"
+moseq2-model = {editable = true, path = "."}
+pyhsmm = {editable = true, git = "https://github.com/mattjj/pyhsmm"}
+pybasicbayes = {editable = true, git = "https://github.com/mattjj/pybasicbayes"}
+autoregressive = {editable = true, git = "https://github.com/mattjj/pyhsmm-autoregressive"}
 
 [requires]
 python_version = "3.6"

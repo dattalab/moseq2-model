@@ -1,6 +1,3 @@
-from glob import glob
-from os.path import basename
-from os.path import splitext
 from setuptools import setup, find_packages
 # testing w/o 'scikit-learn == 0.16.1','scikit-image',works okay but leaving here for reference
 # note that we need to pull in autoregressive and pybasicbayes from github,
@@ -17,10 +14,8 @@ setup(
     include_package_data=True,
     platforms='any',
     python_requires='>=3.6',
-    setup_requires=[
-        'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
-        'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
-        'autoregressive @ git+https://github.com/mattjj/pyhsmm-autoregressive.git@master'
-    ],
+    setup_requires=['numpy', "future", "six"],
+    install_requires=[],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )
+
