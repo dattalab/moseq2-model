@@ -2,8 +2,7 @@ from unittest import TestCase
 
 class TestTrainFit(TestCase):
 
-    def test_in_notebook(self):
-        print()
+
 
     def test_ensure_odict(self):
         print()
@@ -36,4 +35,7 @@ class TestTrainFit(TestCase):
         print()
 
     def test_model_score(self):
+        print()
+
+    def test_in_notebook(self):
         print()

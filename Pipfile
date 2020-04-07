@@ -28,7 +28,7 @@ hdf5storage = "*"
 ruamel_yaml = "*"
 scikit-image = "*"
 scikit-learn = "*"
-moseq2-model = {editable = true,path = "."}
+moseq2-model = {editable = true, path = "."}
 opencv-python = "*"
 
 [requires]
