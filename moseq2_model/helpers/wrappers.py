@@ -12,6 +12,21 @@ from moseq2_model.helpers.data import process_indexfile, select_data_to_model, \
                                     get_heldout_data_splits, get_training_data_splits
 
 def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_directory=None, gui=False):
+    '''
+    Wrapper function to train ARHMM, shared between CLI and GUI.
+    Parameters
+    ----------
+    input_file (str): path to pca scores file.
+    dest_file (str): path to save model to.
+    config_data (dict): dictionary containing necessary modeling parameters.
+    index (str): path to index file.
+    output_directory (str): path to alternative output directory.
+    gui (bool): indicates whether Jupyter notebook is being used.
+
+    Returns
+    -------
+    None
+    '''
 
     # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore

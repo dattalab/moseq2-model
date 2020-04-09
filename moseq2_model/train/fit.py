@@ -18,14 +18,28 @@ from tqdm import tqdm, tqdm_notebook
 
 
 def _in_notebook():
-    '''determine if this function was executed in a jupyter notebook
+    '''
+    Determine if this function was executed in a jupyter notebook.
+    Returns
+    -------
+    A boolean describing the presence of a jupyter notebook
+    '''
 
-    Returns:
-        a boolean describing the presence of a jupyter notebook'''
     return 'ipykernel' in sys.modules
 
 
 def _ensure_odict(data):
+    '''
+    Casts input data to OrderedDict if it is not one already.
+    Parameters
+    ----------
+    data (list or dict): data dictionary to train ARHMM.
+
+    Returns
+    -------
+    data (OrderedDict): Ordered version of input data variable
+    '''
+
     if isinstance(data, (list, tuple, np.ndarray)):
         data = OrderedDict(enumerate(data))
     elif isinstance(data, dict):
@@ -70,11 +84,33 @@ class MoseqModel:
             self.ll_history = []
 
     def get_params(self, deep=True):
+        '''
+        Get model parameters.
+        Parameters
+        ----------
+        deep (bool): indicate whether to use deep copy
+
+        Returns
+        -------
+        params (dict): Model parameters
+        '''
+
         if deep:
             return deepcopy(self.params)
         return self.params
 
     def set_params(self, **model_params):
+        '''
+        Update model parameters.
+        Parameters
+        ----------
+        model_params (dict): model parameter dictionary to update
+
+        Returns
+        -------
+        None
+        '''
+
         if self.scale_kappa and 'alpha' in model_params:
             new_kappa = (model_params['alpha'] / (1 - self.rho)) - model_params['alpha']
             model_params['kappa'] = new_kappa
@@ -82,6 +118,18 @@ class MoseqModel:
         return self
 
     def fit(self, X, y=None):
+        '''
+        Trains model given data.
+        Parameters
+        ----------
+        X (OrderedDict): data_dict used to train ARHMM
+        y (None)
+
+        Returns
+        -------
+        None
+        '''
+
         X = _ensure_odict(X)
         in_nb = _in_notebook()
         silence = self.params['silent']
@@ -116,11 +164,33 @@ class MoseqModel:
         return self
 
     def partial_fit(self, X):
+        '''
+        Not implemented.
+        Parameters
+        ----------
+        X (OrderedDict)
+
+        Returns
+        -------
+
+        '''
+
         X = _ensure_odict(X)
         self.arhmm = ARHMM(X, **self.params)
         raise NotImplementedError()
 
     def predict(self, X):
+        '''
+        Get label predictions from input data.
+        Parameters
+        ----------
+        X (list, or OrderedDict): data to predict labels
+
+        Returns
+        -------
+        y_pred (list): list of label predictions
+        '''
+
         if isinstance(X, (list, tuple)):
             y_pred = [self.arhmm.heldout_viterbi(_x) for _x in X]
         elif isinstance(X, (dict, OrderedDict)):
@@ -133,6 +203,18 @@ class MoseqModel:
         raise NotImplementedError()
 
     def log_likelihood_score(self, X, reduction=None):
+        '''
+        Compute Log-Likelihood Score of each session.
+        Parameters
+        ----------
+        X (list or OrderedDict): data to compute log-likelihood score from.
+        reduction (str): indicates whether to use a reduction operation.
+
+        Returns
+        -------
+        _lls (1D numpy array): log-likelihood arrays.
+        '''
+
         if isinstance(X, (list, tuple)):
             _lls = map(self.arhmm.log_likelihood, X)
             _lls = [v / l for v, l in zip(_lls, map(len, X))]
@@ -147,9 +229,23 @@ class MoseqModel:
         return _lls
 
     def get_median_duration(self):
+        '''
+
+        Returns
+        -------
+        (pandas DataFrame): DataFrame of median syllable durations
+        '''
+
         return self.df.groupby('uuid').median().dur
 
     def duration_score(self):
+        '''
+
+        Returns
+        -------
+        (1D numpy array): scores of computed median syllable durations
+        '''
+
         dur = self.get_median_duration().mean()
         return -np.abs(dur - self.optimal_duration)
 
