@@ -5,6 +5,7 @@ import numpy as np
 def syll_onset(labels: np.ndarray) -> np.ndarray:
     '''
     Finds indices of syllable onsets.
+
     Parameters
     ----------
     labels (np.ndarray): array of syllable labels for a mouse.
@@ -24,6 +25,7 @@ def syll_onset(labels: np.ndarray) -> np.ndarray:
 def syll_duration(labels: np.ndarray) -> np.ndarray:
     '''
     Computes the duration of each syllable.
+
     Parameters
     ----------
     labels (np.ndarray): array of syllable labels for a mouse.
@@ -41,6 +43,7 @@ def syll_duration(labels: np.ndarray) -> np.ndarray:
 def syll_id(labels: np.ndarray) -> np.ndarray:
     '''
     Returns the syllable label at each syllable transition.
+
     Parameters
     ----------
     labels (np.ndarray): array of syllable labels for a mouse.
@@ -57,6 +60,7 @@ def syll_id(labels: np.ndarray) -> np.ndarray:
 def to_df(labels, uuid) -> pd.DataFrame:
     '''
     Convert labels numpy.ndarray to pandas.DataFrame
+
     Parameters
     ----------
     labels (np.ndarray): array of syllable labels for a mouse.

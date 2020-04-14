@@ -9,6 +9,8 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
                 checkpoint_file=None, start=0, save_file=None, progress_kwargs={},
                 num_frames=[1], train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
     '''
+    ARHMM training: Resamples ARHMM for inputted number of iterations,
+    and optionally computes loglikelihood scores for each iteration if verbose is True.
 
     Parameters
     ----------
@@ -79,6 +81,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
 def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
     '''
     Computes a summary of model performance after resampling steps. Is only run if verbose = True.
+
     Parameters
     ----------
     model (ARHMM): model to compute lls.
@@ -151,6 +154,7 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
 def get_labels_from_model(model):
     '''
     Grabs the model labels for each training dataset and places them in a list.
+
     Parameters
     ----------
     model (ARHMM): trained ARHMM model
@@ -168,6 +172,7 @@ def get_labels_from_model(model):
 def whiten_all(data_dict, center=True):
     '''
     Whitens all the PC Scores at once.
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
@@ -195,6 +200,7 @@ def whiten_all(data_dict, center=True):
 def whiten_each(data_dict, center=True):
     '''
     Whiten each group of PC scores separately
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
@@ -215,6 +221,7 @@ def whiten_each(data_dict, center=True):
 def run_e_step(arhmm):
     '''
     Computes the expected states for each training dataset and places them in a list.
+
     Parameters
     ----------
     arhmm (ARHMM): model to compute expected states from.
@@ -231,6 +238,7 @@ def run_e_step(arhmm):
 def zscore_each(data_dict, center=True):
     '''
     z-score each set of PC Scores separately
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
@@ -251,6 +259,7 @@ def zscore_each(data_dict, center=True):
 def zscore_all(data_dict, npcs=10, center=True):
     '''
     z-score the PC Scores altogether.
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
@@ -275,6 +284,7 @@ def zscore_all(data_dict, npcs=10, center=True):
 def get_crosslikes(arhmm, frame_by_frame=False):
     '''
     Compute cross log-likelihood validation ratios.
+
     Parameters
     ----------
     arhmm (ARHMM): Model to compute cross
@@ -316,6 +326,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
 def slices_from_indicators(indseq):
     '''
     Given indices for seqences, return list sliced sublists.
+
     Parameters
     ----------
     indseq (list): indices to create slices at.
@@ -331,6 +342,7 @@ def slices_from_indicators(indseq):
 def rleslices(seq):
     '''
     Get changepoint index slices
+
     Parameters
     ----------
     seq (list): list of labels

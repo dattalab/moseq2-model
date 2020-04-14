@@ -6,6 +6,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
                         percent_split=20, verbose=False, output_directory=None):
     '''
     Trains ARHMM from Jupyter notebook.
+
     Parameters
     ----------
     input_file (str): pca scores file path.

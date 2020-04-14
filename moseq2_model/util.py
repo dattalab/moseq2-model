@@ -16,6 +16,7 @@ flush_print = partial(print, flush=True)
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
     '''
     Load the Principal Component Scores for modeling.
+
     Parameters
     ----------
     filename (str): path to the file that contains PC scores
@@ -91,6 +92,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 def save_dict(filename, obj_to_save=None):
     '''
     Save dictionary to file.
+
     Parameters
     ----------
     filename (str): path to file where dict is being saved.
@@ -126,6 +128,7 @@ def save_dict(filename, obj_to_save=None):
 def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
     '''
     Recursively save dicts to h5 file groups.
+
     Parameters
     ----------
     h5file (h5py.File): opened h5py File object.
@@ -163,6 +166,7 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
 def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     '''
     Load an arhmm checkpoint and re-add data into the arhmm model checkpoint.
+
     Parameters
     ----------
     filename (str): path that specifies the checkpoint.
@@ -184,6 +188,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
     '''
     Save an arhmm checkpoint and strip out data used to train the model.
+
     Parameters
     ----------
     filename (str): path that specifies the checkpoint
@@ -202,6 +207,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 def append_resample(filename, label_dict: dict):
     '''
     Adds the labels from a resampling iteration to a pickle file.
+
     Parameters
     ----------
     filename (str): file (containing modeling results) to append new label dict to.
@@ -223,6 +229,7 @@ def load_dict_from_hdf5(filename):
     '''
     A convenience function to load the entire contents of an h5 file
     into a dictionary.
+
     Parameters
     ----------
     filename (str): path to h5 file.
@@ -239,6 +246,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     '''
     A convenience function to load the contents of an h5 file
     at a user-specified path into a dictionary.
+
     Parameters
     ----------
     filename (str): path to h5 file.
@@ -265,6 +273,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
 def h5_to_dict(h5file, path: str) -> dict:
     '''
     Load h5 data to dictionary from a user specified path.
+
     Parameters
     ----------
     h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
@@ -288,6 +297,7 @@ def h5_to_dict(h5file, path: str) -> dict:
 def load_data_from_matlab(filename, var_name="features", npcs=10):
     '''
     Load PC Scores from a specified variable column in a MATLAB file.
+
     Parameters
     ----------
     filename (str): path to MATLAB (.mat) file
@@ -315,6 +325,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 def load_cell_string_from_matlab(filename, var_name="uuids"):
     '''
     Load cell strings from MATLAB file.
+
     Parameters
     ----------
     filename (str): path to .mat file
@@ -346,6 +357,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 def copy_model(model_obj):
     '''
     Return a new copy of a model using deepcopy().
+
     Parameters
     ----------
     model_obj (ARHMM): model to copy.
@@ -375,6 +387,7 @@ def copy_model(model_obj):
 def get_parameters_from_model(model, save_ar=True):
     '''
     Get parameter dictionary from model.
+
     Parameters
     ----------
     model (ARHMM): model to get parameters from.
@@ -426,6 +439,7 @@ def get_parameters_from_model(model, save_ar=True):
 def progressbar(*args, **kwargs):
     '''
     Selects tqdm progress bar.
+
     Parameters
     ----------
     args (iterable)

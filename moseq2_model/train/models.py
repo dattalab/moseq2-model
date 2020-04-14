@@ -13,6 +13,7 @@ def _get_empirical_ar_params(train_datas, params):
     '''
     Estimate the parameters of an AR observation model
     by fitting a single AR model to the entire dataset.
+
     Parameters
     ----------
     train_datas (list): list of np.ndarrays representing each session's PC scores
@@ -49,6 +50,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
           separate_trans=False, groups=None, robust=False, silent=False):
     '''
+    Initializes ARHMM and adds data and groups to model.
 
     Parameters
     ----------

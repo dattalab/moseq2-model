@@ -14,6 +14,7 @@ from moseq2_model.helpers.data import process_indexfile, select_data_to_model, \
 def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_directory=None, gui=False):
     '''
     Wrapper function to train ARHMM, shared between CLI and GUI.
+
     Parameters
     ----------
     input_file (str): path to pca scores file.
