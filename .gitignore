@@ -92,3 +92,4 @@ ENV/
 .vscode/
 /data/
 /.pytest_cache/
+/.doctrees/

@@ -11,15 +11,15 @@ Subpackages
    moseq2-model.moseq2_model.tests
 
 CLI Module
---------------------------------------
+==========
 
-.. automodule:: moseq2_model.cli
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. click:: moseq2_model.cli:cli
+    :prog: cli
+    :show-nested:
+
 
 GUI Module
---------------------------------------
+==========
 
 .. automodule:: moseq2_model.gui
    :members:
@@ -27,7 +27,7 @@ GUI Module
    :show-inheritance:
 
 General Utilities Module
----------------------------------------
+========================
 
 .. automodule:: moseq2_model.util
    :members:
