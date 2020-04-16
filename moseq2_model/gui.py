@@ -1,4 +1,5 @@
 import ruamel.yaml as yaml
+from .cli import learn_model
 from moseq2_model.helpers.wrappers import learn_model_wrapper
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
@@ -50,5 +51,13 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     config_data['npcs'] = npcs
     config_data['percent_split'] = percent_split
     config_data['verbose'] = verbose
+
+    # Get default CLI params
+    objs = learn_model.params
+
+    params = {tmp.name: tmp.default for tmp in objs if not tmp.required}
+    for k, v in params.items():
+        if k not in config_data.keys():
+            config_data[k] = v
 
     learn_model_wrapper(input_file, dest_file, config_data, index, output_directory=output_directory, gui=True)
