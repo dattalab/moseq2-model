@@ -1,8 +1,9 @@
+import os
 from setuptools import setup, find_packages
-# testing w/o 'scikit-learn == 0.16.1','scikit-image',works okay but leaving here for reference
-# note that we need to pull in autoregressive and pybasicbayes from github,
-# I've hardcorded the dependency links to use very high version numbers, hope it doesn't break anything!
-# note that you will need to pass the option --process-dependency-links for this to work correctly
+
+os.system('export CC="$(which gcc-7)"')
+os.system('export CXX="$(which g++-7)"')
+
 
 setup(
     name='moseq2_model',
@@ -15,7 +16,14 @@ setup(
     platforms='any',
     python_requires='>=3.6',
     setup_requires=['numpy', "future", "six"],
-    install_requires=[],
+    install_requires=['six', 'h5py', 'scipy', 'numpy', 'click', 'cython',
+                      'pandas', 'future', 'joblib', 'scikit-learn',
+                      'scikit-image', 'setuptools', 'cytoolz', 'ipywidgets',
+                      'matplotlib', 'statsmodels', 'ruamel.yaml', 'opencv-python',
+                      'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
+                      'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
+                      'autoregressive @ git+https://github.com/mattjj/pyhsmm-autoregressive.git@master'
+                      ],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )
 
