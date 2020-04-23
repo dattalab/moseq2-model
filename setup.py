@@ -1,8 +1,34 @@
 import os
+import sys
+import subprocess
 from setuptools import setup, find_packages
 
 os.system('export CC="$(which gcc-7)"')
 os.system('export CXX="$(which g++-7)"')
+
+def install(package):
+    subprocess.call([sys.executable, "-m", "pip", "install", package])
+
+
+try:
+    import numpy
+except ImportError:
+    install('numpy')
+
+try:
+    import future
+except ImportError:
+    install('future')
+
+try:
+    import six
+except ImportError:
+    install('six')
+
+try:
+    import cython
+except ImportError:
+    install('cython')
 
 
 setup(
@@ -10,7 +36,6 @@ setup(
     version='0.4.0',
     author='Datta Lab',
     description='Modeling for the best',
-    package_dir={'': '.'},
     packages=find_packages(exclude='docs'),
     include_package_data=True,
     platforms='any',
