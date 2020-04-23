@@ -20,6 +20,7 @@ from tqdm import tqdm, tqdm_notebook
 def _in_notebook():
     '''
     Determine if this function was executed in a jupyter notebook.
+
     Returns
     -------
     A boolean describing the presence of a jupyter notebook
@@ -31,9 +32,11 @@ def _in_notebook():
 def _ensure_odict(data):
     '''
     Casts input data to OrderedDict if it is not one already.
+
     Parameters
     ----------
     data (list or dict): data dictionary to train ARHMM.
+
     Returns
     -------
     data (OrderedDict): Ordered version of input data variable
@@ -85,9 +88,11 @@ class MoseqModel:
     def get_params(self, deep=True):
         '''
         Get model parameters.
+
         Parameters
         ----------
         deep (bool): indicate whether to use deep copy
+
         Returns
         -------
         params (dict): Model parameters
@@ -100,9 +105,11 @@ class MoseqModel:
     def set_params(self, **model_params):
         '''
         Update model parameters.
+
         Parameters
         ----------
         model_params (dict): model parameter dictionary to update
+
         Returns
         -------
         None
@@ -117,10 +124,12 @@ class MoseqModel:
     def fit(self, X, y=None):
         '''
         Trains model given data.
+
         Parameters
         ----------
         X (OrderedDict): data_dict used to train ARHMM
         y (None)
+
         Returns
         -------
         None
@@ -162,9 +171,11 @@ class MoseqModel:
     def partial_fit(self, X):
         '''
         Not implemented.
+
         Parameters
         ----------
         X (OrderedDict)
+
         Returns
         -------
         '''
@@ -176,9 +187,11 @@ class MoseqModel:
     def predict(self, X):
         '''
         Get label predictions from input data.
+
         Parameters
         ----------
         X (list, or OrderedDict): data to predict labels
+
         Returns
         -------
         y_pred (list): list of label predictions
@@ -198,10 +211,12 @@ class MoseqModel:
     def log_likelihood_score(self, X, reduction=None):
         '''
         Compute Log-Likelihood Score of each session.
+
         Parameters
         ----------
         X (list or OrderedDict): data to compute log-likelihood score from.
         reduction (str): indicates whether to use a reduction operation.
+
         Returns
         -------
         _lls (1D numpy array): log-likelihood arrays.
@@ -223,6 +238,7 @@ class MoseqModel:
     def get_median_duration(self):
         '''
         Calculates median duration.
+
         Returns
         -------
         (pandas DataFrame): DataFrame of median syllable durations
@@ -233,6 +249,7 @@ class MoseqModel:
     def duration_score(self):
         '''
         Computes score for assigned syllable duration
+
         Returns
         -------
         (1D numpy array): scores of computed median syllable durations
