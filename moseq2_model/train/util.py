@@ -11,6 +11,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
+
     Parameters
     ----------
     model (ARHMM): model to train.
@@ -28,6 +29,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     separate_trans (bool): using different transition matrices
     groups (list): list of groups included in modeling (only if verbose = True)
     verbose (bool): Compute model summary.
+
     Returns
     -------
     model (ARHMM): trained model.
@@ -79,6 +81,7 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
 def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
     '''
     Computes a summary of model performance after resampling steps. Is only run if verbose = True.
+
     Parameters
     ----------
     model (ARHMM): model to compute lls.
@@ -89,6 +92,7 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
     num_frames (int): total number of frames included in modeling.
     iter_lls (list): list of log-likelihoods at an iteration level.
     iter_holls (list): list of held-out log-likelihoods at an iteration level.
+
     Returns
     -------
     iter_lls (list): updated list of log-likelihoods at an iteration level.
@@ -150,9 +154,11 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
 def get_labels_from_model(model):
     '''
     Grabs the model labels for each training dataset and places them in a list.
+
     Parameters
     ----------
     model (ARHMM): trained ARHMM model
+
     Returns
     -------
     cat_labels (list): Predicted syllable labels for all frames concatenated into a single list.
@@ -166,10 +172,12 @@ def get_labels_from_model(model):
 def whiten_all(data_dict, center=True):
     '''
     Whitens all the PC Scores at once.
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
     center (bool): Indicates whether to center data.
+
     Returns
     -------
     data_dict (OrderedDict): Whitened training data dictionary
@@ -192,10 +200,12 @@ def whiten_all(data_dict, center=True):
 def whiten_each(data_dict, center=True):
     '''
     Whiten each group of PC scores separately
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
     center (bool): Indicates whether to normalize data.
+
     Returns
     -------
     data_dict (OrderedDict): Whitened training data dictionary
@@ -211,9 +221,11 @@ def whiten_each(data_dict, center=True):
 def run_e_step(arhmm):
     '''
     Computes the expected states for each training dataset and places them in a list.
+
     Parameters
     ----------
     arhmm (ARHMM): model to compute expected states from.
+
     Returns
     -------
     e_states (list): list of expected states
@@ -226,10 +238,12 @@ def run_e_step(arhmm):
 def zscore_each(data_dict, center=True):
     '''
     z-score each set of PC Scores separately
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
     center (bool): Indicates whether to normalize data.
+
     Returns
     -------
     data_dict (OrderedDict): z-scored training data dictionary
@@ -245,11 +259,13 @@ def zscore_each(data_dict, center=True):
 def zscore_all(data_dict, npcs=10, center=True):
     '''
     z-score the PC Scores altogether.
+
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
     npcs (int): number of pcs included
     center (bool): Indicates whether to normalize data.
+
     Returns
     -------
     data_dict (OrderedDict): z-scored training data dictionary
@@ -269,10 +285,12 @@ def get_crosslikes(arhmm, frame_by_frame=False):
     '''
     Gets the cross-likelihoods, a measure of confidence in the model's
     segmentation, for each syllable a model learns.
+
     Parameters
     ----------
     arhmm: the ARHMM model object fit to your data
     frame_by_frame (bool): if True, the cross-likelihoods will be computed for each frame.
+
     Returns
     -------
     All_CLs (list): a dictionary containing cross-likelihoods for each syllable pair.
@@ -308,9 +326,11 @@ def get_crosslikes(arhmm, frame_by_frame=False):
 def slices_from_indicators(indseq):
     '''
     Given indices for seqences, return list sliced sublists.
+
     Parameters
     ----------
     indseq (list): indices to create slices at.
+
     Returns
     -------
     (list): list of slices from given indices.
@@ -322,9 +342,11 @@ def slices_from_indicators(indseq):
 def rleslices(seq):
     '''
     Get changepoint index slices
+
     Parameters
     ----------
     seq (list): list of labels
+
     Returns
     -------
     (map generator): slices given syllable changepoint indices

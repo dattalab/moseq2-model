@@ -15,6 +15,7 @@ flush_print = partial(print, flush=True)
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
     '''
     Load the Principal Component Scores for modeling.
+
     Parameters
     ----------
     filename (str): path to the file that contains PC scores
@@ -22,6 +23,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
     load_groups (bool): Load metadata group variable
     npcs (int): Number of PCs to load
     h5_key_is_uuid (bool): use h5 key as uuid.
+
     Returns
     -------
     data_dict (OrderedDict): key-value pairs for keys being uuids and values being PC scores.
@@ -89,10 +91,12 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 def save_dict(filename, obj_to_save=None):
     '''
     Save dictionary to file.
+
     Parameters
     ----------
     filename (str): path to file where dict is being saved.
     obj_to_save (dict): dict to save.
+
     Returns
     -------
     None
@@ -123,11 +127,13 @@ def save_dict(filename, obj_to_save=None):
 def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
     '''
     Recursively save dicts to h5 file groups.
+
     Parameters
     ----------
     h5file (h5py.File): opened h5py File object.
     export_dict (dict): dictionary to save
     path (str): path within h5 to save to.
+
     Returns
     -------
     None
@@ -159,10 +165,12 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
 def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     '''
     Load an arhmm checkpoint and re-add data into the arhmm model checkpoint.
+
     Parameters
     ----------
     filename (str): path that specifies the checkpoint.
     train_data (OrderedDict): an OrderedDict that contains the training data
+
     Returns
     -------
     mdl_dict (dict): a dict containing the model with reloaded data, and associated training data
@@ -179,11 +187,13 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
     '''
     Save an arhmm checkpoint and strip out data used to train the model.
+
     Parameters
     ----------
     filename (str): path that specifies the checkpoint
     arhmm (dict): a dictionary containing the model obj, training iteration number,
                log-likelihoods of each training step, and labels for each step.
+
     Returns
     -------
     None
@@ -197,6 +207,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 def append_resample(filename, label_dict: dict):
     '''
     Adds the labels from a resampling iteration to a pickle file.
+
     Parameters
     ----------
     filename (str): file (containing modeling results) to append new label dict to.
@@ -204,6 +215,7 @@ def append_resample(filename, label_dict: dict):
             key is the sampling iteration and the value contains a dict of:
             (labels, a log likelihood val, and expected states if the flag is set)
             from each mouse.
+
     Returns
     -------
     None
@@ -217,9 +229,11 @@ def load_dict_from_hdf5(filename):
     '''
     A convenience function to load the entire contents of an h5 file
     into a dictionary.
+
     Parameters
     ----------
     filename (str): path to h5 file.
+
     Returns
     -------
     (dict): dict containing all of the h5 file contents.
@@ -232,10 +246,12 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     '''
     A convenience function to load the contents of an h5 file
     at a user-specified path into a dictionary.
+
     Parameters
     ----------
     filename (str): path to h5 file.
     path (str): path within the h5 file to load data from.
+
     Returns
     -------
     (dict): dict containing all of the h5 file contents.
@@ -257,10 +273,12 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
 def h5_to_dict(h5file, path: str) -> dict:
     '''
     Load h5 data to dictionary from a user specified path.
+
     Parameters
     ----------
     h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
     path (str): path to the base dataset within the h5 file
+
     Returns
     -------
     out (dict): a dict with h5 file contents with the same path structure
@@ -279,11 +297,13 @@ def h5_to_dict(h5file, path: str) -> dict:
 def load_data_from_matlab(filename, var_name="features", npcs=10):
     '''
     Load PC Scores from a specified variable column in a MATLAB file.
+
     Parameters
     ----------
     filename (str): path to MATLAB (.mat) file
     var_name (str): variable to load
     npcs (int): number of PCs to load.
+
     Returns
     -------
     data_dict (OrderedDict): loaded dictionary of uuid and PC-score pairings.
@@ -305,10 +325,12 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 def load_cell_string_from_matlab(filename, var_name="uuids"):
     '''
     Load cell strings from MATLAB file.
+
     Parameters
     ----------
     filename (str): path to .mat file
     var_name (str): cell name to read
+
     Returns
     -------
     return_list (list): list of selected loaded variables
@@ -335,9 +357,11 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 def copy_model(model_obj):
     '''
     Return a new copy of a model using deepcopy().
+
     Parameters
     ----------
     model_obj (ARHMM): model to copy.
+
     Returns
     -------
     cp (ARHMM): copy of the model
@@ -363,10 +387,12 @@ def copy_model(model_obj):
 def get_parameters_from_model(model, save_ar=True):
     '''
     Get parameter dictionary from model.
+
     Parameters
     ----------
     model (ARHMM): model to get parameters from.
     save_ar (bool): save AR Matrices.
+
     Returns
     -------
     parameters (dict): dictionary containing all modeling parameters
@@ -413,10 +439,12 @@ def get_parameters_from_model(model, save_ar=True):
 def progressbar(*args, **kwargs):
     '''
     Selects tqdm progress bar.
+
     Parameters
     ----------
     args (iterable)
     kwargs (tdqm args[1:])
+
     Returns
     -------
     tqdm() iterating object.

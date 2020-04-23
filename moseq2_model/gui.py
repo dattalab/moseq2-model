@@ -7,6 +7,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
                         percent_split=20, verbose=False, output_directory=None):
     '''
     Trains ARHMM from Jupyter notebook.
+
     Parameters
     ----------
     input_file (str): pca scores file path.
@@ -25,6 +26,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     percent_split (int): train-validation data split ratio percentage.
     verbose (bool): compute modeling summary (Warning current implementation is slow).
     output_directory (str): alternative output directory for GUI users
+
     Returns
     -------
     None
