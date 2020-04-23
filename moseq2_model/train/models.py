@@ -10,10 +10,17 @@ import warnings
 
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):
-    """
+    '''
     Estimate the parameters of an AR observation model
     by fitting a single AR model to the entire dataset.
-    """
+    Parameters
+    ----------
+    train_datas (list): list of np.ndarrays representing each session's PC scores
+    params (dict): dict object of modeling parameters
+    Returns
+    -------
+    obs_params (dict): dict of observational parameters to use in modeling.
+    '''
 
     assert isinstance(train_datas, list) and len(train_datas) > 0
     datadimension = train_datas[0].shape[1]
@@ -40,6 +47,31 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
           separate_trans=False, groups=None, robust=False, silent=False):
+    '''
+    Initializes ARHMM and adds data and groups to model.
+    Parameters
+    ----------
+    data_dict (OrderedDict): dictionary of data to add to model
+    kappa (float): probability prior distribution for syllable duration
+    gamma (float): probability prior distribution for PCs explaining syllable states
+    nlags (int): number of lag frames to add to sessions
+    alpha (float): probability prior distribution for syllable transition rate
+    K_0_scale (float): Standard deviation of lagged data
+    S_0_scale (float): Standard deviation of data
+    max_states (int): Maximum number of model states
+    empirical_bayes (bool): Use empirical bayes AR parameters
+    affine (bool): Use affine transformation
+    model_hypparams (dict): dictionary of model parameters
+    obs_hypparams (dict): dictionary of observational parameters
+    sticky_init (bool): Initialize the states with random projections.
+    separate_trans (bool): use separate transition graphs for each unique group
+    groups (list): list of groups to model
+    robust (bool): use t-Distribution model
+    silent (bool): print out model information.
+    Returns
+    -------
+    model (ARHMM): model object with data loaded, prepared for modeling.
+    '''
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
