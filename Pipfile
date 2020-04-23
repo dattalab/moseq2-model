@@ -1,0 +1,39 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+pytest-cov = "*"
+
+[packages]
+six = "*"
+h5py = "*"
+tqdm = "*"
+scipy = "*"
+numpy = "*"
+click = "*"
+cython = "*"
+pandas = "*"
+awscli = "*"
+future = "*"
+joblib = "*"
+sklearn = "*"
+cytoolz = "*"
+setuptools = "*"
+ipywidgets = "*"
+matplotlib = "*"
+statsmodels = "*"
+hdf5storage = "*"
+ruamel_yaml = "*"
+scikit-image = "*"
+scikit-learn = "*"
+opencv-python = "*"
+moseq2-model = {editable = true, path = "."}
+pyhsmm = {editable = true, git = "https://github.com/mattjj/pyhsmm"}
+pybasicbayes = {editable = true, git = "https://github.com/mattjj/pybasicbayes"}
+autoregressive = {editable = true, git = "https://github.com/mattjj/pyhsmm-autoregressive"}
+
+[requires]
+python_version = "3.6"

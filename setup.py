@@ -10,7 +10,6 @@ setup(
     version='0.4.0',
     author='Datta Lab',
     description='Modeling for the best',
-    package_dir={'': '.'},
     packages=find_packages(exclude='docs'),
     include_package_data=True,
     platforms='any',
