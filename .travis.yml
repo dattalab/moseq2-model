@@ -2,7 +2,6 @@
 language: python
 dist: trusty
 os: linux
-cache: false
 
 stages:
   - latest-installs
