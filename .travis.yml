@@ -15,8 +15,6 @@ jobs:
       stage: latest-installs
       before_install:
         - pip install pipenv
-        - pip install pytest codecov
-        - pip install "pytest-cov>=2.4.0,<2.6"
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pipenv install --dev --ignore-pipfile --deploy
@@ -33,8 +31,6 @@ jobs:
       stage: latest-pythons
       before_install:
         - pip install pipenv
-        - pip install pytest codecov
-        - pip install "pytest-cov>=2.4.0,<2.6"
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pipenv install --dev --ignore-pipfile --deploy
@@ -51,8 +47,7 @@ jobs:
       before_install:
         - pip install -U pip
         - pip install awscli
-        - pip install pytest codecov
-        - pip install "pytest-cov>=2.4.0,<2.6"
+        - pip install pytest codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
@@ -68,8 +63,7 @@ jobs:
       before_install:
         - pip install -U pip
         - pip install awscli
-        - pip install pytest codecov
-        - pip install "pytest-cov>=2.4.0,<2.6"
+        - pip install pytest codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .

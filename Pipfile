@@ -6,8 +6,6 @@ verify_ssl = true
 [dev-packages]
 pytest = "*"
 pytest-cov = "*"
-
-[packages]
 six = "*"
 h5py = "*"
 tqdm = "*"
@@ -33,3 +31,4 @@ opencv-python = "*"
 pyhsmm = {editable = true, git = "https://github.com/mattjj/pyhsmm"}
 pybasicbayes = {editable = true, git = "https://github.com/mattjj/pybasicbayes"}
 autoregressive = {editable = true, git = "https://github.com/mattjj/pyhsmm-autoregressive"}
+
