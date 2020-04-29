@@ -14,6 +14,7 @@ jobs:
       python: '3.6'
       stage: latest-installs
       before_install:
+        - pip install -U pip
         - pip install pipenv
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
@@ -30,6 +31,7 @@ jobs:
       python: '3.7'
       stage: latest-pythons
       before_install:
+        - pip install -U pip
         - pip install pipenv
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
@@ -47,14 +49,14 @@ jobs:
       before_install:
         - pip install -U pip
         - pip install awscli
-        - pip install pytest codecov pytest-cov
+        - pip install pytest>=5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
       before_script:
         - make
       script:
-        - pytest --cov=./moseq2_model/tests/
+        - pytest --cov-report xml --cov-report term
 
     - env: ISOLATED=true
       dist: xenial
@@ -63,11 +65,11 @@ jobs:
       before_install:
         - pip install -U pip
         - pip install awscli
-        - pip install pytest codecov pytest-cov
+        - pip install pytest>=5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
       before_script:
         - make
       script:
-        - pytest --cov=./moseq2_model/tests/
+        - pytest --cov-report xml --cov-report term
