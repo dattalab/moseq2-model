@@ -40,7 +40,6 @@ setup(
     include_package_data=True,
     platforms='any',
     python_requires='>=3.6',
-    setup_requires=['numpy', "future", "six"],
     install_requires=['six==1.14.0', 'h5py==2.10.0',
                       'scipy==1.4.1', 'numpy==1.17.4', 'click==7.0', 'cython==0.29.14',
                       'pandas==0.25.3', 'future==0.18.2', 'joblib==0.14.0', 'scikit-learn==0.22', 'tqdm==4.40.0',

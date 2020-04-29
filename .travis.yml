@@ -19,6 +19,9 @@ jobs:
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pipenv install --dev --ignore-pipfile --deploy
+        - pipenv run pip install git+https://github.com/mattjj/pyhsmm.git
+        - pipenv run pip install git+https://github.com/mattjj/pybasicbayes.git
+        - pipenv run pip install git+https://github.com/mattjj/pyhsmm-autoregressive.git
       before_script:
         - make
       script:
@@ -36,6 +39,9 @@ jobs:
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pipenv install --dev --ignore-pipfile --deploy
+        - pipenv run pip install git+https://github.com/mattjj/pyhsmm.git
+        - pipenv run pip install git+https://github.com/mattjj/pybasicbayes.git
+        - pipenv run pip install git+https://github.com/mattjj/pyhsmm-autoregressive.git
       before_script:
         - make
       script:
@@ -49,7 +55,7 @@ jobs:
       before_install:
         - pip install -U pip
         - pip install awscli
-        - pip install pytest>=5.4.1 codecov pytest-cov
+        - pip install pytest==5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
@@ -65,7 +71,7 @@ jobs:
       before_install:
         - pip install -U pip
         - pip install awscli
-        - pip install pytest>=5.4.1 codecov pytest-cov
+        - pip install pytest==5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
