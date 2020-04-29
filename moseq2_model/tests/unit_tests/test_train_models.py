@@ -53,20 +53,17 @@ class TestTrainModels(TestCase):
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
 
-        with open(index_path, 'r') as f:
-            index_data = yaml.safe_load(f)
-        f.close()
-
-        all_keys, groups = select_data_to_model(index_data)
-
         data_dict, data_metadata = load_pcs(filename=input_file,
                                             var_name='scores',
                                             npcs=10,
                                             load_groups=True)
 
+        nkeys = 5
+        all_keys = ['key1', 'key2', 'key3', 'key4', 'key5']
+
         config_data, data_dict, model_parameters, train_list, hold_out_list = \
             prepare_model_metadata(data_dict, data_metadata, config_data, \
-                                    len(all_keys), all_keys)
+                                    nkeys, all_keys)
 
         model_parameters['separate_trans'] = False
         model_parameters['robust'] = False

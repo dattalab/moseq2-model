@@ -10,16 +10,12 @@ from moseq2_model.helpers.data import prepare_model_metadata, select_data_to_mod
 def get_model(separate_trans=False, robust=False, groups=[]):
     input_file = 'data/test_scores.h5'
     config_file = 'data/config.yaml'
-    index_path = 'data/test_index.yaml'
 
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
 
-    with open(index_path, 'r') as f:
-        index_data = yaml.safe_load(f)
-    f.close()
-
-    all_keys, groups = select_data_to_model(index_data)
+    nkeys = 5
+    groups = ['key1', 'key2', 'key3', 'key4', 'key5']
 
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name='scores',
@@ -28,7 +24,7 @@ def get_model(separate_trans=False, robust=False, groups=[]):
 
     config_data, data_dict, model_parameters, train_list, hold_out_list = \
         prepare_model_metadata(data_dict, data_metadata, config_data, \
-                               len(all_keys), all_keys)
+                               nkeys, groups)
 
     model_parameters['separate_trans'] = separate_trans
     model_parameters['robust'] = robust

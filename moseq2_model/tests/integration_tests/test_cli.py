@@ -14,7 +14,7 @@ class TestCLI(TestCase):
                                [input_file],
                                catch_exceptions=False)
 
-        assert result.exit_code == 0
+        assert result.exit_code == 0, "CLI Command did not successfully complete"
 
     def test_learn_model(self):
 
@@ -37,6 +37,6 @@ class TestCLI(TestCase):
                                train_params,
                                catch_exceptions=False)
 
-        assert os.path.exists(dest_file)
-        assert result.exit_code == 0
+        assert os.path.exists(dest_file), "Trained model file was not created or is in the incorrect location"
+        assert result.exit_code == 0, "CLI Command did not successfully complete"
         os.remove(dest_file)

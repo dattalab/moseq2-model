@@ -24,7 +24,8 @@ class TestDataHelpers(TestCase):
             config_data = yaml.safe_load(f)
 
         index_data, data_metadata = process_indexfile(index_path, config_data, data_metadata)
-        assert (len(index_data['files']) == len(data_metadata['uuids']))
+        assert (len(index_data['files']) == len(data_metadata['uuids'])),\
+            "Number of input files != number of uuids in the index file"
 
     def _select_data_to_model(self):
 
@@ -38,7 +39,7 @@ class TestDataHelpers(TestCase):
 
             all_keys, groups = select_data_to_model(index_data)
 
-            assert len(all_keys) == len(groups)
+            assert len(all_keys) == len(groups), "Number of groups != number of uuids"
 
             stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
             with open(stdin.name, 'w') as f:
@@ -48,8 +49,8 @@ class TestDataHelpers(TestCase):
             sys.stdin = open(stdin.name)
 
             all_keys, groups = select_data_to_model(index_data, gui=True)
-            assert len(all_keys) == len(groups) == 1
-            assert groups[0] == 'default'
+            assert len(all_keys) == len(groups) == 1, "index data was incorrectly parsed"
+            assert groups[0] == 'default', "groups were returned incorrectly"
 
     def test_prepare_model_metadata(self):
 

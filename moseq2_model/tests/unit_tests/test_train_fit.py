@@ -3,7 +3,7 @@ from unittest import TestCase
 from collections import OrderedDict
 from moseq2_model.util import load_pcs
 from moseq2_model.train.util import whiten_all
-from moseq2_model.train.fit import _ensure_odict, _in_notebook, MoseqModel
+from moseq2_model.train.fit import _ensure_odict, MoseqModel
 
 class TestTrainFit(TestCase):
 
@@ -160,7 +160,3 @@ class TestTrainFit(TestCase):
         dur_score = model.duration_score()
         assert isinstance(dur_score, float)
         assert dur_score != None
-
-    def test_in_notebook(self):
-        x = _in_notebook()
-        assert True == x

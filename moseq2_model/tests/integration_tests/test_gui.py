@@ -25,5 +25,5 @@ class TestGUI(TestCase):
         learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa, separate_trans, robust, checkpoint_freq, percent_split, verbose)
 
-        assert (os.path.exists(dest_file))
+        assert (os.path.exists(dest_file)), "Trained model file was not created or is in the incorrect location"
         os.remove(dest_file)
