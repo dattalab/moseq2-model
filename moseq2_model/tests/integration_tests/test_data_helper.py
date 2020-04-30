@@ -133,7 +133,7 @@ class TestDataHelpers(TestCase):
         assert (train_list != hold_out_list)
         assert (len(train_list) == len(hold_out_list))
 
-        train_list, train_data, hold_out_list, test_data, nt_frames = \
+        train_data, hold_out_list, test_data, nt_frames = \
             get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
 
         assert(train_list != None and test_data != None)
@@ -153,10 +153,9 @@ class TestDataHelpers(TestCase):
             config_data = yaml.safe_load(f)
             config_data['hold_out'] = False
 
-        train_list, train_data, training_data, hold_out_list, validation_data, nt_frames = \
+        train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, data_dict)
 
-        assert hold_out_list == None
         assert len(list(training_data.values())[0]) > len(list(validation_data.values())[0])
         assert len(list(training_data.keys())) == len(list(validation_data.keys()))
         total_frames = nt_frames[0] + len(list(validation_data.values())[0])

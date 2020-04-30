@@ -1,6 +1,8 @@
 import os
+import sys
 from unittest import TestCase
 from moseq2_model.gui import learn_model_command
+from tempfile import TemporaryDirectory, NamedTemporaryFile
 
 class TestGUI(TestCase):
 
@@ -21,6 +23,15 @@ class TestGUI(TestCase):
         checkpoint_freq = -1
         percent_split=20
         verbose = False
+
+        with TemporaryDirectory() as tmp:
+            # test space-separated input
+            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            with open(stdin.name, 'w') as f:
+                f.write('default Group1')
+            f.close()
+
+            sys.stdin = open(stdin.name)
 
         learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa, separate_trans, robust, checkpoint_freq, percent_split, verbose)

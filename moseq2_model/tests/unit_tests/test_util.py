@@ -72,7 +72,7 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        train_list, train_data, training_data, hold_out_list, validation_data, nt_frames = \
+        train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
@@ -91,7 +91,7 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        train_list, train_data, training_data, hold_out_list, validation_data, nt_frames = \
+        train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
