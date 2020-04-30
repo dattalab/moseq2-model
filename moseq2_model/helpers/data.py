@@ -95,48 +95,28 @@ def select_data_to_model(index_data, gui=False):
     use_keys = []
     use_groups = []
     if gui:
-        groups_to_train = ''
-        while (len(use_keys) == 0):
-            try:
-                groups_to_train = input(
-                    "Input comma-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
-                if ',' in groups_to_train:
-                    tmp_g = groups_to_train.split(',')
-                    for g in tmp_g:
-                        g = g.strip()
-                        for f in index_data['files']:
-                            if f['group'] == g:
-                                if f['uuid'] not in use_keys:
-                                    use_keys.append(f['uuid'])
-                                    use_groups.append(g)
-                elif len(groups_to_train) == 0:
-                    for f in index_data['files']:
-                        use_keys.append(f['uuid'])
-                        use_groups.append(f['group'])
-                else:
-                    for f in index_data['files']:
-                        if f['group'] == groups_to_train:
-                            if f['uuid'] not in use_keys:
-                                use_keys.append(f['uuid'])
-                                use_groups.append(groups_to_train)
-            except:
-                if len(groups_to_train) == 0:
-                    for f in index_data['files']:
-                        use_keys.append(f['uuid'])
-                        use_groups.append(f['group'])
-                    all_keys = use_keys
-                    groups = use_groups
-                    break
-                print('Group name not found, try again.')
-
-            all_keys = use_keys
-            groups = use_groups
+        while(len(use_groups) == 0):
+            groups_to_train = input(
+                "Input comma/space-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
+            if ',' in groups_to_train:
+                sel_groups = [g.strip() for g in groups_to_train.split(',')]
+                use_keys = [f['uuid'] for f in index_data['files'] if f['group'] in sel_groups]
+                use_groups = [f['group'] for f in index_data['files'] if f['uuid'] in use_keys]
+            elif len(groups_to_train) > 0:
+                sel_groups = [g for g in groups_to_train.split(' ')]
+                use_keys = [f['uuid'] for f in index_data['files'] if f['group'] in sel_groups]
+                use_groups = [f['group'] for f in index_data['files'] if f['uuid'] in use_keys]
+            else:
+                for f in index_data['files']:
+                    use_keys.append(f['uuid'])
+                    use_groups.append(f['group'])
     else:
         for f in index_data['files']:
             use_keys.append(f['uuid'])
             use_groups.append(f['group'])
-        all_keys = use_keys
-        groups = use_groups
+
+    all_keys = use_keys
+    groups = use_groups
 
     return all_keys, groups
 
@@ -205,13 +185,12 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         'nlags': config_data['nlags'],
         'robust': config_data['robust'],
         'max_states': config_data['max_states'],
-        'separate_trans': config_data['separate_trans']
+        'separate_trans': config_data['separate_trans'],
+        'groups': None
     }
 
     if config_data['separate_trans']:
         model_parameters['groups'] = data_metadata['groups']
-    else:
-        model_parameters['groups'] = None
 
     if config_data['whiten'][0].lower() == 'a':
         click.echo('Whitening the training data using the whiten_all function')
@@ -223,7 +202,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         click.echo('Not whitening the data')
 
     if config_data['noise_level'] > 0:
-        click.echo('Using {} STD AWGN'.format(config_data['noise_level']))
+        click.echo(f'Using {config_data["noise_level"]} STD AWGN.')
         for k, v in data_dict.items():
             data_dict[k] = v + np.random.randn(*v.shape) * config_data['noise_level']
 
@@ -251,11 +230,10 @@ def get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list):
 
     train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
     test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
-    train_list = list(train_data.keys())
     hold_out_list = list(test_data.keys())
     nt_frames = [len(v) for v in train_data.values()]
 
-    return train_list, train_data, hold_out_list, test_data, nt_frames
+    return train_data, hold_out_list, test_data, nt_frames
 
 def get_training_data_splits(config_data, data_dict):
     '''
@@ -278,7 +256,6 @@ def get_training_data_splits(config_data, data_dict):
 
     train_data = data_dict
     train_list = list(data_dict.keys())
-    test_data = None
     hold_out_list = None
 
     training_data = OrderedDict()

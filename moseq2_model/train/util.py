@@ -1,7 +1,7 @@
-import os
 import sys
 import numpy as np
 from functools import partial
+from cytoolz import valmap
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
@@ -128,9 +128,9 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
         if len(val_ll) > 1:
             val_ll = sum(val_ll) / sum(lens)
         else:
-            try:
+            if isinstance(val_ll[0], list):
                 val_ll = sum(val_ll) / len(val_ll[0])
-            except:
+            else:
                 val_ll = sum(val_ll) / len(val_ll)
         iter_holls.append(val_ll)
     else:
@@ -307,7 +307,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
                 likes = s.aBl[s.stateseq == j]
                 for i in range(Nstates):
                     all_CLs[(i, j)].append(likes[:, i] - likes[:, j])
-        all_CLs = {k: np.concatenate(v) for k, v in all_CLs.items()}
+        all_CLs = valmap(np.concatenate, all_CLs)
     else:
         for s in arhmm.states_list:
             for j in range(Nstates):
