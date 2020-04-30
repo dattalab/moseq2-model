@@ -255,8 +255,6 @@ def get_training_data_splits(config_data, data_dict):
     '''
 
     train_data = data_dict
-    train_list = list(data_dict.keys())
-    hold_out_list = None
 
     training_data = OrderedDict()
     validation_data = OrderedDict()
@@ -274,7 +272,7 @@ def get_training_data_splits(config_data, data_dict):
         validation_data[k] = testing_X
         nv_frames.append(validation_data[k].shape[0])
 
-    return train_list, train_data, training_data, hold_out_list, validation_data, nt_frames
+    return train_data, training_data, validation_data, nt_frames
 
 def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file):
     '''

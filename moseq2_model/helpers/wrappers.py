@@ -70,7 +70,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     if config_data['hold_out']:
         train_data, hold_out_list, test_data, nt_frames = get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
     else:
-        train_data, training_data, hold_out_list, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
+        train_data, training_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
     checkpoint_file = dest_file + '-checkpoint.arhmm'
     # back-up file
