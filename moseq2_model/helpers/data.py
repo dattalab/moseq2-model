@@ -95,48 +95,28 @@ def select_data_to_model(index_data, gui=False):
     use_keys = []
     use_groups = []
     if gui:
-        groups_to_train = ''
-        while (len(use_keys) == 0):
-            try:
-                groups_to_train = input(
-                    "Input comma-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
-                if ',' in groups_to_train:
-                    tmp_g = groups_to_train.split(',')
-                    for g in tmp_g:
-                        g = g.strip()
-                        for f in index_data['files']:
-                            if f['group'] == g:
-                                if f['uuid'] not in use_keys:
-                                    use_keys.append(f['uuid'])
-                                    use_groups.append(g)
-                elif len(groups_to_train) == 0:
-                    for f in index_data['files']:
-                        use_keys.append(f['uuid'])
-                        use_groups.append(f['group'])
-                else:
-                    for f in index_data['files']:
-                        if f['group'] == groups_to_train:
-                            if f['uuid'] not in use_keys:
-                                use_keys.append(f['uuid'])
-                                use_groups.append(groups_to_train)
-            except:
-                if len(groups_to_train) == 0:
-                    for f in index_data['files']:
-                        use_keys.append(f['uuid'])
-                        use_groups.append(f['group'])
-                    all_keys = use_keys
-                    groups = use_groups
-                    break
-                print('Group name not found, try again.')
-
-            all_keys = use_keys
-            groups = use_groups
+        while(len(use_groups) == 0):
+            groups_to_train = input(
+                "Input comma/space-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
+            if ',' in groups_to_train:
+                sel_groups = [g.strip() for g in groups_to_train.split(',')]
+                use_keys = [f['uuid'] for f in index_data['files'] if f['group'] in sel_groups]
+                use_groups = [f['group'] for f in index_data['files'] if f['uuid'] in use_keys]
+            elif len(groups_to_train) > 0:
+                sel_groups = [g for g in groups_to_train.split(' ')]
+                use_keys = [f['uuid'] for f in index_data['files'] if f['group'] in sel_groups]
+                use_groups = [f['group'] for f in index_data['files'] if f['uuid'] in use_keys]
+            else:
+                for f in index_data['files']:
+                    use_keys.append(f['uuid'])
+                    use_groups.append(f['group'])
     else:
         for f in index_data['files']:
             use_keys.append(f['uuid'])
             use_groups.append(f['group'])
-        all_keys = use_keys
-        groups = use_groups
+
+    all_keys = use_keys
+    groups = use_groups
 
     return all_keys, groups
 
@@ -278,7 +258,6 @@ def get_training_data_splits(config_data, data_dict):
 
     train_data = data_dict
     train_list = list(data_dict.keys())
-    test_data = None
     hold_out_list = None
 
     training_data = OrderedDict()
