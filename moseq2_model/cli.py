@@ -74,8 +74,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 checkpoint_freq, index, default_group, verbose):
 
     click_data = click.get_current_context().params
-    cli_data = {k: v for k, v in click_data.items()}
-    learn_model_wrapper(input_file, dest_file, cli_data)
+    learn_model_wrapper(input_file, dest_file, click_data)
 
 
 if __name__ == '__main__':
