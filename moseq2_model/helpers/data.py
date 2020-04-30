@@ -185,13 +185,12 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         'nlags': config_data['nlags'],
         'robust': config_data['robust'],
         'max_states': config_data['max_states'],
-        'separate_trans': config_data['separate_trans']
+        'separate_trans': config_data['separate_trans'],
+        'groups': None
     }
 
     if config_data['separate_trans']:
         model_parameters['groups'] = data_metadata['groups']
-    else:
-        model_parameters['groups'] = None
 
     if config_data['whiten'][0].lower() == 'a':
         click.echo('Whitening the training data using the whiten_all function')
@@ -203,7 +202,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         click.echo('Not whitening the data')
 
     if config_data['noise_level'] > 0:
-        click.echo('Using {} STD AWGN'.format(config_data['noise_level']))
+        click.echo(f'Using {config_data["noise_level"]} STD AWGN.')
         for k, v in data_dict.items():
             data_dict[k] = v + np.random.randn(*v.shape) * config_data['noise_level']
 
@@ -231,11 +230,10 @@ def get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list):
 
     train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
     test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
-    train_list = list(train_data.keys())
     hold_out_list = list(test_data.keys())
     nt_frames = [len(v) for v in train_data.values()]
 
-    return train_list, train_data, hold_out_list, test_data, nt_frames
+    return train_data, hold_out_list, test_data, nt_frames
 
 def get_training_data_splits(config_data, data_dict):
     '''

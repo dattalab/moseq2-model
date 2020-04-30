@@ -5,11 +5,10 @@ from copy import deepcopy
 from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, run_e_step
-from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
-                               load_arhmm_checkpoint, flush_print)
-from moseq2_model.helpers.data import process_indexfile, select_data_to_model, \
+from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, load_arhmm_checkpoint)
+from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, \
                                             prepare_model_metadata, graph_modeling_loglikelihoods, \
-                                    get_heldout_data_splits, get_training_data_splits
+                                            get_heldout_data_splits, get_training_data_splits)
 
 def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_directory=None, gui=False):
     '''
@@ -69,9 +68,9 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     config_data, data_dict, model_parameters, train_list, hold_out_list= prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys)
 
     if config_data['hold_out']:
-        train_list, train_data, hold_out_list, test_data, nt_frames = get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
+        train_data, hold_out_list, test_data, nt_frames = get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
     else:
-        train_list, train_data, training_data, hold_out_list, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
+        train_data, training_data, hold_out_list, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
     checkpoint_file = dest_file + '-checkpoint.arhmm'
     # back-up file
@@ -79,17 +78,17 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     resample_save_file = dest_file + '-resamples.p'
 
     if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file_backup):
-        flush_print('Loading Checkpoint')
+        click.echo('Loading Checkpoint')
         try:
             checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
         except (FileNotFoundError, ValueError):
-            flush_print('Loading original checkpoint failed, checking backup')
+            click.echo('Loading original checkpoint failed, checking backup')
             if os.path.exists(checkpoint_file_backup):
                 checkpoint_file = checkpoint_file_backup
             checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
         arhmm = checkpoint.pop('model')
         itr = checkpoint.pop('iter')
-        flush_print('On iteration', itr)
+        click.echo('On iteration', itr)
     else:
         arhmm = ARHMM(data_dict=train_data, **model_parameters)
         itr = 0
@@ -173,7 +172,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     # if we save the model, don't use copy_model which strips out the data and potentially
     # leaves useless certain functions we'll want to use in the future (e.g. cross-likes)
     if config_data['e_step']:
-        flush_print('Running E step...')
+        click.echo('Running E step...')
         expected_states = run_e_step(arhmm)
 
     # TODO:  just compute cross-likes at the end and potentially dump the model (what else
@@ -190,11 +189,9 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
         'model': copy_model(arhmm) if config_data['save_model'] else None,
         'hold_out_list': hold_out_list,
         'train_list': train_list,
-        'train_ll': train_ll
+        'train_ll': train_ll,
+        'expected_states': expected_states if config_data['e_step'] else None
     }
-
-    if config_data['e_step']:
-        export_dict['expected_states'] = expected_states
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
