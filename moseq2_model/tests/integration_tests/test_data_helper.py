@@ -27,8 +27,7 @@ class TestDataHelpers(TestCase):
         assert (len(index_data['files']) == len(data_metadata['uuids'])),\
             "Number of input files != number of uuids in the index file"
 
-    def _select_data_to_model(self):
-
+    def test_select_data_to_model(self):
         index_path = 'data/test_index.yaml'
 
         with open(index_path, 'r') as f:
@@ -36,21 +35,47 @@ class TestDataHelpers(TestCase):
         f.close()
 
         with TemporaryDirectory() as tmp:
-
+            # test simple CLI case
             all_keys, groups = select_data_to_model(index_data)
 
             assert len(all_keys) == len(groups), "Number of groups != number of uuids"
 
+            # test single GUI input
+            index_data['files'][1]['group'] = 'default'
             stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
             with open(stdin.name, 'w') as f:
                 f.write('default')
             f.close()
 
             sys.stdin = open(stdin.name)
-
             all_keys, groups = select_data_to_model(index_data, gui=True)
+
             assert len(all_keys) == len(groups) == 1, "index data was incorrectly parsed"
             assert groups[0] == 'default', "groups were returned incorrectly"
+
+            # test space-separated input
+            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            with open(stdin.name, 'w') as f:
+                f.write('default Group1')
+            f.close()
+
+            sys.stdin = open(stdin.name)
+            all_keys, groups = select_data_to_model(index_data, gui=True)
+
+            assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
+            self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
+
+            # test comma-separated input
+            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            with open(stdin.name, 'w') as f:
+                f.write('default, Group1')
+            f.close()
+
+            sys.stdin = open(stdin.name)
+            all_keys, groups = select_data_to_model(index_data, gui=True)
+
+            assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
+            self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
 
     def test_prepare_model_metadata(self):
 
