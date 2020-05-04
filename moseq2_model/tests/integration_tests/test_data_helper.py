@@ -101,9 +101,9 @@ class TestDataHelpers(TestCase):
         config_data, data_dict1, model_parameters, train_list, hold_out_list = \
             prepare_model_metadata(data_dict, data_metadata, config_data, len(all_keys), all_keys)
 
-        assert data_dict.values() != data_dict1.values()
-        assert train_list == all_keys
-        assert hold_out_list == None
+        assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
+        assert train_list == all_keys, "Loaded uuids do not match total number of uuids"
+        assert hold_out_list == None, "Some of the data is unintentionally held out"
 
     def test_get_heldout_data_splits(self):
         input_file = 'data/test_scores.h5'
@@ -130,13 +130,13 @@ class TestDataHelpers(TestCase):
         config_data, data_dict, model_parameters, train_list, hold_out_list = \
             prepare_model_metadata(data_dict, data_metadata, config_data, len(all_keys), all_keys)
 
-        assert (train_list != hold_out_list)
-        assert (len(train_list) == len(hold_out_list))
+        assert (sorted(train_list) != sorted(hold_out_list)), "Training data is the same as held out data"
+        assert (len(train_list) == len(hold_out_list)), "Number of held out sets is incorrect, supposed to be 1"
 
         train_data, hold_out_list, test_data, nt_frames = \
             get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
 
-        assert(train_list != None and test_data != None)
+        assert(train_list != None and test_data != None), "There are missing datasets"
 
 
     def test_get_training_data_splits(self):
@@ -156,11 +156,14 @@ class TestDataHelpers(TestCase):
         train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, data_dict)
 
-        assert len(list(training_data.values())[0]) > len(list(validation_data.values())[0])
-        assert len(list(training_data.keys())) == len(list(validation_data.keys()))
+        assert len(list(training_data.values())[0]) > len(list(validation_data.values())[0]), "Data split is incorrect"
+        assert len(list(training_data.keys())) == len(list(validation_data.keys())), \
+            "Training data and Val data do not contain same keys"
+
         total_frames = nt_frames[0] + len(list(validation_data.values())[0])
         percent_out =  int((1 - (nt_frames[0]/total_frames)) * 100)
-        assert percent_out == config_data['percent_split']
+
+        assert percent_out == config_data['percent_split'], "Config file was not correctly updated"
 
 
     def test_graph_modeling_loglikelihoods(self):
@@ -178,5 +181,5 @@ class TestDataHelpers(TestCase):
 
         img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
 
-        assert os.path.exists(img_path)
+        assert os.path.exists(img_path), "Something went wrong; graph was not created."
         os.remove(img_path)
