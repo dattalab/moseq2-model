@@ -8,8 +8,8 @@ from moseq2_model.cli import *
 
 def test_count_frames():
 
-    input_dir = 'tests/test_data/'
+    input_dir = 'data/'
 
 def test_learn_model():
 
-    input_dir = 'tests/test_data/'
+    input_dir = 'tests/'

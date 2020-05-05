@@ -22,9 +22,7 @@ def temp_dir(tmpdir):
 
 def test_load_matlab_data(script_loc):
 
-    cwd = str(script_loc)
-    pcs = load_data_from_matlab(os.path.join(cwd, 'test_data/dummy_matlab.mat'),
-                                var_name='features')
+    pcs = load_data_from_matlab('data/dummy_matlab.mat', var_name='features')
     keys = list(pcs.keys())
 
     assert(len(keys) == 1)
@@ -34,9 +32,7 @@ def test_load_matlab_data(script_loc):
 
 def test_load_cell_string_from_matlab(script_loc):
 
-    cwd = str(script_loc)
-    groups = load_cell_string_from_matlab(os.path.join(cwd, 'test_data/dummy_matlab.mat'),
-                                          var_name='groups')
+    groups = load_cell_string_from_matlab('data/dummy_matlab.mat', var_name='groups')
 
     assert(len(groups) == 1)
     assert(groups[0] == 'test')
@@ -45,10 +41,7 @@ def test_load_cell_string_from_matlab(script_loc):
 def test_load_pcs(script_loc):
 
     # first test loading dummy matlab file, then pickle, then h5
-
-    cwd = str(script_loc)
-    pcs, metadata = load_pcs(os.path.join(cwd,
-                                          'test_data/dummy_matlab.mat'), load_groups=True)
+    pcs, metadata = load_pcs('data/dummy_matlab.mat', load_groups=True)
 
     assert(len(pcs) == 1)
     assert(len(metadata['groups']) == 1)
