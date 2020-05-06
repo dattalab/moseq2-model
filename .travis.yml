@@ -9,6 +9,7 @@ install:
 # install what we need for testing
 before_install:
   - pip install --upgrade pip
+  - pip install awscli
   - pip install pytest codecov
   - pip install "pytest-cov>=2.4.0,<2.6"
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
