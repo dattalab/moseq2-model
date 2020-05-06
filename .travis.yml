@@ -15,7 +15,7 @@ jobs:
       stage: latest-installs
       before_install:
         - pip install -U pip
-        - pip install pipenv
+        - pip install pipenv codecov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pipenv install --dev --ignore-pipfile --deploy
@@ -35,7 +35,7 @@ jobs:
       stage: latest-pythons
       before_install:
         - pip install -U pip
-        - pip install pipenv
+        - pip install pipenv codecov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pipenv install --dev --ignore-pipfile --deploy
@@ -63,6 +63,8 @@ jobs:
         - make
       script:
         - pytest --cov-report xml --cov-report term
+      after_success:
+        - codecov -t $CC_TEST_REPORTER_ID
 
     - env: ISOLATED=true
       dist: xenial
@@ -79,3 +81,5 @@ jobs:
         - make
       script:
         - pytest --cov-report xml --cov-report term
+      after_success:
+        - codecov -t $CC_TEST_REPORTER_ID
