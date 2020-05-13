@@ -16,6 +16,6 @@ before_install:
 
 # script for tests... (eventually add coveralls)
 before_script: make
-script: pytest --cov=./moseq2_model
+script: pytest --cov=./moseq2_model moseq2_model
 after_success:
   - codecov -t 0920ece4-7a13-4764-9ec2-192f709670ca
