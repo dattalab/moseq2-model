@@ -384,31 +384,21 @@ def copy_model(model_obj):
     return cp
 
 
-def get_parameters_from_model(model, save_ar=True):
+def get_parameters_from_model(model):
     '''
     Get parameter dictionary from model.
 
     Parameters
     ----------
     model (ARHMM): model to get parameters from.
-    save_ar (bool): save AR Matrices.
 
     Returns
     -------
     parameters (dict): dictionary containing all modeling parameters
     '''
 
-    # trans_dist=model.trans_distn
     init_obs_dist = model.init_emission_distn.hypparams
-
-    # need to be smarter about this, but for now assume parameters are the same
-    # (eek!) if we use separate trans
-
-    try:
-        trans_dist = model.trans_distn
-    except Exception:
-        tmp = model.trans_distns
-        trans_dist = tmp[0]
+    trans_dist = model.trans_distn
 
     ls_obj = dir(model.obs_distns[0])
 
@@ -423,15 +413,13 @@ def get_parameters_from_model(model, save_ar=True):
         'kappa_0': init_obs_dist['kappa_0'],
         'nlags': model.nlags,
         'mu_0': init_obs_dist['mu_0'],
-        'model_class': model.__class__.__name__
+        'model_class': model.__class__.__name__,
+        'ar_mat': [obs.A for obs in model.obs_distns],
+        'sig': [obs.sigma for obs in model.obs_distns]
         }
 
     if 'nu' in ls_obj:
         parameters['nu'] = [obs.nu for obs in model.obs_distns]
-
-    if save_ar:
-        parameters['ar_mat'] = [obs.A for obs in model.obs_distns]
-        parameters['sig'] = [obs.sigma for obs in model.obs_distns]
 
     return parameters
 

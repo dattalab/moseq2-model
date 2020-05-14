@@ -84,6 +84,16 @@ class TestUtils(TestCase):
         assert sys.getsizeof(model) == sys.getsizeof(cp)
 
     def test_get_parameters_from_model(self):
+
+        def check_params(model, params):
+            trans_dist = model.trans_distn
+            assert params['kappa'] == trans_dist.kappa
+            assert params['gamma'] == trans_dist.gamma
+            assert params['max_states'] == trans_dist.N
+            assert params['nlags'] == model.nlags
+            assert params['ar_mat'] == [obs.A for obs in model.obs_distns]
+            assert params['sig'] == [obs.sigma for obs in model.obs_distns]
+
         model, data_dict = get_model()
         config_file = 'data/config.yaml'
 
@@ -97,22 +107,19 @@ class TestUtils(TestCase):
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data,
-                                                                          num_frames=[900, 900])
-
+                                                                          num_frames=[900, 900], separate_trans=True)
 
         params = get_parameters_from_model(model)
-        try:
-            trans_dist = model.trans_distn
-        except:
-            tmp = model.trans_distns
-            trans_dist = tmp[0]
+        check_params(model, params)
 
-        assert params['kappa'] == trans_dist.kappa
-        assert params['gamma'] == trans_dist.gamma
-        assert params['max_states'] == trans_dist.N
-        assert params['nlags'] == model.nlags
-        assert params['ar_mat'] == [obs.A for obs in model.obs_distns]
-        assert params['sig'] == [obs.sigma for obs in model.obs_distns]
+
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+                                                                          num_iter=5, train_data=training_data,
+                                                                          val_data=validation_data,
+                                                                          num_frames=[900, 900], separate_trans=False)
+
+        params = get_parameters_from_model(model)
+        check_params(model, params)
 
     def test_load_matlab_data(self):
 
@@ -122,7 +129,6 @@ class TestUtils(TestCase):
         assert(len(keys) == 1)
         assert(keys[0] == 0)
         assert(np.all(pcs[0] == 1))
-
 
     def test_load_cell_string_from_matlab(self):
 
