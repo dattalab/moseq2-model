@@ -1,9 +1,12 @@
+import numpy as np
+from scipy import stats
+from copy import deepcopy
 import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.util import load_pcs
 from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, get_labels_from_model, whiten_all, whiten_each, \
-                                    run_e_step
+                                    run_e_step, zscore_all, zscore_each, get_crosslikes
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 from moseq2_model.helpers.data import prepare_model_metadata, select_data_to_model, get_training_data_splits
 
@@ -134,3 +137,50 @@ class TestTrainUtils(TestCase):
         ex_states = run_e_step(model)
         assert len(ex_states) == 2
         assert len(ex_states[0]) == 905 # 908 - 3 nlag frames
+
+    def test_zscore_each(self):
+
+        _, data_dict = get_model()
+        test_result = zscore_each(deepcopy(data_dict))
+
+        for k, v in data_dict.items():
+            valid_truth_scores = v[~np.isnan(v).any(axis=1), :10]
+            truth = stats.zscore(valid_truth_scores)
+
+            valid_test_scores = test_result[k][~np.isnan(test_result[k]).any(axis=1), :10]
+            assert np.allclose(truth, valid_test_scores)
+
+    def test_zscore_all(self):
+        npcs = 10
+        _, data_dict = get_model()
+        test_result = zscore_all(deepcopy(data_dict), npcs=npcs)
+
+        for k, v in test_result.items():
+            valid_truth_scores = data_dict[k][~np.isnan(data_dict[k]).any(axis=1), :10]
+            truth = stats.zscore(valid_truth_scores)
+
+            valid_test_scores = v[~np.isnan(v).any(axis=1), :10]
+            assert not np.allclose(truth, valid_test_scores)
+
+        valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in data_dict.values()])
+
+        all_zscored = stats.zscore(valid_scores)
+        test_valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in test_result.values()])
+        assert np.allclose(all_zscored, test_valid_scores)
+
+
+    def test_get_crosslikes(self):
+
+        arhmm, _ = get_model()
+
+        all_CLs, CL = get_crosslikes(arhmm)
+
+        assert len(all_CLs.keys()) == 10000
+        assert CL.shape == (100, 100)
+
+        all_CLs2, CL2 = get_crosslikes(arhmm, frame_by_frame=True)
+
+        assert len(all_CLs2.keys()) == 10000
+        assert CL2.shape == (100, 100)
+
+        self.assertRaises(AssertionError, np.testing.assert_equal, CL, CL2)

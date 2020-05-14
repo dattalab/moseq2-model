@@ -273,9 +273,9 @@ def zscore_all(data_dict, npcs=10, center=True):
 
     valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in data_dict.values()])
     mu, sig = valid_scores.mean(axis=0), valid_scores.std(axis=0)
-
-    for k, v in data_dict.items():
-        data_dict[k] = (v - mu) / sig
+    if center:
+        for k, v in data_dict.items():
+            data_dict[k] = (v - mu) / sig
 
     return data_dict
 
