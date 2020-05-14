@@ -4,7 +4,10 @@ Welcome to moseq2, the latest version of a software package for mouse tracking i
 
 ## Documentation
 
-All documentation regarding moseq2-model can be found in our [github wiki](https://github.com/dattalab/moseq2-model/wiki).
+All documentation regarding moseq2-model can be found in the `Documentation.pdf` file in the root directory.
+
+An HTML ReadTheDocs page can be generated using the `sphinx` package via running the `make html` command 
+in the `docs/` directory.
 
 ## Contributing
 

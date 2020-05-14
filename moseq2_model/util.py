@@ -123,10 +123,11 @@ def save_dict(filename, obj_to_save=None):
         raise ValueError('Did not understand filetype')
 
 
-# https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
+
 def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
     '''
     Recursively save dicts to h5 file groups.
+    # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
 
     Parameters
     ----------
