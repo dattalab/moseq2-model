@@ -75,7 +75,7 @@ class TestUtils(TestCase):
         train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data,
                                                                           num_frames=[900, 900])
@@ -104,7 +104,7 @@ class TestUtils(TestCase):
         train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data,
                                                                           num_frames=[900, 900], separate_trans=True)
@@ -113,7 +113,7 @@ class TestUtils(TestCase):
         check_params(model, params)
 
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data,
                                                                           num_frames=[900, 900], separate_trans=False)

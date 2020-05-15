@@ -1,10 +1,12 @@
 import os
 import sys
+import glob
 import click
 from copy import deepcopy
 from collections import OrderedDict
 from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, run_e_step
+from os.path import join, basename, getctime, realpath, dirname, exists
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, load_arhmm_checkpoint)
 from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, \
                                             prepare_model_metadata, graph_modeling_loglikelihoods, \
@@ -30,19 +32,21 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
     if output_directory is None:
-        dest_file = os.path.realpath(dest_file)
+        dest_file = realpath(dest_file)
     else:
-        dest_file = os.path.join(output_directory, dest_file)
+        dest_file = join(output_directory, dest_file)
 
-    if not os.access(os.path.dirname(dest_file), os.W_OK):
+    if not os.access(dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
 
-    if config_data['save_every'] < 0:
-        click.echo("Will only save the last iteration of the model")
-        save_every = config_data['num_iter'] + 1
+    checkpoint_path = join(dirname(dest_file), 'checkpoints/')
+    checkpoint_freq = config_data.get('checkpoint_freq', -1)
 
-    if config_data['checkpoint_freq'] < 0:
-        checkpoint_freq = config_data['num_iter'] + 1
+    if checkpoint_freq < 0:
+        checkpoint_freq = config_data.get('num_iter', 100) + 1
+    else:
+        if not exists(checkpoint_path):
+            os.makedirs(checkpoint_path)
 
     click.echo("Entering modeling training")
 
@@ -65,33 +69,34 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
     nkeys = len(all_keys)
 
-    config_data, data_dict, model_parameters, train_list, hold_out_list= prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys)
+    config_data, data_dict, model_parameters, train_list, hold_out_list = \
+        prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys)
 
     if config_data['hold_out']:
-        train_data, hold_out_list, test_data, nt_frames = get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
+        train_data, hold_out_list, test_data, nt_frames = \
+            get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
     else:
         train_data, training_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
-    checkpoint_file = dest_file + '-checkpoint.arhmm'
-    # back-up file
-    checkpoint_file_backup = dest_file + '-checkpoint_backup.arhmm'
-    resample_save_file = dest_file + '-resamples.p'
+    # check for available previous modeling checkpoints
+    checkpoint_file = join(checkpoint_path, basename(dest_file).replace('.p', '') + '-checkpoint.arhmm')
+    all_checkpoints = glob.glob(f'{checkpoint_path}*.arhmm')
 
-    if os.path.exists(checkpoint_file) or os.path.exists(checkpoint_file_backup):
-        click.echo('Loading Checkpoint')
+    itr = 0
+    if len(all_checkpoints) > 0:
+        latest_checkpoint = max(all_checkpoints, key=getctime) # get latest checkpoint
+        click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
         try:
-            checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
+            checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
+
+            arhmm = checkpoint.pop('model')
+            itr = checkpoint.pop('iter')
+            click.echo(f'On iteration {itr}')
         except (FileNotFoundError, ValueError):
-            click.echo('Loading original checkpoint failed, checking backup')
-            if os.path.exists(checkpoint_file_backup):
-                checkpoint_file = checkpoint_file_backup
-            checkpoint = load_arhmm_checkpoint(checkpoint_file, train_data)
-        arhmm = checkpoint.pop('model')
-        itr = checkpoint.pop('iter')
-        click.echo('On iteration', itr)
+            click.echo('Loading original checkpoint failed, creating new ARHMM')
+            arhmm = ARHMM(data_dict=train_data, **model_parameters)
     else:
         arhmm = ARHMM(data_dict=train_data, **model_parameters)
-        itr = 0
 
     progressbar_kwargs = {
         'total': config_data['num_iter'],
@@ -130,11 +135,9 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model\
     (
         model=arhmm,
-        save_every=save_every,
         num_iter=config_data['num_iter'],
         ncpus=config_data['ncpus'],
         checkpoint_freq=checkpoint_freq,
-        save_file=resample_save_file,
         checkpoint_file=checkpoint_file,
         start=itr,
         progress_kwargs=progressbar_kwargs,

@@ -49,7 +49,7 @@ class TestTrainUtils(TestCase):
         train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p', num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, num_iter=5, train_data=training_data,
                                                                           val_data=validation_data, num_frames=[900, 900])
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
@@ -60,7 +60,7 @@ class TestTrainUtils(TestCase):
         assert len(group_idx) == 1
         assert group_idx == ['default']
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data,
                                                                           num_frames=[900, 900], verbose=True)
@@ -79,7 +79,7 @@ class TestTrainUtils(TestCase):
         train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data, separate_trans=True,
                                                                           groups=['default', 'Group1'],
@@ -106,7 +106,7 @@ class TestTrainUtils(TestCase):
         train_data, training_data, validation_data, nt_frames = \
             get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, save_file='data/out_model.p',
+        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data,
                                                                           num_frames=[900, 900])
@@ -127,8 +127,8 @@ class TestTrainUtils(TestCase):
     def test_whiten_each(self):
         _, data_dict = get_model()
 
-        whitened_a = whiten_all(data_dict,center=False)
-        whitened_e = whiten_each(data_dict,center=False)
+        whitened_a = whiten_all(data_dict, center=False)
+        whitened_e = whiten_each(data_dict, center=False)
         assert data_dict.values() != whitened_a.values()
         assert whitened_a.values() != whitened_e.values()
 

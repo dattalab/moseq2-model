@@ -5,9 +5,9 @@ from cytoolz import valmap
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
 
-def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None,
-                checkpoint_file=None, start=0, save_file=None, progress_kwargs={},
-                num_frames=[1], train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
+def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
+                checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
+                train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -48,33 +48,46 @@ def train_model(model, num_iter=100, save_every=1, ncpus=1, checkpoint_freq=None
     for itr in progressbar(range(start, num_iter), **progress_kwargs):
         try:
             model.resample_model(num_procs=ncpus)
-        except:
+        except KeyboardInterrupt:
+            print('Training manually interrupted.')
+            print('Gracefully Breaking')
+            break
+
+        except Exception:
             print("Unexpected error:", sys.exc_info()[0])
             print('Breaking.')
             break
-        if verbose:
-            iter_lls, iter_holls = get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls)
 
-        # append resample stats to a file
-        if (itr + 1) % save_every == 0:
-            save_dict = {
-                (itr + 1): {
-                    'iter': itr + 1,
-                    'log_likelihoods': model.log_likelihood(),
-                    'labels': get_labels_from_model(model)
-                }
+        if verbose:
+            summ_stats = {
+                'model': model,
+                'groups': groups,
+                'train_data': train_data,
+                'val_data': val_data,
+                'separate_trans': separate_trans,
+                'num_frames': num_frames,
+                'iter_lls': iter_lls,
+                'iter_holls': iter_holls
             }
-            append_resample(save_file, save_dict)
+            iter_lls, iter_holls = get_model_summary(**summ_stats)
+
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
             save_data = {
                 'iter': itr + 1,
                 'model': model,
+                'log_likelihoods': model.log_likelihood(),
+                'labels': get_labels_from_model(model)
             }
+            checkpoint_file = checkpoint_file
+            checkpoint_file = "{0}_{2}.{1}".format(
+                *checkpoint_file.replace(f'_{itr-checkpoint_freq}', '').rsplit('.', 1) + [itr]
+            )
             save_arhmm_checkpoint(checkpoint_file, save_data)
 
     if groups != None:
         group_idx = groups
+
     return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
 
 

@@ -1,8 +1,8 @@
-import pickle
-import numpy as np
-import joblib
-import scipy.io
 import h5py
+import joblib
+import pickle
+import scipy.io
+import numpy as np
 from copy import deepcopy
 from cytoolz import first
 from functools import partial
@@ -399,7 +399,11 @@ def get_parameters_from_model(model):
     '''
 
     init_obs_dist = model.init_emission_distn.hypparams
-    trans_dist = model.trans_distn
+
+    if hasattr(model, 'trans_distns'):
+        trans_dist = model.trans_distns[0]
+    else:
+        trans_dist = model.trans_distn
 
     ls_obj = dir(model.obs_distns[0])
 

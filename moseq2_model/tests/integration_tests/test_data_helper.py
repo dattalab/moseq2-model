@@ -42,7 +42,7 @@ class TestDataHelpers(TestCase):
 
             # test single GUI input
             index_data['files'][1]['group'] = 'default'
-            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
             with open(stdin.name, 'w') as f:
                 f.write('default')
             f.close()
@@ -54,7 +54,7 @@ class TestDataHelpers(TestCase):
             assert groups[0] == 'default', "groups were returned incorrectly"
 
             # test space-separated input
-            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
             with open(stdin.name, 'w') as f:
                 f.write('default Group1')
             f.close()
@@ -66,7 +66,7 @@ class TestDataHelpers(TestCase):
             self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
 
             # test comma-separated input
-            stdin = NamedTemporaryFile(prefix=tmp, suffix=".txt")
+            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
             with open(stdin.name, 'w') as f:
                 f.write('default, Group1')
             f.close()
