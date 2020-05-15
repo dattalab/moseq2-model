@@ -274,6 +274,35 @@ def get_training_data_splits(config_data, data_dict):
 
     return train_data, training_data, validation_data, nt_frames
 
+def graph_helper(groups, lls, legend, iterations, ll_type='train', sep_trans=False):
+    '''
+    Helper function to plot the training and validation log-likelihoods
+     over the each model training iteration.
+
+    Parameters
+    ----------
+    groups (list): list of group names that the model was trained on.
+    lls (list): list of log-likelihoods over each iteration.
+    legend (list): list of legend labels for each group's log-likelihoods curve.
+    iterations (list): range() generated list indicated x-axis length.
+    ll_type (str): string to indicate (in the legend) whether plotting training or validation curves.
+    sep_trans (bool): indicates whether there is more than one set on log-likelihoods.
+
+    Returns
+    -------
+    None
+    '''
+
+    if sep_trans: lls = lls[0]
+    for i, g in enumerate(groups):
+        lw = 10 - 8 * i / len(lls)
+        ls = ['-', '--', '-.', ':'][i % 4]
+        try:
+            plt.plot(iterations, np.asarray(lls)[:, i], linestyle=ls, linewidth=lw)
+        except:
+            plt.plot(iterations, np.asarray(lls), linestyle=ls, linewidth=lw)
+        legend.append(f'{ll_type}: {g} LL')
+
 def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file):
     '''
     Graphs model training performance progress throughout modeling.
@@ -296,36 +325,12 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
         iterations = [i for i in range(len(iter_lls))]
         legend = []
         if config_data['separate_trans']:
-            for i, g in enumerate(group_idx):
-                lw = 10 - 8 * i / len(iter_lls[0])
-                ls = ['-', '--', '-.', ':'][i % 4]
-
-                plt.plot(iterations, np.asarray(iter_lls)[:, i], linestyle=ls, linewidth=lw)
-                legend.append(f'train: {g} LL')
-
-            for i, g in enumerate(group_idx):
-                lw = 5 - 3 * i / len(iter_holls[0])
-                ls = ['-', '--', '-.', ':'][i % 4]
-
-                plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-                legend.append(f'val: {g} LL')
+            graph_helper(group_idx, iter_lls, legend, iterations, sep_trans=True)
+            graph_helper(group_idx, iter_holls, legend, iterations, ll_type='val', sep_trans=True)
         else:
-            for i, g in enumerate(group_idx):
-                lw = 10 - 8 * i / len(iter_lls)
-                ls = ['-', '--', '-.', ':'][i % 4]
+            graph_helper(group_idx, iter_lls, legend, iterations)
+            graph_helper(group_idx, iter_lls, legend, iterations, ll_type='val')
 
-                plt.plot(iterations, np.asarray(iter_lls), linestyle=ls, linewidth=lw)
-                legend.append(f'train: {g} LL')
-
-            for i, g in enumerate(group_idx):
-                lw = 5 - 3 * i / len(iter_holls)
-                ls = ['-', '--', '-.', ':'][i % 4]
-                try:
-                    plt.plot(iterations, np.asarray(iter_holls)[:, i], linestyle=ls, linewidth=lw)
-                    legend.append(f'val: {g} LL')
-                except:
-                    plt.plot(iterations, np.asarray(iter_holls), linestyle=ls, linewidth=lw)
-                    legend.append(f'val: {g} LL')
         plt.legend(legend)
 
         plt.ylabel('Average Syllable Log-Likelihood')
