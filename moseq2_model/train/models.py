@@ -127,21 +127,18 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
-    # add ze data
-
     for index, (data_name, data) in enumerate(data_dict.items()):
         if not silent:
             flush_print(f'Adding data from key {data_name}')
         if separate_trans:
             if groups[index] != 'n/a':
                 if not silent:
-                    flush_print('Group ID: {}'.format(str(groups[index])))
+                    flush_print(f'Group ID: {groups[index]}')
                     model.add_data(data, group_id=groups[index])
         else:
             model.add_data(data)
 
-    # initialize ze states per SL's recommendation
-
+    # initialize states per SL's recommendation
     if sticky_init:
         for i in range(0, len(model.stateseqs)):
             seqlen = len(model.stateseqs[i])

@@ -45,7 +45,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             metadata['groups'] = load_cell_string_from_matlab(filename, "groups")
         else:
             metadata['groups'] = None
-    elif filename.endswith('.z') or filename.endswith('.pkl') or filename.endswith('.p'):
+    elif filename.endswith(('.z', '.pkl', '.p')):
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
@@ -103,9 +103,6 @@ def save_dict(filename, obj_to_save=None):
     None
     '''
 
-    # we gotta switch to lists here my friend, create a file with multiple
-    # pickles, only load as we need them
-
     if filename.endswith('.mat'):
         print('Saving MAT file', filename)
         scipy.io.savemat(filename, mdict=obj_to_save)
@@ -118,14 +115,13 @@ def save_dict(filename, obj_to_save=None):
     elif filename.endswith('.h5'):
         print('Saving h5 file', filename)
         with h5py.File(filename, 'w') as f:
-            # TODO: rename this function to be consistent with the other repos
-            recursively_save_dict_contents_to_group(f, obj_to_save)
+            dict_to_h5(f, obj_to_save)
     else:
         raise ValueError('Did not understand filetype')
 
 
 
-def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
+def dict_to_h5(h5file, export_dict, path='/'):
     '''
     Recursively save dicts to h5 file groups.
     # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
@@ -159,9 +155,9 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
         elif isinstance(item, (np.int, np.float, str, bytes)):
             h5file.create_dataset(path+key, data=item)
         elif isinstance(item, dict):
-            recursively_save_dict_contents_to_group(h5file, item, path + key + '/')
+            dict_to_h5(h5file, item, path + key + '/')
         else:
-            raise ValueError('Cannot save {} type'.format(type(item)))
+            raise ValueError(f'Cannot save {type(item)} type')
 
 
 def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
@@ -227,23 +223,6 @@ def append_resample(filename, label_dict: dict):
         pickle.dump(label_dict, f)
 
 
-def load_dict_from_hdf5(filename):
-    '''
-    A convenience function to load the entire contents of an h5 file
-    into a dictionary.
-
-    Parameters
-    ----------
-    filename (str): path to h5 file.
-
-    Returns
-    -------
-    (dict): dict containing all of the h5 file contents.
-    '''
-
-    return h5_to_dict(filename, '/')
-
-
 def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     '''
     A convenience function to load the contents of an h5 file
@@ -272,7 +251,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     return ans
 
 
-def h5_to_dict(h5file, path: str) -> dict:
+def h5_to_dict(h5file, path: str = '/') -> dict:
     '''
     Load h5 data to dictionary from a user specified path.
 
@@ -436,28 +415,6 @@ def get_parameters_from_model(model, save_ar=True):
         parameters['sig'] = [obs.sigma for obs in model.obs_distns]
 
     return parameters
-
-
-def progressbar(*args, **kwargs):
-    '''
-    Selects tqdm progress bar.
-
-    Parameters
-    ----------
-    args (iterable)
-    kwargs (tdqm args[1:])
-
-    Returns
-    -------
-    tqdm() iterating object.
-    '''
-
-    cli = kwargs.pop('cli', False)
-
-    if cli:
-        return tqdm(*args, **kwargs)
-    else:
-        return tqdm(*args, **kwargs)
 
 
 def list_rank(chk_list):
