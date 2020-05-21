@@ -4,7 +4,7 @@ from moseq2_model.helpers.wrappers import learn_model_wrapper
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
                 max_states, npcs, kappa, separate_trans, robust, checkpoint_freq,
-                        percent_split=20, verbose=False, output_directory=None):
+                        alpha=5.7, gamma=1e3, percent_split=20, verbose=False, output_directory=None):
     '''
     Trains ARHMM from Jupyter notebook.
 
@@ -31,9 +31,6 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     -------
     None
     '''
-
-    alpha = 5.7
-    gamma = 1e3
 
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
