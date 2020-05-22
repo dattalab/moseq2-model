@@ -35,8 +35,8 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
 
-    config_data['alpha'] = alpha
-    config_data['gamma'] = gamma
+    config_data['alpha'] = config_data.get('alpha', 5.7)
+    config_data['gamma'] = config_data.get('gamma', 1e3)
     config_data['kappa'] = kappa
     config_data['separate_trans'] = separate_trans
     config_data['robust'] = robust
