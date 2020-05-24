@@ -17,18 +17,6 @@ from IPython.display import display
 from tqdm import tqdm, tqdm_notebook
 
 
-def _in_notebook():
-    '''
-    Determine if this function was executed in a jupyter notebook.
-
-    Returns
-    -------
-    A boolean describing the presence of a jupyter notebook
-    '''
-
-    return 'ipykernel' in sys.modules
-
-
 def _ensure_odict(data):
     '''
     Casts input data to OrderedDict if it is not one already.
@@ -237,7 +225,7 @@ class MoseqModel:
 
     def get_median_duration(self):
         '''
-        Calculates median duration.
+        Calculates median syllable durations for each session included in the model.
 
         Returns
         -------
@@ -249,10 +237,13 @@ class MoseqModel:
     def duration_score(self):
         '''
         Computes score for assigned syllable duration
+        This score is is typically used to find the models with syllable durations
+         close to the data's changepoint durations.
+
 
         Returns
         -------
-        (1D numpy array): scores of computed median syllable durations
+        (float): a single negative number that should be maximized (to get close to 0)
         '''
 
         dur = self.get_median_duration().mean()

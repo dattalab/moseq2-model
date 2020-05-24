@@ -48,7 +48,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
 
     run_parameters = deepcopy(config_data)
     data_dict, data_metadata = load_pcs(filename=input_file,
-                                        var_name=config_data['var_name'],
+                                        var_name=config_data.get('var_name', 'scores'),
                                         npcs=config_data['npcs'],
                                         load_groups=True)
 
@@ -186,7 +186,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
         'model_parameters': save_parameters,
         'run_parameters': run_parameters,
         'metadata': data_metadata,
-        'model': copy_model(arhmm) if config_data['save_model'] else None,
+        'model': copy_model(arhmm) if config_data.get('save_model', True) else None,
         'hold_out_list': hold_out_list,
         'train_list': train_list,
         'train_ll': train_ll,

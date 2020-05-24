@@ -30,6 +30,9 @@ def syll_duration(labels: np.ndarray) -> np.ndarray:
     ----------
     labels (np.ndarray): array of syllable labels for a mouse.
 
+    >>> syll_duration(np.array([1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3]))
+    array([3, 4, 5])
+
     Returns
     -------
     durations (np.ndarray): array of syllable durations.
@@ -47,6 +50,9 @@ def syll_id(labels: np.ndarray) -> np.ndarray:
     Parameters
     ----------
     labels (np.ndarray): array of syllable labels for a mouse.
+
+     >>> syll_id(np.array([1, 1, 1, 2, 2, 2, 3, 3, 3]))
+     array([1, 2, 3])
 
     Returns
     -------
