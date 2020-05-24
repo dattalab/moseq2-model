@@ -61,7 +61,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     all_keys = list(data_dict.keys())
     groups = list(data_metadata['groups'])
 
-    if gui and (index_data != None):
+    if gui and (index_data != None) and config_data.get('select_groups', True):
         all_keys, groups =  select_data_to_model(index_data, gui)
         data_metadata['groups'] = groups
         data_metadata['uuids'] = all_keys
@@ -83,7 +83,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     all_checkpoints = glob.glob(f'{checkpoint_path}*.arhmm')
 
     itr = 0
-    if len(all_checkpoints) > 0:
+    if (len(all_checkpoints) > 0) and config_data.get('use_checkpoint', False):
         latest_checkpoint = max(all_checkpoints, key=getctime) # get latest checkpoint
         click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
         try:

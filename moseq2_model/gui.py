@@ -3,8 +3,8 @@ from .cli import learn_model
 from moseq2_model.helpers.wrappers import learn_model_wrapper
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
-                max_states, npcs, kappa, separate_trans, robust, checkpoint_freq,
-                        alpha=5.7, gamma=1e3, percent_split=20, verbose=False, output_directory=None):
+                max_states, npcs, kappa, separate_trans, robust, checkpoint_freq, use_checkpoint=False,
+                        alpha=5.7, gamma=1e3, select_groups=False, percent_split=20, verbose=False, output_directory=None):
     '''
     Trains ARHMM from Jupyter notebook.
 
@@ -48,6 +48,8 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out, nfo
     config_data['npcs'] = npcs
     config_data['percent_split'] = percent_split
     config_data['verbose'] = verbose
+    config_data['select_groups'] = select_groups
+    config_data['use_checkpoint'] = use_checkpoint
 
     # Get default CLI params
     objs = learn_model.params

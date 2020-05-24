@@ -31,7 +31,7 @@ class TestCLI(TestCase):
         kappa = None
 
         train_params = [input_file, dest_file, "-i", index, '-n', num_iter, '--checkpoint-freq', freq,
-                        '-m', max_states, '--npcs', npcs, '-k', kappa, '--robust']
+                        '-m', max_states, '--npcs', npcs, '-k', kappa, '--robust', '--use-checkpoint']
 
         runner = CliRunner()
 
@@ -39,10 +39,10 @@ class TestCLI(TestCase):
                                train_params,
                                catch_exceptions=False)
 
+        assert result.exit_code == 0, "CLI Command did not successfully complete"
         assert os.path.exists(dest_file), "Trained model file was not created or is in the incorrect location"
         assert os.path.exists(checkpoint_path)
         assert len(os.listdir(checkpoint_path)) == 5 # iters: 1, 3, 5, 7, 9
-        assert result.exit_code == 0, "CLI Command did not successfully complete"
 
         os.remove(dest_file)
         shutil.rmtree(checkpoint_path)

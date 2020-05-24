@@ -337,7 +337,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
     return_list (list): list of selected loaded variables
     '''
 
-    f = h5py.File(filename)
+    f = h5py.File(filename, 'r')
     return_list = []
 
     if var_name in f.keys():
