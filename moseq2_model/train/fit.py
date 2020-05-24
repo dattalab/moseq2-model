@@ -221,7 +221,7 @@ class MoseqModel:
 
     def get_median_duration(self):
         '''
-        Calculates median duration.
+        Calculates median syllable durations for each session included in the model.
 
         Returns
         -------
@@ -233,10 +233,13 @@ class MoseqModel:
     def duration_score(self):
         '''
         Computes score for assigned syllable duration
+        This score is is typically used to find the models with syllable durations
+         close to the data's changepoint durations.
+
 
         Returns
         -------
-        (1D numpy array): scores of computed median syllable durations
+        (float): a single negative number that should be maximized (to get close to 0)
         '''
 
         dur = self.get_median_duration().mean()
