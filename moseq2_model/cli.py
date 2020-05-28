@@ -20,8 +20,8 @@ def cli():
 
 @cli.command('version', help='Print version number')
 def version():
-    import moseq2_viz
-    click.echo(moseq2_viz.__version__)
+    import moseq2_model
+    click.echo(moseq2_model.__version__)
 
 
 @cli.command(name='count-frames', help="Counts number of frames in given h5 file (pca_scores)")
