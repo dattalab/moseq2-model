@@ -18,8 +18,13 @@ click.core.Option.__init__ = new_init
 def cli():
     pass
 
+@cli.command('version', help='Print version number')
+def version():
+    import moseq2_viz
+    click.echo(moseq2_viz.__version__)
 
-@cli.command(name='count-frames')
+
+@cli.command(name='count-frames', help="Counts number of frames in given h5 file (pca_scores)")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
 def count_frames(input_file, var_name):
@@ -36,7 +41,7 @@ def count_frames(input_file, var_name):
 
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
-@cli.command(name="learn-model")
+@cli.command(name="learn-model", help="Trains ARHMM on PCA Scores with given training parameters")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))
 @click.option("--hold-out", "-h", type=bool, default=False, is_flag=True,

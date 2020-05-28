@@ -1,5 +1,6 @@
 import os
 import sys
+import codecs
 import subprocess
 from setuptools import setup, find_packages
 
@@ -31,9 +32,23 @@ except ImportError:
     install('cython')
 
 
+def read(rel_path):
+    here = os.path.abspath(os.path.dirname(__file__))
+    with codecs.open(os.path.join(here, rel_path), 'r') as fp:
+        return fp.read()
+
+def get_version(rel_path):
+    for line in read(rel_path).splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    else:
+        raise RuntimeError("Unable to find version string.")
+
+
 setup(
     name='moseq2_model',
-    version='0.4.0',
+    version=get_version("moseq2_model/__init__.py"),
     author='Datta Lab',
     description='Modeling for the best',
     packages=find_packages(exclude='docs'),
