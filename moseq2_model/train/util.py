@@ -50,11 +50,6 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             model.resample_model(num_procs=ncpus)
         except KeyboardInterrupt:
             print('Training manually interrupted.')
-            print('Gracefully Breaking')
-            break
-
-        except Exception:
-            print("Unexpected error:", sys.exc_info()[0])
             print('Breaking.')
             break
 
