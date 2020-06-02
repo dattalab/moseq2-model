@@ -23,7 +23,7 @@ Commands:
   version       Print version number
 ```
 
-Run the command with the `--help` flag to display all available options and their descriptions.
+Run any command with the `--help` flag to display all available options and their descriptions.
 
 ## Documentation
 
