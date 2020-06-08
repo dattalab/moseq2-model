@@ -67,9 +67,10 @@ def process_indexfile(index, config_data, data_metadata):
             yaml.safe_dump(index_data, f)
         f.close()
 
-        for i in range(len(subjectNames)):
-            print(f'[{i + 1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:',
-                  i_groups[i], '; Key:', uuids[i])
+        if config_data.get('select_groups', False):
+            for i in range(len(subjectNames)):
+                print(f'[{i + 1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:',
+                      i_groups[i], '; Key:', uuids[i])
     else:
         index_data = None
 
