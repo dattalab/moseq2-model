@@ -61,8 +61,9 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     all_keys = list(data_dict.keys())
     groups = list(data_metadata['groups'])
 
-    if gui and (index_data != None) and config_data.get('select_groups', True):
-        all_keys, groups =  select_data_to_model(index_data, gui)
+    select_groups = config_data.get('select_groups', True)
+    if (index_data != None):
+        all_keys, groups = select_data_to_model(index_data, select_groups)
         data_metadata['groups'] = groups
         data_metadata['uuids'] = all_keys
 

@@ -48,7 +48,7 @@ class TestDataHelpers(TestCase):
             f.close()
 
             sys.stdin = open(stdin.name)
-            all_keys, groups = select_data_to_model(index_data, gui=True)
+            all_keys, groups = select_data_to_model(index_data, select_groups=True)
 
             assert len(all_keys) == len(groups) == 1, "index data was incorrectly parsed"
             assert groups[0] == 'default', "groups were returned incorrectly"
@@ -60,7 +60,7 @@ class TestDataHelpers(TestCase):
             f.close()
 
             sys.stdin = open(stdin.name)
-            all_keys, groups = select_data_to_model(index_data, gui=True)
+            all_keys, groups = select_data_to_model(index_data, select_groups=True)
 
             assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
             self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
@@ -72,7 +72,7 @@ class TestDataHelpers(TestCase):
             f.close()
 
             sys.stdin = open(stdin.name)
-            all_keys, groups = select_data_to_model(index_data, gui=True)
+            all_keys, groups = select_data_to_model(index_data, select_groups=True)
 
             assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
             self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
@@ -161,7 +161,7 @@ class TestDataHelpers(TestCase):
             "Training data and Val data do not contain same keys"
 
         total_frames = nt_frames[0] + len(list(validation_data.values())[0])
-        percent_out =  int((1 - (nt_frames[0]/total_frames)) * 100)
+        percent_out = int((1 - (nt_frames[0]/total_frames)) * 100)
 
         assert percent_out == config_data['percent_split'], "Config file was not correctly updated"
 

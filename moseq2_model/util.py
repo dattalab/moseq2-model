@@ -202,6 +202,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 
     mdl = arhmm.pop('model')
     arhmm['model'] = copy_model(mdl)
+    print(f'Saving Checkpoint {filename}')
     joblib.dump(arhmm, filename, compress=('zlib', 5))
 
 
