@@ -81,20 +81,24 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
 
     # check for available previous modeling checkpoints
     checkpoint_file = join(checkpoint_path, basename(dest_file).replace('.p', '') + '-checkpoint.arhmm')
-    all_checkpoints = glob.glob(f'{checkpoint_path}*.arhmm')
+    all_checkpoints = [f for f in glob.glob(f'{checkpoint_path}*.arhmm') if basename(dest_file).replace('.p', '') in f]
 
     itr = 0
-    if (len(all_checkpoints) > 0) and config_data.get('use_checkpoint', False):
-        latest_checkpoint = max(all_checkpoints, key=getctime) # get latest checkpoint
-        click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
-        try:
-            checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
+    if config_data.get('use_checkpoint', False):
+        if len(all_checkpoints) > 0:
+            latest_checkpoint = max(all_checkpoints, key=getctime) # get latest checkpoint
+            click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
+            try:
+                checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
 
-            arhmm = checkpoint.pop('model')
-            itr = checkpoint.pop('iter')
-            click.echo(f'On iteration {itr}')
-        except (FileNotFoundError, ValueError):
-            click.echo('Loading original checkpoint failed, creating new ARHMM')
+                arhmm = checkpoint.pop('model')
+                itr = checkpoint.pop('iter')
+                click.echo(f'On iteration {itr}')
+            except (FileNotFoundError, ValueError):
+                click.echo('Loading original checkpoint failed, creating new ARHMM')
+                arhmm = ARHMM(data_dict=train_data, **model_parameters)
+        else:
+            click.echo('No matching checkpoints found, creating new ARHMM')
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
     else:
         arhmm = ARHMM(data_dict=train_data, **model_parameters)

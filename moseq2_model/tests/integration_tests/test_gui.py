@@ -37,8 +37,11 @@ class TestGUI(TestCase):
 
             sys.stdin = open(stdin.name)
 
-        learn_model_command(input_file, dest_file, config_file, index, hold_out, nfolds, num_iter,
-                max_states, npcs, kappa, separate_trans, robust, checkpoint_freq, percent_split, verbose, select_groups=True)
+        learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
+                            num_iter=num_iter,
+                            max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
+                            checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
+                            select_groups=True)
 
         assert (os.path.exists(dest_file)), "Trained model file was not created or is in the incorrect location"
         assert (os.path.exists(checkpoint_path)), "Checkpoints were not created"
@@ -48,8 +51,20 @@ class TestGUI(TestCase):
         updated_dest_file = 'data/updated_model.p'
         checkpoint_freq = -1
 
-        learn_model_command(input_file, updated_dest_file, config_file, index, hold_out, nfolds, num_iter,
-                            max_states, npcs, kappa, separate_trans, robust, checkpoint_freq, percent_split, verbose)
+        with TemporaryDirectory() as tmp:
+            # test space-separated input
+            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
+            with open(stdin.name, 'w') as f:
+                f.write('default Group1')
+            f.close()
+
+            sys.stdin = open(stdin.name)
+
+        learn_model_command(input_file, updated_dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
+                            num_iter=num_iter,
+                            max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
+                            checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
+                            select_groups=True)
 
         assert (os.path.exists(updated_dest_file)), "Updated model file was not created or is in the incorrect location"
         shutil.rmtree(checkpoint_path)
