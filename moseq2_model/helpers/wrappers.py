@@ -12,7 +12,7 @@ from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, 
                                             prepare_model_metadata, graph_modeling_loglikelihoods, \
                                             get_heldout_data_splits, get_training_data_splits)
 
-def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_directory=None, gui=False):
+def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=False):
     '''
     Wrapper function to train ARHMM, shared between CLI and GUI.
 
@@ -22,7 +22,6 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
     dest_file (str): path to save model to.
     config_data (dict): dictionary containing necessary modeling parameters.
     index (str): path to index file.
-    output_directory (str): path to alternative output directory.
     gui (bool): indicates whether Jupyter notebook is being used.
     Returns
     -------
@@ -31,10 +30,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, output_d
 
     # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
-    if output_directory is None:
-        dest_file = realpath(dest_file)
-    else:
-        dest_file = join(output_directory, dest_file)
+    dest_file = realpath(dest_file)
 
     if not os.access(dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')

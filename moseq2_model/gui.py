@@ -4,7 +4,7 @@ from moseq2_model.helpers.wrappers import learn_model_wrapper
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out=False, nfolds=2, num_iter=100,
     max_states=100, npcs=10, kappa=None, alpha=5.7, gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1,
-    use_checkpoint=False, select_groups=False, percent_split=20, verbose=False, output_directory=None):
+    use_checkpoint=False, select_groups=False, percent_split=20, verbose=False):
     '''
     Trains ARHMM from Jupyter notebook.
 
@@ -29,7 +29,6 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
     select_groups (bool): indicates to display all sessions and choose subset of groups to model alone.
     percent_split (int): train-validation data split ratio percentage.
     verbose (bool): compute modeling summary (Warning current implementation is slow).
-    output_directory (str): alternative output directory for GUI users
 
     Returns
     -------
@@ -63,4 +62,4 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
     config_data['select_groups'] = select_groups
     config_data['use_checkpoint'] = use_checkpoint
 
-    learn_model_wrapper(input_file, dest_file, config_data, index, output_directory=output_directory, gui=True)
+    learn_model_wrapper(input_file, dest_file, config_data, index, gui=True)
