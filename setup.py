@@ -1,11 +1,11 @@
-import subprocess
+import os
 import sys
+import codecs
+import subprocess
 from setuptools import setup, find_packages
 
-# testing w/o 'scikit-learn == 0.16.1','scikit-image',works okay but leaving here for reference
-# note that we need to pull in autoregressive and pybasicbayes from github,
-# I've hardcorded the dependency links to use very high version numbers, hope it doesn't break anything!
-# note that you will need to pass the option --process-dependency-links for this to work correctly
+os.system('export CC="$(which gcc-7)"')
+os.system('export CXX="$(which g++-7)"')
 
 def install(package):
     subprocess.call([sys.executable, "-m", "pip", "install", package])
@@ -31,19 +31,38 @@ try:
 except ImportError:
     install('cython')
 
+
+def read(rel_path):
+    here = os.path.abspath(os.path.dirname(__file__))
+    with codecs.open(os.path.join(here, rel_path), 'r') as fp:
+        return fp.read()
+
+def get_version(rel_path):
+    for line in read(rel_path).splitlines():
+        if line.startswith('__version__'):
+            delim = '"' if '"' in line else "'"
+            return line.split(delim)[1]
+    else:
+        raise RuntimeError("Unable to find version string.")
+
+
 setup(
     name='moseq2_model',
-    version='0.2.4',
+    version=get_version("moseq2_model/__init__.py"),
     author='Datta Lab',
     description='Modeling for the best',
     packages=find_packages(exclude='docs'),
+    include_package_data=True,
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['future', 'h5py', 'click', 'numpy', 'pandas',
+    install_requires=['six==1.14.0', 'h5py==2.10.0',
+                      'scipy==1.4.1', 'numpy==1.18.3', 'click==7.0', 'cython==0.29.14',
+                      'pandas==1.0.5', 'future==0.18.2', 'joblib==0.15.1', 'scikit-learn==0.22', 'tqdm==4.40.0',
+                      'scikit-image==0.16.2', 'setuptools', 'cytoolz==0.10.1', 'ipywidgets==7.5.1',
+                      'matplotlib==3.1.2', 'statsmodels==0.10.2', 'ruamel.yaml==0.16.5', 'opencv-python==4.1.2.30',
                       'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
-                      'joblib', 'cytoolz', 'ipywidgets',
-                      'hdf5storage', 'ruamel.yaml', 'tqdm', 'sklearn',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
-                      'autoregressive @ git+https://github.com/mattjj/pyhsmm-autoregressive.git@master'],
+                      'autoregressive @ git+https://github.com/mattjj/pyhsmm-autoregressive.git@master'
+                      ],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )

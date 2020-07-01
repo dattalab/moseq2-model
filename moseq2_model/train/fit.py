@@ -14,18 +14,21 @@ from cytoolz import merge, valmap
 from collections import OrderedDict
 from ipywidgets import Label
 from IPython.display import display
-from tqdm import tqdm, tqdm_notebook
-
-
-def _in_notebook():
-    '''determine if this function was executed in a jupyter notebook
-
-    Returns:
-        a boolean describing the presence of a jupyter notebook'''
-    return 'ipykernel' in sys.modules
-
+from tqdm.auto import tqdm
 
 def _ensure_odict(data):
+    '''
+    Casts input data to OrderedDict if it is not one already.
+
+    Parameters
+    ----------
+    data (list or dict): data dictionary to train ARHMM.
+
+    Returns
+    -------
+    data (OrderedDict): Ordered version of input data variable
+    '''
+
     if isinstance(data, (list, tuple, np.ndarray)):
         data = OrderedDict(enumerate(data))
     elif isinstance(data, dict):
@@ -70,11 +73,35 @@ class MoseqModel:
             self.ll_history = []
 
     def get_params(self, deep=True):
+        '''
+        Get model parameters.
+
+        Parameters
+        ----------
+        deep (bool): indicate whether to use deep copy
+
+        Returns
+        -------
+        params (dict): Model parameters
+        '''
+
         if deep:
             return deepcopy(self.params)
         return self.params
 
     def set_params(self, **model_params):
+        '''
+        Update model parameters.
+
+        Parameters
+        ----------
+        model_params (dict): model parameter dictionary to update
+
+        Returns
+        -------
+        None
+        '''
+
         if self.scale_kappa and 'alpha' in model_params:
             new_kappa = (model_params['alpha'] / (1 - self.rho)) - model_params['alpha']
             model_params['kappa'] = new_kappa
@@ -82,8 +109,20 @@ class MoseqModel:
         return self
 
     def fit(self, X, y=None):
+        '''
+        Trains model given data.
+
+        Parameters
+        ----------
+        X (OrderedDict): data_dict used to train ARHMM
+        y (None)
+
+        Returns
+        -------
+        None
+        '''
+
         X = _ensure_odict(X)
-        in_nb = _in_notebook()
         silence = self.params['silent']
         if self.history:
             self.dur_history = []
@@ -92,13 +131,11 @@ class MoseqModel:
 
         arhmm = ARHMM(data_dict=deepcopy(_ensure_odict(X)), **self.params)
 
-        progressbar = tqdm_notebook if in_nb else tqdm
-
-        if not silence and in_nb:
+        if not silence:
             lbl = Label('duration: ll:')
             display(lbl)
 
-        for _ in progressbar(range(self.iters), disable=silence):
+        for _ in tqdm(range(self.iters), disable=silence):
             arhmm.resample_model(num_procs=self.cpus)
             labels = get_labels_from_model(arhmm)
             self.df = pd.concat([to_df(l, u) for u, l in enumerate(labels)])
@@ -109,18 +146,41 @@ class MoseqModel:
                 self.ll_history.append(arhmm.log_likelihood())
                 self.dur_history.append(_dur)
 
-            if not silence and in_nb and self.history:
+            if not silence and self.history:
                 lbl.value = f'median duration: {self.dur_history[-1]:0.3f}s -- log-likelihood: {self.ll_history[-1]:0.3E}'
 
         self.arhmm = arhmm
         return self
 
     def partial_fit(self, X):
+        '''
+        Not implemented.
+
+        Parameters
+        ----------
+        X (OrderedDict)
+
+        Returns
+        -------
+        '''
+
         X = _ensure_odict(X)
         self.arhmm = ARHMM(X, **self.params)
         raise NotImplementedError()
 
     def predict(self, X):
+        '''
+        Get label predictions from input data.
+
+        Parameters
+        ----------
+        X (list, or OrderedDict): data to predict labels
+
+        Returns
+        -------
+        y_pred (list): list of label predictions
+        '''
+
         if isinstance(X, (list, tuple)):
             y_pred = [self.arhmm.heldout_viterbi(_x) for _x in X]
         elif isinstance(X, (dict, OrderedDict)):
@@ -133,6 +193,19 @@ class MoseqModel:
         raise NotImplementedError()
 
     def log_likelihood_score(self, X, reduction=None):
+        '''
+        Compute Log-Likelihood Score of each session.
+
+        Parameters
+        ----------
+        X (list or OrderedDict): data to compute log-likelihood score from.
+        reduction (str): indicates whether to use a reduction operation.
+
+        Returns
+        -------
+        _lls (1D numpy array): log-likelihood arrays.
+        '''
+
         if isinstance(X, (list, tuple)):
             _lls = map(self.arhmm.log_likelihood, X)
             _lls = [v / l for v, l in zip(_lls, map(len, X))]
@@ -147,9 +220,28 @@ class MoseqModel:
         return _lls
 
     def get_median_duration(self):
+        '''
+        Calculates median syllable durations for each session included in the model.
+
+        Returns
+        -------
+        (pandas DataFrame): DataFrame of median syllable durations
+        '''
+
         return self.df.groupby('uuid').median().dur
 
     def duration_score(self):
+        '''
+        Computes score for assigned syllable duration
+        This score is is typically used to find the models with syllable durations
+         close to the data's changepoint durations.
+
+
+        Returns
+        -------
+        (float): a single negative number that should be maximized (to get close to 0)
+        '''
+
         dur = self.get_median_duration().mean()
         return -np.abs(dur - self.optimal_duration)
 
