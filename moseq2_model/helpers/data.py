@@ -67,16 +67,17 @@ def process_indexfile(index, config_data, data_metadata):
             yaml.safe_dump(index_data, f)
         f.close()
 
-        for i in range(len(subjectNames)):
-            print(f'[{i + 1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:',
-                  i_groups[i], '; Key:', uuids[i])
+        if config_data.get('select_groups', False):
+            for i in range(len(subjectNames)):
+                print(f'[{i + 1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:',
+                      i_groups[i], '; Key:', uuids[i])
     else:
         index_data = None
 
     return index_data, data_metadata
 
 
-def select_data_to_model(index_data, gui=False):
+def select_data_to_model(index_data, select_groups=False):
     '''
     GUI: Prompts user to select data to model via the data uuids/groups and paths located in the index file.
     CLI: Selects all data from index file.
@@ -94,7 +95,7 @@ def select_data_to_model(index_data, gui=False):
 
     use_keys = []
     use_groups = []
-    if gui:
+    if select_groups:
         while(len(use_groups) == 0):
             groups_to_train = input(
                 "Input comma/space-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")

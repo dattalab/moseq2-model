@@ -14,20 +14,7 @@ from cytoolz import merge, valmap
 from collections import OrderedDict
 from ipywidgets import Label
 from IPython.display import display
-from tqdm import tqdm, tqdm_notebook
-
-
-def _in_notebook():
-    '''
-    Determine if this function was executed in a jupyter notebook.
-
-    Returns
-    -------
-    A boolean describing the presence of a jupyter notebook
-    '''
-
-    return 'ipykernel' in sys.modules
-
+from tqdm.auto import tqdm
 
 def _ensure_odict(data):
     '''
@@ -136,7 +123,6 @@ class MoseqModel:
         '''
 
         X = _ensure_odict(X)
-        in_nb = _in_notebook()
         silence = self.params['silent']
         if self.history:
             self.dur_history = []
@@ -145,13 +131,11 @@ class MoseqModel:
 
         arhmm = ARHMM(data_dict=deepcopy(_ensure_odict(X)), **self.params)
 
-        progressbar = tqdm_notebook if in_nb else tqdm
-
-        if not silence and in_nb:
+        if not silence:
             lbl = Label('duration: ll:')
             display(lbl)
 
-        for _ in progressbar(range(self.iters), disable=silence):
+        for _ in tqdm(range(self.iters), disable=silence):
             arhmm.resample_model(num_procs=self.cpus)
             labels = get_labels_from_model(arhmm)
             self.df = pd.concat([to_df(l, u) for u, l in enumerate(labels)])
@@ -162,7 +146,7 @@ class MoseqModel:
                 self.ll_history.append(arhmm.log_likelihood())
                 self.dur_history.append(_dur)
 
-            if not silence and in_nb and self.history:
+            if not silence and self.history:
                 lbl.value = f'median duration: {self.dur_history[-1]:0.3f}s -- log-likelihood: {self.ll_history[-1]:0.3E}'
 
         self.arhmm = arhmm
@@ -237,7 +221,7 @@ class MoseqModel:
 
     def get_median_duration(self):
         '''
-        Calculates median duration.
+        Calculates median syllable durations for each session included in the model.
 
         Returns
         -------
@@ -249,10 +233,13 @@ class MoseqModel:
     def duration_score(self):
         '''
         Computes score for assigned syllable duration
+        This score is is typically used to find the models with syllable durations
+         close to the data's changepoint durations.
+
 
         Returns
         -------
-        (1D numpy array): scores of computed median syllable durations
+        (float): a single negative number that should be maximized (to get close to 0)
         '''
 
         dur = self.get_median_duration().mean()
