@@ -1,24 +1,33 @@
-import os
-import pickle
-import numpy as np
-import joblib
-import scipy.io
 import h5py
+import joblib
+import pickle
+import scipy.io
+import numpy as np
 from copy import deepcopy
 from cytoolz import first
 from functools import partial
-from tqdm import tqdm_notebook, tqdm
+from tqdm.auto import tqdm
 from collections import OrderedDict
 from autoregressive.util import AR_striding
 
 flush_print = partial(print, flush=True)
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
-    '''Load the princpal component scores for modeling
-    Args:
-        filename: path to the file that contains PC scores
-        var_name: key where the pc scores are stored within ``filename`` 
+    '''
+    Load the Principal Component Scores for modeling.
 
+    Parameters
+    ----------
+    filename (str): path to the file that contains PC scores
+    var_name (str): key where the pc scores are stored within ``filename``
+    load_groups (bool): Load metadata group variable
+    npcs (int): Number of PCs to load
+    h5_key_is_uuid (bool): use h5 key as uuid.
+
+    Returns
+    -------
+    data_dict (OrderedDict): key-value pairs for keys being uuids and values being PC scores.
+    metadata (OrderedDict): dictionary containing lists of index-aligned uuids and groups.
     '''
 
     metadata = {
@@ -57,10 +66,11 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
                 elif isinstance(tmp, h5py.Group):
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
-                    if 'groups' in f:
-                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
-                    elif load_groups:
+                    if load_groups:
                         metadata['groups'] = list(range(len(tmp)))
+                    elif 'groups' in f:
+                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
+
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -79,6 +89,18 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 
 
 def save_dict(filename, obj_to_save=None):
+    '''
+    Save dictionary to file.
+
+    Parameters
+    ----------
+    filename (str): path to file where dict is being saved.
+    obj_to_save (dict): dict to save.
+
+    Returns
+    -------
+    None
+    '''
 
     # we gotta switch to lists here my friend, create a file with multiple
     # pickles, only load as we need them
@@ -101,11 +123,23 @@ def save_dict(filename, obj_to_save=None):
         raise ValueError('Did not understand filetype')
 
 
-# https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
+
 def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
-    """
-    ....
-    """
+    '''
+    Recursively save dicts to h5 file groups.
+    # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
+
+    Parameters
+    ----------
+    h5file (h5py.File): opened h5py File object.
+    export_dict (dict): dictionary to save
+    path (str): path within h5 to save to.
+
+    Returns
+    -------
+    None
+    '''
+
     for key, item in export_dict.items():
         if isinstance(key, (tuple, int)):
             key = str(key)
@@ -130,17 +164,19 @@ def recursively_save_dict_contents_to_group(h5file, export_dict, path='/'):
 
 
 def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
-    '''Load an arhmm checkpoint and re-add data into the arhmm model checkpoint
-    Args:
-        filename: path that specifies the checkpoint
-        data: an OrderedDict that contains the training data
-        groups (optional: default - None): a list of groups each mouse is a part of.
-            Only used if `separate_trans` is `True`
-        separate_trans (optional: default - False): a bool flag to tell the model
-            to use separate transition matrices
-    Returns:
-        a dict containing the model with reloaded data, and associated training data
     '''
+    Load an arhmm checkpoint and re-add data into the arhmm model checkpoint.
+
+    Parameters
+    ----------
+    filename (str): path that specifies the checkpoint.
+    train_data (OrderedDict): an OrderedDict that contains the training data
+
+    Returns
+    -------
+    mdl_dict (dict): a dict containing the model with reloaded data, and associated training data
+    '''
+
     mdl_dict = joblib.load(filename)
     nlags = mdl_dict['model'].nlags
 
@@ -150,37 +186,79 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     return mdl_dict
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
-    '''Save an arhmm checkpoint and strip out data used to train the model
-    Args:
-        filename: path that specifies the checkpoint
-        arhmm: a dictionary containing the model obj, training iteration number,
-               log-likelihoods of each training step, and labels for each step
     '''
+    Save an arhmm checkpoint and strip out data used to train the model.
+
+    Parameters
+    ----------
+    filename (str): path that specifies the checkpoint
+    arhmm (dict): a dictionary containing the model obj, training iteration number,
+               log-likelihoods of each training step, and labels for each step.
+
+    Returns
+    -------
+    None
+    '''
+
     mdl = arhmm.pop('model')
     arhmm['model'] = copy_model(mdl)
+    print(f'Saving Checkpoint {filename}')
     joblib.dump(arhmm, filename, compress=('zlib', 5))
 
 
 def append_resample(filename, label_dict: dict):
-    '''Adds the labels from a resampling iteration to a pickle file
-    Args:
-        label_dict: a dictionary with a single key/value pair, where the
+    '''
+    Adds the labels from a resampling iteration to a pickle file.
+
+    Parameters
+    ----------
+    filename (str): file (containing modeling results) to append new label dict to.
+    label_dict (dict): a dictionary with a single key/value pair, where the
             key is the sampling iteration and the value contains a dict of:
             (labels, a log likelihood val, and expected states if the flag is set)
-            from each mouse
+            from each mouse.
+
+    Returns
+    -------
+    None
     '''
+
     with open(filename, 'ab+') as f:
         pickle.dump(label_dict, f)
 
 
 def load_dict_from_hdf5(filename):
-    """ A convenience function to load the entire contents of an h5 file
-    into a dictionary
-    """
+    '''
+    A convenience function to load the entire contents of an h5 file
+    into a dictionary.
+
+    Parameters
+    ----------
+    filename (str): path to h5 file.
+
+    Returns
+    -------
+    (dict): dict containing all of the h5 file contents.
+    '''
+
     return h5_to_dict(filename, '/')
 
 
 def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
+    '''
+    A convenience function to load the contents of an h5 file
+    at a user-specified path into a dictionary.
+
+    Parameters
+    ----------
+    filename (str): path to h5 file.
+    path (str): path within the h5 file to load data from.
+
+    Returns
+    -------
+    (dict): dict containing all of the h5 file contents.
+    '''
+
     ans = {}
     if isinstance(file[path], h5py._hl.dataset.Dataset):
         # only use the final path key to add to `ans`
@@ -196,12 +274,18 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
 
 def h5_to_dict(h5file, path: str) -> dict:
     '''
-    Args:
-        h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
-        path: path to the base dataset within the h5 file
-    Returns:
-        a dict with h5 file contents with the same path structure
+    Load h5 data to dictionary from a user specified path.
+
+    Parameters
+    ----------
+    h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
+    path (str): path to the base dataset within the h5 file
+
+    Returns
+    -------
+    out (dict): a dict with h5 file contents with the same path structure
     '''
+
     if isinstance(h5file, str):
         with h5py.File(h5file, 'r') as f:
             out = _load_h5_to_dict(f, path)
@@ -213,6 +297,19 @@ def h5_to_dict(h5file, path: str) -> dict:
 
 
 def load_data_from_matlab(filename, var_name="features", npcs=10):
+    '''
+    Load PC Scores from a specified variable column in a MATLAB file.
+
+    Parameters
+    ----------
+    filename (str): path to MATLAB (.mat) file
+    var_name (str): variable to load
+    npcs (int): number of PCs to load.
+
+    Returns
+    -------
+    data_dict (OrderedDict): loaded dictionary of uuid and PC-score pairings.
+    '''
 
     data_dict = OrderedDict()
 
@@ -228,8 +325,20 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 
 
 def load_cell_string_from_matlab(filename, var_name="uuids"):
+    '''
+    Load cell strings from MATLAB file.
 
-    f = h5py.File(filename)
+    Parameters
+    ----------
+    filename (str): path to .mat file
+    var_name (str): cell name to read
+
+    Returns
+    -------
+    return_list (list): list of selected loaded variables
+    '''
+
+    f = h5py.File(filename, 'r')
     return_list = []
 
     if var_name in f.keys():
@@ -248,6 +357,18 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
 # per Scott's suggestion
 def copy_model(model_obj):
+    '''
+    Return a new copy of a model using deepcopy().
+
+    Parameters
+    ----------
+    model_obj (ARHMM): model to copy.
+
+    Returns
+    -------
+    cp (ARHMM): copy of the model
+    '''
+
     tmp = []
 
     # make a deep copy of the data-less version
@@ -265,19 +386,25 @@ def copy_model(model_obj):
     return cp
 
 
-def get_parameters_from_model(model, save_ar=True):
+def get_parameters_from_model(model):
+    '''
+    Get parameter dictionary from model.
 
-    # trans_dist=model.trans_distn
+    Parameters
+    ----------
+    model (ARHMM): model to get parameters from.
+
+    Returns
+    -------
+    parameters (dict): dictionary containing all modeling parameters
+    '''
+
     init_obs_dist = model.init_emission_distn.hypparams
 
-    # need to be smarter about this, but for now assume parameters are the same
-    # (eek!) if we use separate trans
-
-    try:
+    if hasattr(model, 'trans_distns'):
+        trans_dist = model.trans_distns[0]
+    else:
         trans_dist = model.trans_distn
-    except Exception:
-        tmp = model.trans_distns
-        trans_dist = tmp[0]
 
     ls_obj = dir(model.obs_distns[0])
 
@@ -292,29 +419,37 @@ def get_parameters_from_model(model, save_ar=True):
         'kappa_0': init_obs_dist['kappa_0'],
         'nlags': model.nlags,
         'mu_0': init_obs_dist['mu_0'],
-        'model_class': model.__class__.__name__
+        'model_class': model.__class__.__name__,
+        'ar_mat': [obs.A for obs in model.obs_distns],
+        'sig': [obs.sigma for obs in model.obs_distns]
         }
 
     if 'nu' in ls_obj:
         parameters['nu'] = [obs.nu for obs in model.obs_distns]
 
-    if save_ar:
-        parameters['ar_mat'] = [obs.A for obs in model.obs_distns]
-        parameters['sig'] = [obs.sigma for obs in model.obs_distns]
-
     return parameters
 
 
 def progressbar(*args, **kwargs):
+    '''
+    Selects tqdm progress bar.
+
+    Parameters
+    ----------
+    args (iterable)
+    kwargs (tdqm args[1:])
+
+    Returns
+    -------
+    tqdm() iterating object.
+    '''
+
     cli = kwargs.pop('cli', False)
 
     if cli:
         return tqdm(*args, **kwargs)
     else:
-        try:
-            return tqdm_notebook(*args, **kwargs)
-        except Exception:
-            return tqdm(*args, **kwargs)
+        return tqdm(*args, **kwargs)
 
 
 def list_rank(chk_list):
