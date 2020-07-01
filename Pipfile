@@ -1,0 +1,32 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pytest = "*"
+pytest-cov = "*"
+
+[packages]
+six = "*"
+h5py = "*"
+tqdm = "*"
+scipy = "*"
+numpy = "*"
+click = "*"
+cython = "*"
+pandas = "*"
+awscli = "*"
+future = "*"
+joblib = "*"
+sklearn = "*"
+cytoolz = "*"
+setuptools = "*"
+ipywidgets = "*"
+matplotlib = "*"
+statsmodels = "*"
+hdf5storage = "*"
+ruamel_yaml = "*"
+scikit-image = "*"
+scikit-learn = "*"
+opencv-python = "*"
