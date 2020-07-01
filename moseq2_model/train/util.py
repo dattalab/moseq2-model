@@ -1,9 +1,10 @@
 import sys
 import numpy as np
-from functools import partial
 from cytoolz import valmap
+from tqdm.auto import tqdm
+from functools import partial
 from collections import OrderedDict, defaultdict
-from moseq2_model.util import progressbar, save_arhmm_checkpoint, append_resample
+from moseq2_model.util import save_arhmm_checkpoint, append_resample
 
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
@@ -14,14 +15,14 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
     Parameters
     ----------
-    model (ARHMM): model to train.
-    num_iter (int): total number of resampling iterations.
-    save_every (int): model parameter updating frequency.
-    ncpus (int): number of cpus to resample model.
+    model (ARHMM): model to train
+    num_iter (int): total number of resampling iterations
+    save_every (int): iteration frequency where model predictions are saved to a file
+    ncpus (int): number of cpus to resample model
     checkpoint_freq (int): frequency of new checkpoint saves in iterations
     checkpoint_file (str): path to new checkpoint file
-    start (int): starting iteration index (used to resume modeling, default is 0).
-    save_file (str): path to file to save model checkpoint (only if checkpoint_freq > 0)
+    start (int): starting iteration index (used to resume modeling, default is 0)
+    save_file (str): path to file to save model checkpoint (only if is not None)
     progress_kwargs (dict): keyword arguments for progress bar
     num_frames (int): total number of frames included in modeling
     train_data (OrderedDict): dict of validation data (only if verbose = True)
@@ -45,7 +46,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     iter_lls = []
     iter_holls = []
     group_idx = ['default']
-    for itr in progressbar(range(start, num_iter), **progress_kwargs):
+    for itr in tqdm(range(start, num_iter), **progress_kwargs):
         try:
             model.resample_model(num_procs=ncpus)
         except KeyboardInterrupt:
@@ -224,7 +225,7 @@ def whiten_each(data_dict, center=True):
         data_dict[k] = tmp_dict[k]
 
     return data_dict
-    #return OrderedDict((k, whiten_all(OrderedDict([k,v]), center=center)) for k, v in data_dict.items())
+
 
 def run_e_step(arhmm):
     '''
@@ -281,14 +282,15 @@ def zscore_all(data_dict, npcs=10, center=True):
 
     valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in data_dict.values()])
     mu, sig = valid_scores.mean(axis=0), valid_scores.std(axis=0)
-    if center:
-        for k, v in data_dict.items():
-            data_dict[k] = (v - mu) / sig
+
+    for k, v in data_dict.items():
+        numerator = v - mu if center else v
+        data_dict[k] = numerator / sig
 
     return data_dict
 
 
-# taken from syllables by @alewbw
+# taken from syllables by @alexbw
 def get_crosslikes(arhmm, frame_by_frame=False):
     '''
     Gets the cross-likelihoods, a measure of confidence in the model's
