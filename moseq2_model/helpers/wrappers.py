@@ -101,7 +101,6 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
 
     progressbar_kwargs = {
         'total': config_data['num_iter'],
-        'cli': True,
         'file': sys.stdout,
         'leave': False,
         'disable': not config_data['progressbar'],
