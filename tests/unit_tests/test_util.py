@@ -4,9 +4,9 @@ import h5py
 import numpy as np
 import ruamel.yaml as yaml
 from unittest import TestCase
+from tests.unit_tests.test_train_utils import get_model
 from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
-from moseq2_model.tests.unit_tests.test_train_utils import get_model
 from moseq2_model.util import load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict,\
                     append_resample, h5_to_dict, _load_h5_to_dict, copy_model, \
                     get_parameters_from_model
