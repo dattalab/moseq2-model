@@ -3,7 +3,6 @@ import sys
 import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.util import load_pcs
-from tempfile import TemporaryDirectory, NamedTemporaryFile
 from moseq2_model.helpers.data import process_indexfile, select_data_to_model, prepare_model_metadata,\
     get_heldout_data_splits, get_training_data_splits, graph_modeling_loglikelihoods
 
@@ -32,50 +31,43 @@ class TestDataHelpers(TestCase):
 
         with open(index_path, 'r') as f:
             index_data = yaml.safe_load(f)
-        f.close()
 
-        with TemporaryDirectory() as tmp:
-            # test simple CLI case
-            all_keys, groups = select_data_to_model(index_data)
+        # test simple CLI case
+        all_keys, groups = select_data_to_model(index_data)
+        assert len(all_keys) == len(groups), "Number of groups != number of uuids"
 
-            assert len(all_keys) == len(groups), "Number of groups != number of uuids"
+        # test single GUI input
+        index_data['files'][1]['group'] = 'default'
+        stdin = 'data/stdin.txt'
+        with open(stdin, 'w') as f:
+            f.write('default')
 
-            # test single GUI input
-            index_data['files'][1]['group'] = 'default'
-            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
-            with open(stdin.name, 'w') as f:
-                f.write('default')
-            f.close()
+        sys.stdin = open(stdin)
+        all_keys, groups = select_data_to_model(index_data, select_groups=True)
 
-            sys.stdin = open(stdin.name)
-            all_keys, groups = select_data_to_model(index_data, select_groups=True)
+        assert len(all_keys) == len(groups) == 1, "index data was incorrectly parsed"
+        assert groups[0] == 'default', "groups were returned incorrectly"
 
-            assert len(all_keys) == len(groups) == 1, "index data was incorrectly parsed"
-            assert groups[0] == 'default', "groups were returned incorrectly"
+        # test space-separated input
+        with open(stdin, 'w') as f:
+            f.write('default Group1')
 
-            # test space-separated input
-            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
-            with open(stdin.name, 'w') as f:
-                f.write('default Group1')
-            f.close()
+        sys.stdin = open(stdin)
+        all_keys, groups = select_data_to_model(index_data, select_groups=True)
 
-            sys.stdin = open(stdin.name)
-            all_keys, groups = select_data_to_model(index_data, select_groups=True)
+        assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
+        self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
 
-            assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
-            self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
+        # test comma-separated input
+        with open(stdin, 'w') as f:
+            f.write('default, Group1')
 
-            # test comma-separated input
-            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
-            with open(stdin.name, 'w') as f:
-                f.write('default, Group1')
-            f.close()
+        sys.stdin = open(stdin)
+        all_keys, groups = select_data_to_model(index_data, select_groups=True)
 
-            sys.stdin = open(stdin.name)
-            all_keys, groups = select_data_to_model(index_data, select_groups=True)
-
-            assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
-            self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
+        assert len(all_keys) == len(groups) == 2, "index data was incorrectly parsed"
+        self.assertCountEqual(groups, ['default', 'Group1'], "groups were returned incorrectly")
+        os.remove(stdin)
 
     def test_prepare_model_metadata(self):
 
@@ -94,7 +86,6 @@ class TestDataHelpers(TestCase):
 
         with open(index_path, 'r') as f:
             index_data = yaml.safe_load(f)
-        f.close()
 
         all_keys, groups = select_data_to_model(index_data)
 
@@ -123,7 +114,6 @@ class TestDataHelpers(TestCase):
 
         with open(index_path, 'r') as f:
             index_data = yaml.safe_load(f)
-        f.close()
 
         all_keys, groups = select_data_to_model(index_data)
 

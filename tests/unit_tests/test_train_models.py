@@ -2,8 +2,8 @@ import numpy as np
 import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.util import load_pcs
+from moseq2_model.helpers.data import prepare_model_metadata
 from moseq2_model.train.models import ARHMM, _get_empirical_ar_params
-from moseq2_model.helpers.data import prepare_model_metadata, select_data_to_model
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans, \
                             ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans
 
@@ -48,7 +48,6 @@ class TestTrainModels(TestCase):
     def test_ARHMM(self):
         input_file = 'data/test_scores.h5'
         config_file = 'data/config.yaml'
-        index_path = 'data/test_index.yaml'
 
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)

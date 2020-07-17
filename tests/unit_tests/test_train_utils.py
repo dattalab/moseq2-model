@@ -5,10 +5,10 @@ import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.util import load_pcs
 from moseq2_model.train.models import ARHMM
+from moseq2_model.helpers.data import prepare_model_metadata, get_training_data_splits
 from moseq2_model.train.util import train_model, get_labels_from_model, whiten_all, whiten_each, \
                                     run_e_step, zscore_all, zscore_each, get_crosslikes
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from moseq2_model.helpers.data import prepare_model_metadata, select_data_to_model, get_training_data_splits
 
 def get_model(separate_trans=False, robust=False, groups=[]):
     input_file = 'data/test_scores.h5'

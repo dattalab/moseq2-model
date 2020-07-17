@@ -4,7 +4,6 @@ import shutil
 import joblib
 from unittest import TestCase
 from moseq2_model.gui import learn_model_command
-from tempfile import TemporaryDirectory, NamedTemporaryFile
 
 class TestGUI(TestCase):
 
@@ -28,14 +27,12 @@ class TestGUI(TestCase):
         percent_split = 20
         verbose = False
 
-        with TemporaryDirectory() as tmp:
-            # test space-separated input
-            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
-            with open(stdin.name, 'w') as f:
-                f.write('default Group1')
-            f.close()
+        # test space-separated input
+        stdin = 'data/stdin.txt'
+        with open(stdin, 'w') as f:
+            f.write('default Group1')
 
-            sys.stdin = open(stdin.name)
+        sys.stdin = open(stdin)
 
         learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter,
@@ -51,14 +48,11 @@ class TestGUI(TestCase):
         num_iter = 15 # train for 5 more iterations
         checkpoint_freq = -1
 
-        with TemporaryDirectory() as tmp:
-            # test space-separated input
-            stdin = NamedTemporaryFile(prefix=tmp+'/', suffix=".txt")
-            with open(stdin.name, 'w') as f:
-                f.write('default Group1')
-            f.close()
+        # test space-separated input
+        with open(stdin, 'w') as f:
+            f.write('default Group1')
 
-            sys.stdin = open(stdin.name)
+        sys.stdin = open(stdin)
 
         learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter, use_checkpoint=True,
@@ -76,3 +70,4 @@ class TestGUI(TestCase):
 
         os.remove('data/original_model.p')
         os.remove(dest_file)
+        os.remove(stdin)

@@ -1,10 +1,9 @@
-import sys
 import numpy as np
 from cytoolz import valmap
 from tqdm.auto import tqdm
 from functools import partial
 from collections import OrderedDict, defaultdict
-from moseq2_model.util import save_arhmm_checkpoint, append_resample
+from moseq2_model.util import save_arhmm_checkpoint
 
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
