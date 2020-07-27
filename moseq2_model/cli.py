@@ -15,13 +15,9 @@ click.core.Option.__init__ = new_init
 
 
 @click.group()
+@click.version_option()
 def cli():
     pass
-
-@cli.command('version', help='Print version number')
-def version():
-    import moseq2_model
-    click.echo(moseq2_model.__version__)
 
 
 @cli.command(name='count-frames', help="Counts number of frames in given h5 file (pca_scores)")
