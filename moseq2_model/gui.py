@@ -62,4 +62,4 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
     config_data['select_groups'] = select_groups
     config_data['use_checkpoint'] = use_checkpoint
 
-    learn_model_wrapper(input_file, dest_file, config_data, index, gui=True)
+    learn_model_wrapper(input_file, dest_file, config_data, index)

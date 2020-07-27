@@ -57,6 +57,7 @@ def count_frames(input_file, var_name):
 @click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")
 @click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")
 @click.option("--percent-split", type=int, default=20, help="Training-validation split percentage")
+@click.option("--load-groups", "-h", type=bool, default=True, help="Dictates in PC Scores should be loaded with their associated group.")
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa; probability prior distribution for syllable duration. Larger k = longer syllable lengths")
 @click.option("--gamma", "-g", type=float, default=1e3, help="Gamma; probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.")
 @click.option("--alpha", "-a", type=float, default=5.7, help="Alpha; probability prior distribution for syllable transition rate.")
@@ -72,7 +73,7 @@ def count_frames(input_file, var_name):
 def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
                 save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
-                kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
+                load_groups, kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
                 checkpoint_freq, use_checkpoint, index, default_group, verbose):
 
     click_data = click.get_current_context().params

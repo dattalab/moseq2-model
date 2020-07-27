@@ -8,11 +8,10 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, run_e_step
 from os.path import join, basename, getctime, realpath, dirname, exists
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, load_arhmm_checkpoint)
-from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, \
-                                            prepare_model_metadata, graph_modeling_loglikelihoods, \
-                                            get_heldout_data_splits, get_training_data_splits)
+from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
+                                       graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
-def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=False):
+def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     '''
     Wrapper function to train ARHMM, shared between CLI and GUI.
 
@@ -50,7 +49,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=config_data.get('var_name', 'scores'),
                                         npcs=config_data['npcs'],
-                                        load_groups=True)
+                                        load_groups=config_data['load_groups'])
 
     index_data, data_metadata = process_indexfile(index, config_data, data_metadata)
 
@@ -198,5 +197,5 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
-    if config_data['verbose'] and gui:
+    if config_data['verbose']:
         return img_path
