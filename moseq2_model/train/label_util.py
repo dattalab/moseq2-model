@@ -1,3 +1,7 @@
+'''
+Syllable label information utility functions.
+'''
+
 import pandas as pd
 import numpy as np
 

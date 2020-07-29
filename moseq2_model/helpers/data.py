@@ -1,3 +1,7 @@
+'''
+Helper functions for reading data from index files, and preparing metadata prior to training.
+'''
+
 import os
 import click
 import random

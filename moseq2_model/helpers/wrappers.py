@@ -1,3 +1,10 @@
+'''
+Wrapper functions for all functionality included in MoSeq2-Model that is accessible via CLI or GUI.
+
+Each wrapper function executes the functionality from end-to-end given it's dependency parameters are inputted.
+(See CLI Click parameters)
+'''
+
 import os
 import sys
 import glob

@@ -1,3 +1,7 @@
+'''
+ARHMM utility functions
+'''
+
 import numpy as np
 from cytoolz import valmap
 from tqdm.auto import tqdm

@@ -1,3 +1,7 @@
+'''
+Utility functions for handling loading and saving models and their respective metadata.
+'''
+
 import h5py
 import joblib
 import pickle
@@ -6,7 +10,6 @@ import numpy as np
 from copy import deepcopy
 from cytoolz import first
 from functools import partial
-from tqdm.auto import tqdm
 from collections import OrderedDict
 from autoregressive.util import AR_striding
 

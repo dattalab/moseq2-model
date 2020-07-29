@@ -1,3 +1,7 @@
+'''
+GUI front-end function for training ARHMM.
+'''
+
 import ruamel.yaml as yaml
 from .cli import learn_model
 from moseq2_model.helpers.wrappers import learn_model_wrapper

@@ -1,3 +1,8 @@
+'''
+CLI front-end operations. This module contains all the functionality and configurable parameters
+users can alter to most accurately process their data.
+'''
+
 import click
 import numpy as np
 from moseq2_model.util import load_pcs, flush_print

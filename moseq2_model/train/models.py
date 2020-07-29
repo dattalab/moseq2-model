@@ -1,11 +1,15 @@
+'''
+ARHMM model initialization utilities.
+'''
+
+import warnings
 import numpy as np
+from cytoolz import merge
+from moseq2_model.util import flush_print
 from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from moseq2_model.util import flush_print
-from cytoolz import merge
-import warnings
 
 
 # Empirical bayes estimate of S_0 (from MoSeq)
