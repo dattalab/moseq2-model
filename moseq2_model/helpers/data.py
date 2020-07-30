@@ -279,7 +279,7 @@ def get_training_data_splits(config_data, data_dict):
 
     return train_data, training_data, validation_data, nt_frames
 
-def graph_helper(groups, lls, legend, iterations, ll_type='train', sep_trans=False):
+def graph_helper(groups, lls, legend, iterations, ll_type='train'):
     '''
     Helper function to plot the training and validation log-likelihoods
      over the each model training iteration.
@@ -298,7 +298,6 @@ def graph_helper(groups, lls, legend, iterations, ll_type='train', sep_trans=Fal
     None
     '''
 
-    if sep_trans: lls = lls[0]
     for i, g in enumerate(groups):
         lw = 10 - 8 * i / len(lls)
         ls = ['-', '--', '-.', ':'][i % 4]
@@ -326,15 +325,15 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
     img_path (str): path to saved graph.
     '''
 
+    ll_type = 'val'
+    if config_data['hold_out']:
+        ll_type = 'held_out'
+
     if config_data['verbose']:
         iterations = [i for i in range(len(iter_lls))]
         legend = []
-        if config_data['separate_trans']:
-            graph_helper(group_idx, iter_lls, legend, iterations, sep_trans=True)
-            graph_helper(group_idx, iter_holls, legend, iterations, ll_type='val', sep_trans=True)
-        else:
-            graph_helper(group_idx, iter_lls, legend, iterations)
-            graph_helper(group_idx, iter_lls, legend, iterations, ll_type='val')
+        graph_helper(group_idx, iter_lls, legend, iterations)
+        graph_helper(group_idx, iter_holls, legend, iterations, ll_type=ll_type)
 
         plt.legend(legend)
 
