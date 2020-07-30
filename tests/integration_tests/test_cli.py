@@ -31,7 +31,7 @@ class TestCLI(TestCase):
         kappa = None
 
         train_params = [input_file, dest_file, "-i", index, '-n', num_iter, '--checkpoint-freq', freq,
-                        '-m', max_states, '--npcs', npcs, '-k', kappa, '--robust', '--use-checkpoint']
+                        '-m', max_states, '--npcs', npcs, '-k', kappa, '--robust', '--use-checkpoint', '--verbose']
 
         runner = CliRunner()
 
@@ -44,6 +44,9 @@ class TestCLI(TestCase):
         assert os.path.exists(checkpoint_path)
         assert len(os.listdir(checkpoint_path)) == 5 # iters: 1, 3, 5, 7, 9
 
+        assert os.path.exists('data/train_val20_summary.png'), 'Training logLikes summary was not created.'
+
         os.remove(dest_file)
+        os.remove('data/train_val20_summary.png')
         shutil.rmtree(checkpoint_path)
 

@@ -410,14 +410,3 @@ def get_parameters_from_model(model):
         parameters['nu'] = [obs.nu for obs in model.obs_distns]
 
     return parameters
-
-
-def list_rank(chk_list):
-    rank = 0
-    flag = True
-    while flag is True:
-        flag = eval("type(chk_list"+'[0]'*rank+") is list")
-        if flag:
-            rank += 1
-
-    return rank
