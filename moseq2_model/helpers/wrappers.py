@@ -41,40 +41,48 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     if not os.access(dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
 
+    # Get checkpoint parameters
     checkpoint_path = join(dirname(dest_file), 'checkpoints/')
     checkpoint_freq = config_data.get('checkpoint_freq', -1)
 
     if checkpoint_freq < 0:
         checkpoint_freq = config_data.get('num_iter', 100) + 1
     else:
+        # Set up checkpoint saving directory
         if not exists(checkpoint_path):
             os.makedirs(checkpoint_path)
 
     click.echo("Entering modeling training")
 
+    # Load PC scores to model with associated uuids and groups
     run_parameters = deepcopy(config_data)
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=config_data.get('var_name', 'scores'),
                                         npcs=config_data['npcs'],
                                         load_groups=config_data['load_groups'])
 
+    # Load data from index file and update data_metadata with groups found in index file
     index_data, data_metadata = process_indexfile(index, config_data, data_metadata)
 
     all_keys = list(data_dict.keys())
     groups = list(data_metadata['groups'])
 
+    # Optional modeling data selection; user inputs group names to include corresponding sessions in modeling
     select_groups = config_data.get('select_groups', True)
     if (index_data != None):
         all_keys, groups = select_data_to_model(index_data, select_groups)
         data_metadata['groups'] = groups
         data_metadata['uuids'] = all_keys
 
+    # Create OrderedDict with all data included in training
     data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
     nkeys = len(all_keys)
 
+    # Whiten data, get list of uuids in training and optionally heldout set (if config_data['hold_out'] == True)
     config_data, data_dict, model_parameters, train_list, hold_out_list = \
         prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys)
 
+    # Load dict of uuid to PC scores for each training and heldout/validation data given the lists of uuids
     if config_data['hold_out']:
         train_data, hold_out_list, test_data, nt_frames = \
             get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
@@ -114,11 +122,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     }
 
     groupings = None
-    if config_data['hold_out']:
-        if model_parameters['groups'] == None:
             train_g, hold_g = [], []
-        else:
-            hold_g = []
             train_g = []
             # remove held out group
             for i in range(len(all_keys)):
@@ -137,7 +141,10 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
             groupings = list(model_parameters['groups'])
 
         test_data = validation_data
+    # If verbose==True; I.e. Plotting loglikelihoods during model training,
+    # get corresponding group names for each uuid in the training/held_out list.
 
+    # Train ARHMM
     arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model\
     (
         model=arhmm,
@@ -202,6 +209,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         'expected_states': expected_states if config_data['e_step'] else None
     }
 
+    # Save data
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
     if config_data['verbose']:
