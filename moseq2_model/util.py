@@ -1,3 +1,7 @@
+'''
+Utility functions for handling loading and saving models and their respective metadata.
+'''
+
 import h5py
 import joblib
 import pickle
@@ -6,7 +10,6 @@ import numpy as np
 from copy import deepcopy
 from cytoolz import first
 from functools import partial
-from tqdm.auto import tqdm
 from collections import OrderedDict
 from autoregressive.util import AR_striding
 
@@ -38,16 +41,19 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
     if filename.endswith('.mat'):
         print('Loading data from matlab file')
         data_dict = load_data_from_matlab(filename, var_name, npcs)
+
         # convert the uuid list to something that will export easily...
         metadata['uuids'] = load_cell_string_from_matlab(filename, "uuids")
         if load_groups:
             metadata['groups'] = load_cell_string_from_matlab(filename, "groups")
         else:
             metadata['groups'] = None
+
     elif filename.endswith(('.z', '.pkl', '.p')):
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
+        # Reading in PCs and associated groups
         if isinstance(first(data_dict.values()), tuple):
             print('Detected tuple')
             for k, v in data_dict.items():
@@ -58,19 +64,24 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 data_dict[k] = v[:, :npcs]
 
     elif filename.endswith('.h5'):
+        # Reading PCs from h5 file
         with h5py.File(filename, 'r') as f:
             if var_name in f:
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
+
+                # Reading in PCs into training dict
                 if isinstance(tmp, h5py.Dataset):
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
+
                 elif isinstance(tmp, h5py.Group):
+                    # Reading in PCs
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
+                    # Optionally loading groups
                     if load_groups:
                         metadata['groups'] = list(range(len(tmp)))
                     elif 'groups' in f:
                         metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
-
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -81,7 +92,6 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 metadata['uuids'] = f['uuid'][()]
             elif h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
-
     else:
         raise ValueError('Did not understand filetype')
 
@@ -102,6 +112,7 @@ def save_dict(filename, obj_to_save=None):
     None
     '''
 
+    # Parsing given file extension and saving model accordingly
     if filename.endswith('.mat'):
         print('Saving MAT file', filename)
         scipy.io.savemat(filename, mdict=obj_to_save)
@@ -137,12 +148,13 @@ def dict_to_h5(h5file, export_dict, path='/'):
     '''
 
     for key, item in export_dict.items():
+        # Parse key and value types, and load them accordingly
         if isinstance(key, (tuple, int)):
             key = str(key)
-
         if isinstance(item, str):
             item = item.encode('utf8')
 
+        # Write dict item to h5 based on its data-type
         if isinstance(item, np.ndarray) and item.dtype == np.object:
             dt = h5py.special_dtype(vlen=item.flat[0].dtype)
             h5file.create_dataset(path+key, item.shape, dtype=dt, compression='gzip')
@@ -173,10 +185,12 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     mdl_dict (dict): a dict containing the model with reloaded data, and associated training data
     '''
 
+    # Loading model and its respective number of lags
     mdl_dict = joblib.load(filename)
     nlags = mdl_dict['model'].nlags
 
     for s, t in zip(mdl_dict['model'].states_list, train_data.values()):
+        # Loading model AR-strided data
         s.data = AR_striding(t.astype('float32'), nlags)
 
     return mdl_dict
@@ -196,8 +210,11 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
     None
     '''
 
+    # Getting model object
     mdl = arhmm.pop('model')
     arhmm['model'] = copy_model(mdl)
+
+    # Save model
     print(f'Saving Checkpoint {filename}')
     joblib.dump(arhmm, filename, compress=('zlib', 5))
 
@@ -243,6 +260,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
         # only use the final path key to add to `ans`
         ans[path.split('/')[-1]] = file[path][()]
     else:
+        # Reading in h5 value into dict key-value pair
         for key, item in file[path].items():
             if isinstance(item, h5py.Dataset):
                 ans[key] = item[()]
@@ -265,6 +283,7 @@ def h5_to_dict(h5file, path: str = '/') -> dict:
     out (dict): a dict with h5 file contents with the same path structure
     '''
 
+    # Load h5 file according to whether it is separated by Groups
     if isinstance(h5file, str):
         with h5py.File(h5file, 'r') as f:
             out = _load_h5_to_dict(f, path)
@@ -293,6 +312,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
     data_dict = OrderedDict()
 
     with h5py.File(filename, 'r') as f:
+        # Loading PCs scores into training data dict
         if var_name in f.keys():
             score_tmp = f[var_name]
             for i in range(len(score_tmp)):
@@ -380,6 +400,7 @@ def get_parameters_from_model(model):
 
     init_obs_dist = model.init_emission_distn.hypparams
 
+    # Loading transition graph(s)
     if hasattr(model, 'trans_distns'):
         trans_dist = model.trans_distns[0]
     else:
@@ -387,6 +408,7 @@ def get_parameters_from_model(model):
 
     ls_obj = dir(model.obs_distns[0])
 
+    # Packing object parameters into a single dict
     parameters = {
         'kappa': trans_dist.kappa,
         'gamma': trans_dist.gamma,
@@ -407,14 +429,3 @@ def get_parameters_from_model(model):
         parameters['nu'] = [obs.nu for obs in model.obs_distns]
 
     return parameters
-
-
-def list_rank(chk_list):
-    rank = 0
-    flag = True
-    while flag is True:
-        flag = eval("type(chk_list"+'[0]'*rank+") is list")
-        if flag:
-            rank += 1
-
-    return rank

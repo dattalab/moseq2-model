@@ -62,7 +62,7 @@ setup(
                       'matplotlib==3.1.2', 'statsmodels==0.10.2', 'ruamel.yaml==0.16.5', 'opencv-python==4.1.2.30',
                       'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
-                      'autoregressive @ git+https://github.com/mattjj/pyhsmm-autoregressive.git@master'
+                      'autoregressive @ git+https://github.com/dattalab/pyhsmm-autoregressive.git@master'
                       ],
     entry_points={'console_scripts': ['moseq2-model = moseq2_model.cli:cli']},
 )

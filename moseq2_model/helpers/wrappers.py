@@ -1,3 +1,10 @@
+'''
+Wrapper functions for all functionality included in MoSeq2-Model that is accessible via CLI or GUI.
+
+Each wrapper function executes the functionality from end-to-end given it's dependency parameters are inputted.
+(See CLI Click parameters)
+'''
+
 import os
 import sys
 import glob
@@ -8,11 +15,10 @@ from moseq2_model.train.models import ARHMM
 from moseq2_model.train.util import train_model, run_e_step
 from os.path import join, basename, getctime, realpath, dirname, exists
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, load_arhmm_checkpoint)
-from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, \
-                                            prepare_model_metadata, graph_modeling_loglikelihoods, \
-                                            get_heldout_data_splits, get_training_data_splits)
+from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
+                                       graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
-def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=False):
+def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     '''
     Wrapper function to train ARHMM, shared between CLI and GUI.
 
@@ -28,7 +34,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
     None
     '''
 
-    # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
+    # TODO: graceful handling of extra parameters: orchestra this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
     dest_file = realpath(dest_file)
 
@@ -50,7 +56,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=config_data.get('var_name', 'scores'),
                                         npcs=config_data['npcs'],
-                                        load_groups=True)
+                                        load_groups=config_data['load_groups'])
 
     index_data, data_metadata = process_indexfile(index, config_data, data_metadata)
 
@@ -73,7 +79,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
         train_data, hold_out_list, test_data, nt_frames = \
             get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
     else:
-        train_data, training_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
+        train_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
     # check for available previous modeling checkpoints
     checkpoint_file = join(checkpoint_path, basename(dest_file).replace('.p', '') + '-checkpoint.arhmm')
@@ -198,5 +204,5 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None, gui=Fals
 
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
-    if config_data['verbose'] and gui:
+    if config_data['verbose']:
         return img_path

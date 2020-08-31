@@ -1,3 +1,7 @@
+'''
+Syllable label information utility functions.
+'''
+
 import pandas as pd
 import numpy as np
 
@@ -15,8 +19,11 @@ def syll_onset(labels: np.ndarray) -> np.ndarray:
     indices (np.ndarray): an array of indices denoting the beginning of each syllables.
     '''
 
+    # Getting indices of syllable switching
     change = np.diff(labels) != 0
     indices = np.where(change)[0]
+
+    # Getting frame indices of the switched syllable
     indices += 1
     indices = np.concatenate(([0], indices))
     return indices
@@ -82,6 +89,7 @@ def to_df(labels, uuid) -> pd.DataFrame:
     elif isinstance(labels, list):
         labels = np.array(labels, dtype=np.int32)
 
+    # Packing all syllable information into a single DataFrame
     df = pd.DataFrame({
         'syll': syll_id(labels),
         'dur': syll_duration(labels),
