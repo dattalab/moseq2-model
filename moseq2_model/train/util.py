@@ -44,12 +44,14 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     group_idx (list): list of group names per modeled session.
     '''
 
+    # Checkpointing boolean
     checkpoint = checkpoint_freq is not None
 
     iter_lls = []
     iter_holls = []
     group_idx = ['default']
     for itr in tqdm(range(start, num_iter), **progress_kwargs):
+        # Resample states, and gracefully return in case of a keyboard interrupt
         try:
             model.resample_model(num_procs=ncpus)
         except KeyboardInterrupt:
@@ -58,6 +60,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
 
         if verbose:
+            # Optionally get iteration log-likelihood values
             summ_stats = {
                 'model': model,
                 'groups': groups,
@@ -72,18 +75,20 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
+            # Pack the data to save in checkpoint
             save_data = {
                 'iter': itr + 1,
                 'model': model,
                 'log_likelihoods': model.log_likelihood(),
                 'labels': get_labels_from_model(model)
             }
-            checkpoint_file = checkpoint_file
+            # Format checkpoint filename
             checkpoint_file = "{0}_{2}.{1}".format(
                 *checkpoint_file.replace(f'_{itr-checkpoint_freq}', '').rsplit('.', 1) + [itr]
             )
             save_arhmm_checkpoint(checkpoint_file, save_data)
 
+    # Get group list to return
     if groups != None:
         group_idx = groups
 
@@ -112,9 +117,11 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
     '''
 
     if not separate_trans:
+        # Get training log-likelihood
         train_ll = model.log_likelihood() / sum(num_frames)
         iter_lls.append(train_ll)
     else:
+        # Get training log-likelihood values for each group
         group_lls = []
         group_idx = []
         if type(groups) == tuple:
@@ -134,6 +141,7 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
 
         iter_lls.append(group_lls)
 
+    # Get iteration heldout/validation log-likelihood values
     if not separate_trans:
         val_ll = [model.log_likelihood(v) for v in val_data.values()]
         lens = [len(v) for v in val_data.values()]
@@ -146,6 +154,7 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
                 val_ll = sum(val_ll) / len(val_ll)
         iter_holls.append(val_ll)
     else:
+        # Get LLs for each modeling group
         group_lls = []
         if type(groups) == tuple:
             for g in list(set(groups[1])):
@@ -315,6 +324,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
     Nstates = arhmm.num_states
 
     if frame_by_frame:
+        # Optionally compute Cross-state log-likelihoods over all frame
         for s in arhmm.states_list:
             for j in range(Nstates):
                 likes = s.aBl[s.stateseq == j]
@@ -322,6 +332,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
                     all_CLs[(i, j)].append(likes[:, i] - likes[:, j])
         all_CLs = valmap(np.concatenate, all_CLs)
     else:
+        # Compute cross log-likelihoods across all modeling states
         for s in arhmm.states_list:
             for j in range(Nstates):
                 for sl in slices_from_indicators(s.stateseq == j):
@@ -329,6 +340,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
                     for i in range(Nstates):
                         all_CLs[(i, j)].append(likes[i] - likes[j])
 
+    # Pack cross log-likelihoods into a square confusion matrix
     CL = np.zeros((Nstates, Nstates))
     for (i, j), _ in np.ndenumerate(CL):
         CL[i, j] = np.nanmean(all_CLs[(i, j)])

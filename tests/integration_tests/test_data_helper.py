@@ -143,8 +143,7 @@ class TestDataHelpers(TestCase):
             config_data = yaml.safe_load(f)
             config_data['hold_out'] = False
 
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, data_dict)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
         assert len(list(training_data.values())[0]) > len(list(validation_data.values())[0]), "Data split is incorrect"
         assert len(list(training_data.keys())) == len(list(validation_data.keys())), \

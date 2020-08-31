@@ -77,7 +77,7 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
@@ -105,8 +105,7 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,

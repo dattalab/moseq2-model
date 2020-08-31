@@ -34,7 +34,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     None
     '''
 
-    # TODO: graceful handling of extra parameters:  orchestraconfig_data['ting'] this fails catastrophically if we pass
+    # TODO: graceful handling of extra parameters: orchestra this fails catastrophically if we pass
     # an extra option, just flag it to the user and ignore
     dest_file = realpath(dest_file)
 
@@ -79,7 +79,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         train_data, hold_out_list, test_data, nt_frames = \
             get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
     else:
-        train_data, training_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
+        train_data, validation_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
     # check for available previous modeling checkpoints
     checkpoint_file = join(checkpoint_path, basename(dest_file).replace('.p', '') + '-checkpoint.arhmm')

@@ -46,8 +46,7 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model()
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, num_iter=5, train_data=training_data,
                                                                           val_data=validation_data, num_frames=[900, 900])
@@ -76,8 +75,7 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model(separate_trans=True, groups=['default', 'Group1'])
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
@@ -103,8 +101,7 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model()
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,

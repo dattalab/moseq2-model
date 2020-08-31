@@ -122,6 +122,7 @@ class MoseqModel:
         None
         '''
 
+        # Setting data to OrderedDict
         X = _ensure_odict(X)
         silence = self.params['silent']
         if self.history:
@@ -129,23 +130,30 @@ class MoseqModel:
             self.label_history = []
             self.ll_history = []
 
+        # Instantiating ARHMM with given parameters and data
         arhmm = ARHMM(data_dict=deepcopy(_ensure_odict(X)), **self.params)
 
+        # Optionally display log-likelihoods throughout training
         if not silence:
             lbl = Label('duration: ll:')
             display(lbl)
 
         for _ in tqdm(range(self.iters), disable=silence):
+            # Resample model
             arhmm.resample_model(num_procs=self.cpus)
+
+            # Get assigned at each iteration and appending them the model history dataframe
             labels = get_labels_from_model(arhmm)
             self.df = pd.concat([to_df(l, u) for u, l in enumerate(labels)])
 
             if self.history:
+                # Computing median syllable duration throughout modeling iterations
                 _dur = self.get_median_duration().mean() / 30
                 self.label_history.append(self.df.copy())
                 self.ll_history.append(arhmm.log_likelihood())
                 self.dur_history.append(_dur)
 
+            # Optionally display median syllable duration at the same time
             if not silence and self.history:
                 lbl.value = f'median duration: {self.dur_history[-1]:0.3f}s -- log-likelihood: {self.ll_history[-1]:0.3E}'
 

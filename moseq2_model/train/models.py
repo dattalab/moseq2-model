@@ -83,8 +83,10 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 
+    # Get dimension of training data
     data_dim = list(data_dict.values())[0].shape[1]
 
+    # Set observational hyper-parameters
     default_obs_hypparams = {
         'nu_0': data_dim+2,
         'S_0': S_0_scale*np.eye(data_dim),
@@ -95,6 +97,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         'K_0': K_0_scale*np.eye(data_dim*nlags+affine)
         }
 
+    # Set modeling hyper-parameters
     default_model_hypparams = {
         'alpha': alpha,
         'gamma': gamma,
@@ -102,44 +105,53 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         'init_state_distn': 'uniform'
         }
 
+    # Update hyper-parameters given function inputted dict objects
     obs_hypparams = merge(default_obs_hypparams, obs_hypparams)
     model_hypparams = merge(default_model_hypparams, model_hypparams)
 
+    # Use AR-Bayesian distributed hyper-parameters
     if empirical_bayes:
         obs_hypparams = _get_empirical_ar_params(list(data_dict.values()), obs_hypparams)
 
     # TODO: return initialization parameters for saving downstream
 
     if separate_trans and not robust:
+        # Loading C-accelerated model with separate transition graphs
         if not silent:
             flush_print('Using model class FastARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and not robust:
+        # Loading default C-accelerated model
         if not silent:
             flush_print('Using model class FastARWeakLimitStickyHDPHMM')
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and robust:
+        # Loading C-accelerated t-distributed ARHMM
         if not silent:
             flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif separate_trans and robust:
+        # Loading C-accelerated t-distributed ARHMM with separate transition graphs
         if not silent:
             flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
     for index, (data_name, data) in enumerate(data_dict.items()):
+        # Add data to model
         if not silent:
             flush_print(f'Adding data from key {data_name}')
         if separate_trans:
+            # Optionally add data with corresponding group for separate transition graphs
             if groups[index] != 'n/a':
                 if not silent:
                     flush_print(f'Group ID: {groups[index]}')
                     model.add_data(data, group_id=groups[index])
         else:
+            # Load data without group, yielding single transition graph
             model.add_data(data)
 
     # initialize states per SL's recommendation
