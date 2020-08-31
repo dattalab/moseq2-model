@@ -1,3 +1,7 @@
+'''
+Helper functions for reading data from index files, and preparing metadata prior to training.
+'''
+
 import os
 import click
 import random
@@ -11,6 +15,54 @@ from collections import OrderedDict
 from moseq2_model.util import flush_print
 from sklearn.model_selection import train_test_split
 from moseq2_model.train.util import whiten_all, whiten_each
+
+
+def get_session_metadata(index):
+    '''
+    Reads index file verbose session metadata to display in case user prompts for
+    interactive group selection.
+
+    Parameters
+    ----------
+    index (str): path to index file
+
+    Returns
+    -------
+    index_data (dict): dict object of loaded index file
+    metadata (dict): dict of lists corresponding to session metadata to display
+    '''
+
+    # Read index file
+    with open(index, 'r') as f:
+        index_data = yaml.safe_load(f)
+
+    # Packing data into single dict
+    metadata = {
+        'i_groups': [],
+        'uuids': [],
+        'subjectNames': [],
+        'sessionNames': []
+    }
+
+    for f in index_data['files']:
+        if f['uuid'] not in metadata['uuids']:
+
+            # Get uuids and groups
+            metadata['uuids'].append(f['uuid'])
+            metadata['i_groups'].append(f['group'])
+
+            # Get sessionNames and subjectNames
+            try:
+                metadata['subjectNames'].append(f['metadata']['SubjectName'])
+                metadata['sessionNames'].append(f['metadata']['SessionName'])
+            except:
+                f['metadata'] = {}
+                f['metadata']['SubjectName'] = 'default'
+                f['metadata']['SessionName'] = 'default'
+                metadata['subjectNames'].append(f['metadata']['SubjectName'])
+                metadata['sessionNames'].append(f['metadata']['SessionName'])
+
+    return index_data, metadata
 
 def process_indexfile(index, config_data, data_metadata):
     '''
@@ -33,9 +85,13 @@ def process_indexfile(index, config_data, data_metadata):
     if os.path.exists(str(index)):
         yml = YAML(typ="rt")
         with open(index, "r") as f:
+            # reading in array of files
             yml_metadata = yml.load(f)["files"]
+
+            # reading corresponding groups and uuids
             yml_groups, yml_uuids = zip(*pluck(['group', 'uuid'], yml_metadata))
 
+        # Setting model metadata group array
         data_metadata["groups"] = []
         for uuid in data_metadata["uuids"]:
             if uuid in yml_uuids:
@@ -43,34 +99,14 @@ def process_indexfile(index, config_data, data_metadata):
             else:
                 data_metadata["groups"].append(config_data['default_group'])
 
-        with open(index, 'r') as f:
-            index_data = yaml.safe_load(f)
-        f.close()
+        # Reading in index file in dict format, and returning metadata for interactive group selection prior to modeling
+        index_data, selection_metadata = get_session_metadata(index)
 
-        i_groups, uuids = [], []
-        subjectNames, sessionNames = [], []
-        for f in index_data['files']:
-            if f['uuid'] not in uuids:
-                uuids.append(f['uuid'])
-                i_groups.append(f['group'])
-                try:
-                    subjectNames.append(f['metadata']['SubjectName'])
-                    sessionNames.append(f['metadata']['SessionName'])
-                except:
-                    f['metadata'] = {}
-                    f['metadata']['SubjectName'] = 'default'
-                    f['metadata']['SessionName'] = 'default'
-                    subjectNames.append(f['metadata']['SubjectName'])
-                    sessionNames.append(f['metadata']['SessionName'])
-
-        with open(index, 'w') as f:
-            yaml.safe_dump(index_data, f)
-        f.close()
-
+        # Optionally display metadata to select groups to model
         if config_data.get('select_groups', False):
-            for i in range(len(subjectNames)):
-                print(f'[{i + 1}]', 'Session Name:', sessionNames[i], '; Subject Name:', subjectNames[i], '; group:',
-                      i_groups[i], '; Key:', uuids[i])
+            for i in range(len(selection_metadata['subjectNames'])):
+                print(f'[{i + 1}]', 'Session Name:', selection_metadata['sessionNames'][i], '; Subject Name:', selection_metadata['subjectNames'][i], '; group:',
+                      selection_metadata['i_groups'][i], '; Key:', selection_metadata['uuids'][i])
     else:
         index_data = None
 
@@ -97,29 +133,31 @@ def select_data_to_model(index_data, select_groups=False):
     use_groups = []
     if select_groups:
         while(len(use_groups) == 0):
+            # Prompt user to select groups to include in training set
             groups_to_train = input(
                 "Input comma/space-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
             if ',' in groups_to_train:
+                # Parse multiple inputted groups if comma is found
                 sel_groups = [g.strip() for g in groups_to_train.split(',')]
                 use_keys = [f['uuid'] for f in index_data['files'] if f['group'] in sel_groups]
                 use_groups = [f['group'] for f in index_data['files'] if f['uuid'] in use_keys]
             elif len(groups_to_train) > 0:
+                # Parse multiple groups in case input is delimited by a space
                 sel_groups = [g for g in groups_to_train.split(' ')]
                 use_keys = [f['uuid'] for f in index_data['files'] if f['group'] in sel_groups]
                 use_groups = [f['group'] for f in index_data['files'] if f['uuid'] in use_keys]
             else:
+                # If no input is given, load all the uuids and groups
                 for f in index_data['files']:
                     use_keys.append(f['uuid'])
                     use_groups.append(f['group'])
     else:
+        # Load all the data
         for f in index_data['files']:
             use_keys.append(f['uuid'])
             use_groups.append(f['group'])
 
-    all_keys = use_keys
-    groups = use_groups
-
-    return all_keys, groups
+    return use_keys, use_groups
 
 def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys):
     '''
@@ -145,6 +183,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
     '''
 
     if config_data['kappa'] is None:
+        # Count total number of frames, then set it as kappa
         total_frames = 0
         for v in data_dict.values():
             idx = (~np.isnan(v)).all(axis=1)
@@ -152,33 +191,40 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         flush_print(f'Setting kappa to the number of frames: {total_frames}')
         config_data['kappa'] = total_frames
 
+    # Optionally hold out sessions for testing
     if config_data['hold_out'] and nkeys >= config_data['nfolds']:
         click.echo(f"Will hold out 1 fold of {config_data['nfolds']}")
 
         if config_data['hold_out_seed'] >= 0:
+            # Select repeatable random sessions to hold out
             click.echo(f"Settings random seed to {config_data['hold_out_seed']}")
             splits = np.array_split(random.Random(config_data['hold_out_seed']).sample(list(range(nkeys)), nkeys),
                                     config_data['nfolds'])
         else:
+            # Holding out sessions randomly
             warnings.warn("Random seed not set, will choose a different test set each time this is run...")
             splits = np.array_split(random.sample(list(range(nkeys)), nkeys), config_data['nfolds'])
 
+        # Make list of held out session uuids
         hold_out_list = [all_keys[k] for k in splits[0].astype('int').tolist()]
+        # Put remainder of the data in the training set
         train_list = [k for k in all_keys if k not in hold_out_list]
         click.echo("Holding out " + str(hold_out_list))
         click.echo("Training on " + str(train_list))
     else:
+        # Set train list to all the uuids
         config_data['hold_out'] = False
         hold_out_list = None
         train_list = all_keys
         test_data = None
 
     if config_data['ncpus'] > len(train_list):
+        # Setting number of allocated cpus equal to number of training sessions
         ncpus = len(train_list)
         config_data['ncpus'] = ncpus
         warnings.warn(f'Setting ncpus to {nkeys}, ncpus must be <= nkeys in dataset, {len(train_list)}')
 
-    # use a list of dicts, with everything formatted ready to go
+    # Pack all the modeling parameters into a single dict
     model_parameters = {
         'gamma': config_data['gamma'],
         'alpha': config_data['alpha'],
@@ -190,9 +236,11 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         'groups': None
     }
 
+    # Adding groups to modeling parameters to compute separate transition graphs
     if config_data['separate_trans']:
         model_parameters['groups'] = data_metadata['groups']
 
+    # Whiten the data
     if config_data['whiten'][0].lower() == 'a':
         click.echo('Whitening the training data using the whiten_all function')
         data_dict = whiten_all(data_dict)
@@ -202,6 +250,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
     else:
         click.echo('Not whitening the data')
 
+    # Applying Additive White Gaussian Noise
     if config_data['noise_level'] > 0:
         click.echo(f'Using {config_data["noise_level"]} STD AWGN.')
         for k, v in data_dict.items():
@@ -229,6 +278,7 @@ def get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list):
     nt_frames (list): list of the number of frames in each session in train_data
     '''
 
+    # Getting OrderedDicts of the training, and testing/held-out data
     train_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in train_list)
     test_data = OrderedDict((i, data_dict[i]) for i in all_keys if i in hold_out_list)
     hold_out_list = list(test_data.keys())
@@ -255,27 +305,27 @@ def get_training_data_splits(config_data, data_dict):
     nt_frames (list): list of length of each session in the split training data.
     '''
 
-    train_data = data_dict
-
     training_data = OrderedDict()
     validation_data = OrderedDict()
 
     nt_frames = []
     nv_frames = []
 
-    for k, v in train_data.items():
-        # train values
+    for k, v in data_dict.items():
+        # Splitting data by test set
         training_X, testing_X = train_test_split(v, test_size=config_data['percent_split'] / 100, shuffle=False, random_state=0)
+
+        # Setting training data key-value pair
         training_data[k] = training_X
         nt_frames.append(training_data[k].shape[0])
 
-        # validation values
+        # Setting validation data key-value pair
         validation_data[k] = testing_X
         nv_frames.append(validation_data[k].shape[0])
 
-    return train_data, training_data, validation_data, nt_frames
+    return training_data, validation_data, nt_frames
 
-def graph_helper(groups, lls, legend, iterations, ll_type='train', sep_trans=False):
+def graph_helper(groups, lls, legend, iterations, ll_type='train'):
     '''
     Helper function to plot the training and validation log-likelihoods
      over the each model training iteration.
@@ -294,8 +344,8 @@ def graph_helper(groups, lls, legend, iterations, ll_type='train', sep_trans=Fal
     None
     '''
 
-    if sep_trans: lls = lls[0]
     for i, g in enumerate(groups):
+        # Set dynamic line widths and formats
         lw = 10 - 8 * i / len(lls)
         ls = ['-', '--', '-.', ':'][i % 4]
         try:
@@ -322,21 +372,23 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
     img_path (str): path to saved graph.
     '''
 
+    ll_type = 'val'
+    if config_data['hold_out']:
+        ll_type = 'held_out'
+
     if config_data['verbose']:
+        # Graphing loglikelihood summary if verbose==True
         iterations = [i for i in range(len(iter_lls))]
         legend = []
-        if config_data['separate_trans']:
-            graph_helper(group_idx, iter_lls, legend, iterations, sep_trans=True)
-            graph_helper(group_idx, iter_holls, legend, iterations, ll_type='val', sep_trans=True)
-        else:
-            graph_helper(group_idx, iter_lls, legend, iterations)
-            graph_helper(group_idx, iter_lls, legend, iterations, ll_type='val')
+        graph_helper(group_idx, iter_lls, legend, iterations)
+        graph_helper(group_idx, iter_holls, legend, iterations, ll_type=ll_type)
 
         plt.legend(legend)
 
         plt.ylabel('Average Syllable Log-Likelihood')
         plt.xlabel('Iterations')
 
+        # Saving plots
         if config_data['hold_out']:
             img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
             plt.title('ARHMM Training Summary With ' + str(config_data['nfolds']) + ' Folds')

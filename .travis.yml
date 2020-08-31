@@ -21,7 +21,7 @@ jobs:
         - pipenv install --dev --ignore-pipfile --deploy
         - pipenv run pip install git+https://github.com/mattjj/pyhsmm.git
         - pipenv run pip install git+https://github.com/mattjj/pybasicbayes.git
-        - pipenv run pip install git+https://github.com/mattjj/pyhsmm-autoregressive.git
+        - pipenv run pip install git+https://github.com/dattalab/pyhsmm-autoregressive.git@master
       before_script:
         - make
       script:
@@ -41,7 +41,7 @@ jobs:
         - pipenv install --dev --ignore-pipfile --deploy
         - pipenv run pip install git+https://github.com/mattjj/pyhsmm.git
         - pipenv run pip install git+https://github.com/mattjj/pybasicbayes.git
-        - pipenv run pip install git+https://github.com/mattjj/pyhsmm-autoregressive.git
+        - pipenv run pip install git+https://github.com/dattalab/pyhsmm-autoregressive.git@master
       before_script:
         - make
       script:

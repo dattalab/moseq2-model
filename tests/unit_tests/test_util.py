@@ -4,12 +4,11 @@ import h5py
 import numpy as np
 import ruamel.yaml as yaml
 from unittest import TestCase
+from tests.unit_tests.test_train_utils import get_model
 from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
-from moseq2_model.tests.unit_tests.test_train_utils import get_model
-from moseq2_model.util import load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict,\
-                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, \
-                    get_parameters_from_model
+from moseq2_model.util import load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5, \
+                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model
 
 class TestUtils(TestCase):
 
@@ -27,7 +26,6 @@ class TestUtils(TestCase):
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         assert list(data_dict.keys()) == data_metadata['uuids']
-
 
     def test_save_dict(self):
         input_data = 'data/test_scores.h5'
@@ -49,15 +47,27 @@ class TestUtils(TestCase):
 
     def test_h5_to_dict(self):
         input_data = 'data/test_scores.h5'
-        outdict = h5_to_dict(input_data, '/')
+        outdict = h5_to_dict(input_data, 'scores')
         assert isinstance(outdict, dict)
+
+    def test_dict_to_h5(self):
+        input_data = 'data/test_scores.h5'
+        outdict = h5_to_dict(input_data, 'scores')
+        assert isinstance(outdict, dict)
+
+        outpath = 'data/out_scores.h5'
+
+        tmp_h5 = h5py.File(outpath, 'w')
+        dict_to_h5(tmp_h5, outdict)
+
+        assert os.path.exists(outpath)
+        os.remove(outpath)
 
     def test_load_h5_to_dict(self):
         input_data = 'data/test_scores.h5'
         with h5py.File(input_data, 'r') as f:
             outdict = _load_h5_to_dict(f, '/')
         assert isinstance(outdict, dict)
-
 
     def test_copy_model(self):
         model, data_dict = get_model()
@@ -67,8 +77,7 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
@@ -96,8 +105,7 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
@@ -106,7 +114,6 @@ class TestUtils(TestCase):
 
         params = get_parameters_from_model(model)
         check_params(model, params)
-
 
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
@@ -131,15 +138,3 @@ class TestUtils(TestCase):
 
         assert(len(groups) == 1)
         assert(groups[0] == 'test')
-
-    def _list_rank(self):
-        print()
-
-    def _recursively_save_dict_contents_to_group(self):
-        print()
-
-    def _load_arhmm_checkpoint(self):
-        print()
-
-    def _save_arhmm_checkpoint(self):
-        print()
