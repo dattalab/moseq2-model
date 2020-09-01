@@ -28,7 +28,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     dest_file (str): path to save model to.
     config_data (dict): dictionary containing necessary modeling parameters.
     index (str): path to index file.
-    gui (bool): indicates whether Jupyter notebook is being used.
+    
     Returns
     -------
     None
