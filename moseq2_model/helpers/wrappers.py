@@ -64,6 +64,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     # Parse index file and update metadata information; namely groups
     index_data, data_metadata = process_indexfile(index, config_data, data_metadata)
 
+    # Get all training session uuids
     all_keys = list(data_dict.keys())
     groups = list(data_metadata['groups'])
 
@@ -74,6 +75,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         data_metadata['groups'] = groups
         data_metadata['uuids'] = all_keys
 
+    # Create OrderedDict of training data
     data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
     nkeys = len(all_keys)
 
@@ -93,7 +95,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     checkpoint_file = join(checkpoint_path, basename(dest_file).replace('.p', '') + '-checkpoint.arhmm')
     all_checkpoints = [f for f in glob.glob(f'{checkpoint_path}*.arhmm') if basename(dest_file).replace('.p', '') in f]
 
-    # Instantiate model, either anew or from previously saved checkpoint
+    # Instantiate model; either anew or from previously saved checkpoint
     arhmm, itr = get_current_model(config_data.get('use_checkpoint', False), all_checkpoints, train_data, model_parameters)
 
     # Pack progress bar keyword arguments

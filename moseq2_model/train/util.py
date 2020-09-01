@@ -7,7 +7,7 @@ from cytoolz import valmap
 from tqdm.auto import tqdm
 from functools import partial
 from collections import OrderedDict, defaultdict
-from moseq2_model.util import save_arhmm_checkpoint
+from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
@@ -47,9 +47,12 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     # Checkpointing boolean
     checkpoint = checkpoint_freq is not None
 
-    iter_lls = []
-    iter_holls = []
-    group_idx = ['default']
+    iter_lls, iter_holls = [], []
+
+    # Set groups if none were supplied
+    if groups == None:
+        groups = ['default']
+
     for itr in tqdm(range(start, num_iter), **progress_kwargs):
         # Resample states, and gracefully return in case of a keyboard interrupt
         try:
@@ -57,7 +60,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
         except KeyboardInterrupt:
             print('Training manually interrupted.')
             print('Returning and saving current iteration of model. ')
-            return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
+            return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
         if verbose:
             # Optionally get iteration log-likelihood values
@@ -71,6 +74,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 'iter_lls': iter_lls,
                 'iter_holls': iter_holls
             }
+            # Compute iteration training and validation log-likelihoods
             iter_lls, iter_holls = get_model_summary(**summ_stats)
 
         # checkpoint if needed
@@ -86,13 +90,10 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             checkpoint_file = "{0}_{2}.{1}".format(
                 *checkpoint_file.replace(f'_{itr-checkpoint_freq}', '').rsplit('.', 1) + [itr]
             )
+            # Save checkpoint
             save_arhmm_checkpoint(checkpoint_file, save_data)
 
-    # Get group list to return
-    if groups != None:
-        group_idx = groups
-
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
 
 def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
@@ -116,35 +117,38 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
     iter_holls (list): updated list of held-out log-likelihoods at an iteration level.
     '''
 
+    # Get train groups
+    if isinstance(groups, tuple):
+        train_groups = list(set(groups[0]))
+    else:
+        train_groups = list(set(groups))
+
+    # Get train data log-likelihoods
+    train_ll = get_loglikelihoods(model, train_data, train_groups, separate_trans)
+
+    # Compute respective normalized log-likelihoods
     if not separate_trans:
-        # Get training log-likelihood
-        train_ll = model.log_likelihood() / sum(num_frames)
+        train_ll = np.array(train_ll) / sum(num_frames)
         iter_lls.append(train_ll)
     else:
-        # Get training log-likelihood values for each group
-        group_lls = []
-        group_idx = []
-        if type(groups) == tuple:
-            for g in list(set(groups[0])):
-                if g != 'n/a':
-                    train_ll = [model.log_likelihood(v, group_id=g) for v in train_data.values()]
-                    lens = [len(v) for v in train_data.values()]
-                    group_lls.append(sum(train_ll) / sum(lens))
-                    group_idx.append(g)
-        else:
-            for g in list(set(groups)):
-                if g != 'n/a':
-                    train_ll = [model.log_likelihood(v, group_id=g) for v in train_data.values()]
-                    lens = [len(v) for v in train_data.values()]
-                    group_lls.append(sum(train_ll) / sum(lens))
-                    group_idx.append(g)
+        lens = [len(v) for v in train_data.values()]
+        iter_lls.append(sum(train_ll) / sum(lens))
 
-        iter_lls.append(group_lls)
+    # Get validation groups
+    if isinstance(groups, tuple):
+        val_groups = list(set(groups[1]))
+    else:
+        val_groups = list(set(groups))
 
     # Get iteration heldout/validation log-likelihood values
-    if not separate_trans:
-        val_ll = [model.log_likelihood(v) for v in val_data.values()]
-        lens = [len(v) for v in val_data.values()]
+    val_ll = get_loglikelihoods(model, val_data, val_groups, separate_trans)
+    lens = [len(v) for v in val_data.values()]
+
+    # Compute respective normalized log-likelihood
+    if separate_trans:
+        g_ll = sum(val_ll) / sum(lens)
+        iter_holls.append(g_ll)
+    else:
         if len(val_ll) > 1:
             val_ll = sum(val_ll) / sum(lens)
         else:
@@ -153,22 +157,6 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
             else:
                 val_ll = sum(val_ll) / len(val_ll)
         iter_holls.append(val_ll)
-    else:
-        # Get LLs for each modeling group
-        group_lls = []
-        if type(groups) == tuple:
-            for g in list(set(groups[1])):
-                if g != 'n/a':
-                    val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
-                    lens = [len(v) for v in val_data.values()]
-                    group_lls.append(sum(val_ll) / sum(lens))
-        else:
-            for g in list(set(groups)):
-                if g != 'n/a':
-                    val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
-                    lens = [len(v) for v in val_data.values()]
-                    group_lls.append(sum(val_ll) / sum(lens))
-        iter_holls.append(group_lls)
 
     return iter_lls, iter_holls
 
