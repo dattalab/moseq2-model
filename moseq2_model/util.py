@@ -3,17 +3,17 @@ Utility functions for handling loading and saving models and their respective me
 '''
 
 import h5py
+import click
 import joblib
 import pickle
 import scipy.io
 import numpy as np
 from copy import deepcopy
 from cytoolz import first
-from functools import partial
 from collections import OrderedDict
+from os.path import basename, getctime
 from autoregressive.util import AR_striding
-
-flush_print = partial(print, flush=True)
+from moseq2_model.train.models import ARHMM
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
     '''
@@ -97,6 +97,119 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 
     return data_dict, metadata
 
+def get_current_model(use_checkpoint, all_checkpoints, train_data, model_parameters):
+    '''
+    Checks to see whether user is loading a checkpointed model, if so, loads the latest iteration.
+    Otherwise, will instantiate a new model.
+
+    Parameters
+    ----------
+    use_checkpoint (bool): CLI input parameter indicating user is loading a checkpointed model
+    all_checkpoints (list): list of all found checkpoint paths
+    train_data (OrderedDict): dictionary of uuid-PC score key-value pairs
+    model_parameters (dict): dictionary of required modeling hyperparameters.
+
+    Returns
+    -------
+    arhmm (ARHMM): instantiated model object including loaded data
+    itr (int): starting iteration number for the model to begin training from.
+    '''
+
+    # Check for available previous modeling checkpoints
+    itr = 0
+    if use_checkpoint:
+        if len(all_checkpoints) > 0:
+            # Get latest checkpoint (with respect to save date)
+            latest_checkpoint = max(all_checkpoints, key=getctime)
+            click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
+            try:
+                checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
+                # Get model object
+                arhmm = checkpoint.pop('model')
+                itr = checkpoint.pop('iter')
+                click.echo(f'On iteration {itr}')
+            except (FileNotFoundError, ValueError):
+                click.echo('Loading original checkpoint failed, creating new ARHMM')
+                arhmm = ARHMM(data_dict=train_data, **model_parameters)
+        else:
+            click.echo('No matching checkpoints found, creating new ARHMM')
+            arhmm = ARHMM(data_dict=train_data, **model_parameters)
+    else:
+        arhmm = ARHMM(data_dict=train_data, **model_parameters)
+
+    return arhmm, itr
+
+def get_loglikelihoods(arhmm, data, groups, separate_trans):
+    '''
+    Computes the log-likelihoods of the trained ARHMM states.
+
+    Parameters
+    ----------
+    arhmm (ARHMM): Trained ARHMM model.
+    data (dict): dict object containing training data keyed by their corresponding UUIDs
+    groups (list): list of assigned groups for all corresponding session uuids. (Only used if
+        separate_trans == True.
+    separate_trans (bool): boolean that determines whether to compute separate log-likelihoods
+    for each modeled group.
+
+    Returns
+    -------
+    ll (list): list of log-likelihoods for the trained model, len(ll) > 1 if separate_trans==True
+    '''
+
+    if separate_trans:
+        ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(groups, data.values())]
+    else:
+        ll = [arhmm.log_likelihood(v) for v in data.values()]
+
+    return ll
+
+def get_session_groupings(data_metadata, groups, all_keys, hold_out_list):
+    '''
+    Creates a list or tuple of assigned groups for training and (optionally)
+    held out data.
+
+    Parameters
+    ----------
+    data_metadata (dict): dict containing session group information
+    groups (list): list of all session groups
+    all_keys (list): list of all corresponding included session UUIDs
+    hold_out_list (list): list of held-out uuids
+
+    Returns
+    -------
+    groupings (list or tuple): 1/2-tuple containing lists of train groups
+    and held-out groups (if held_out_list exists)
+    '''
+
+    groupings = None
+
+    if hold_out_list != None:
+        # Get held out groups
+        if groups == None:
+            train_g, hold_g = [], []
+        else:
+            hold_g = []
+            train_g = []
+            # remove held out group
+            for i in range(len(all_keys)):
+                if all_keys[i] in hold_out_list:
+                    hold_g.append(data_metadata['groups'][i])
+                else:
+                    train_g.append(data_metadata['groups'][i])
+
+        # Ensure training groups were found before setting grouping
+        if len(train_g) != 0:
+            groupings = (train_g, hold_g)
+
+    else:
+        # set default group
+        if groups == None:
+            groupings = []
+        else:
+            groupings = list(groups)
+
+    return groupings
 
 def save_dict(filename, obj_to_save=None):
     '''

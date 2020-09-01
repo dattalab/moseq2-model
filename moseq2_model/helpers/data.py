@@ -12,7 +12,7 @@ import ruamel.yaml as yaml
 from ruamel.yaml import YAML
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-from moseq2_model.util import flush_print
+from moseq2_model.train.models import flush_print
 from sklearn.model_selection import train_test_split
 from moseq2_model.train.util import whiten_all, whiten_each
 

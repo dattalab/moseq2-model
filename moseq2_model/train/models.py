@@ -5,12 +5,14 @@ ARHMM model initialization utilities.
 import warnings
 import numpy as np
 from cytoolz import merge
-from moseq2_model.util import flush_print
+from functools import partial
 from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 
+
+flush_print = partial(print, flush=True)
 
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):

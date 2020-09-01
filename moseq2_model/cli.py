@@ -5,7 +5,8 @@ users can alter to most accurately process their data.
 
 import click
 import numpy as np
-from moseq2_model.util import load_pcs, flush_print
+from moseq2_model.util import load_pcs
+from moseq2_model.train.models import flush_print
 from moseq2_model.helpers.wrappers import learn_model_wrapper
 
 orig_init = click.core.Option.__init__
