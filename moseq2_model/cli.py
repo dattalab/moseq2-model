@@ -71,6 +71,8 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
+@click.option("--converge", is_flag=True, help="Use tAR model")
+@click.option("--tolerance", "-t", type=float, default=1000, help="Tolerance value to check whether model training loglikelihood has converged.")
 @click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--use-checkpoint", is_flag=True, help='indicate whether to use previously saved checkpoint')
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
@@ -80,7 +82,7 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
                 num_iter, var_name, e_step,
                 save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
                 load_groups, kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                checkpoint_freq, use_checkpoint, index, default_group, verbose):
+                converge, tolerance, checkpoint_freq, use_checkpoint, index, default_group, verbose):
 
     click_data = click.get_current_context().params
     learn_model_wrapper(input_file, dest_file, click_data)

@@ -11,7 +11,8 @@ from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
-                train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
+                train_data=None, val_data=None, separate_trans=False, groups=None, 
+                converge=False, tolerance=1000, verbose=False):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -61,6 +62,15 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             print('Training manually interrupted.')
             print('Returning and saving current iteration of model. ')
             return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
+
+        if converge and itr % 5 == 0:
+            # Get current loglikelihood
+            curr_ll = model.log_likelihood()
+            iter_lls.append(curr_ll)
+
+            # Check if loglikelihood increase is less than convergence tolerance
+            if (curr_ll - iter_lls[-2]) <= tolerance:
+                return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
 
         if verbose:
             # Optionally get iteration log-likelihood values

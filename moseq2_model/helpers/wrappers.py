@@ -107,6 +107,9 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         'initial': itr
     }
 
+    if config_data['converge']:
+        config_data['num_iter'] = 1000
+
     # Get data groupings for verbose train vs. test log-likelihood estimation and graphing
     groupings = get_session_groupings(data_metadata, list(data_metadata['groups']), all_keys, hold_out_list)
 
@@ -125,6 +128,8 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         val_data=test_data,
         separate_trans=config_data['separate_trans'],
         groups=groupings,
+        converge=config_data['converge'],
+        tolerance=config_data['tolerance'],
         verbose=config_data['verbose']
     )
 
