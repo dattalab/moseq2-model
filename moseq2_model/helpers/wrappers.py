@@ -38,8 +38,8 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     # an extra option, just flag it to the user and ignore
     dest_file = realpath(dest_file)
 
-    if not os.path.exists(dest_file):
-        os.makedirs(dest_file)
+    if not os.path.exists(dirname(dest_file)):
+        os.makedirs(dirname(dest_file))
 
     if not os.access(dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
