@@ -8,7 +8,7 @@ from moseq2_model.helpers.wrappers import learn_model_wrapper
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out=False, nfolds=2, num_iter=100,
     max_states=100, npcs=10, kappa=None, alpha=5.7, gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1,
-    use_checkpoint=False, select_groups=False, percent_split=20, verbose=False):
+    use_checkpoint=False, select_groups=False, percent_split=1, verbose=False):
     '''
     Trains ARHMM from Jupyter notebook.
 
