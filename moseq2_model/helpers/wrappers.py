@@ -197,10 +197,21 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_di
     # get kappa range to scan
     if config_data['min_kappa'] == None or config_data['max_kappa'] == None:
 
-        config_data['min_kappa'] = count_frames(data_dict)
+        # Choosing a minimum kappa value (AKA value to begin the scan from)
+        # less than the counted number of frames
+        if config_data['min_kappa'] == None:
+            min_kappa = count_frames(data_dict)/100
+            config_data['min_kappa'] = min_kappa
 
         # get kappa values for each model to train
-        kappas = [(config_data['min_kappa'] *(10**i)) for i in range(config_data['n_models'])]
+        if config_data['max_kappa'] == None:
+            kappas = [(config_data['min_kappa'] *(10**i)) for i in range(config_data['n_models'])]
+        else:
+            diff_kappa = config_data['max_kappa'] - config_data['min_kappa']
+            kappa_iter = int(diff_kappa / config_data['n_models'])
+
+            kappas = list(range(config_data['min_kappa'], config_data['max_kappa'], kappa_iter))
+
     else:
         diff_kappa = config_data['max_kappa'] - config_data['min_kappa']
         kappa_iter = int(diff_kappa/config_data['n_models'])
@@ -245,11 +256,12 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_di
             cmd = prefix + cmd +'"'
         commands.append(cmd)
 
+    # Display the string
     command_string = '\n'.join(commands)
+    print('Listing scan commands...\n')
+    print(command_string)
 
-    if config_data['get_cmd']:
-        return command_string
-    else:
-        print('Running commands:')
-        print(command_string)
+    if not config_data['get_cmd']:
         os.system(command_string)
+
+    return command_string
