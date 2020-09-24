@@ -126,7 +126,7 @@ def kappa_scan_fit_models(input_file, index_file, output_dir, hold_out, hold_out
                 wall_time, partition):
 
     click_data = click.get_current_context().params
-    kappa_scan_fit_models_wrapper(input_file, index_file, output_dir, click_data)
+    kappa_scan_fit_models_wrapper(input_file, index_file, click_data, output_dir)
 
 
 if __name__ == '__main__':

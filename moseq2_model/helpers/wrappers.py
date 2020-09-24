@@ -13,7 +13,7 @@ from copy import deepcopy
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, run_e_step
 from os.path import join, basename, realpath, dirname, exists
-from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, \
+from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
                                get_current_model, get_loglikelihoods, get_session_groupings)
 from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata, count_frames,
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
@@ -185,7 +185,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         return img_path
 
 
-def kappa_scan_fit_models_wrapper(input_file, index_file, output_dir, config_data):
+def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_dir):
 
     model_name_format = 'model-{}-{}.p '
 
@@ -247,4 +247,9 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, output_dir, config_dat
 
     command_string = '\n'.join(commands)
 
-    return command_string
+    if config_data['get_cmd']:
+        return command_string
+    else:
+        print('Running commands:')
+        print(command_string)
+        os.system(command_string)

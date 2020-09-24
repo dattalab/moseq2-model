@@ -2,13 +2,16 @@
 GUI front-end function for training ARHMM.
 '''
 
+import os
 import ruamel.yaml as yaml
 from .cli import learn_model
-from moseq2_model.helpers.wrappers import learn_model_wrapper
+from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
 def learn_model_command(input_file, dest_file, config_file, index, hold_out=False, nfolds=2, num_iter=100,
-    max_states=100, npcs=10, kappa=None, alpha=5.7, gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1,
-    use_checkpoint=False, select_groups=False, percent_split=20, verbose=False):
+                        max_states=100, npcs=10, kappa=None, min_kappa=None, max_kappa=None, n_models=5, alpha=5.7,
+                        gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1, use_checkpoint=False,
+                        select_groups=False, percent_split=20, output_dir=None, cluster_type='local', get_cmd=True,
+                        verbose=False):
     '''
     Trains ARHMM from Jupyter notebook.
 
@@ -66,4 +69,16 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
     config_data['select_groups'] = select_groups
     config_data['use_checkpoint'] = use_checkpoint
 
-    learn_model_wrapper(input_file, dest_file, config_data, index)
+    if kappa == 'scan':
+        config_data['min_kappa'] = min_kappa
+        config_data['max_kappa'] = max_kappa
+        config_data['n_models'] = n_models
+        config_data['get_cmd'] = get_cmd
+        config_data['cluster_type'] = cluster_type
+
+        if output_dir == None:
+            output_dir = os.path.dirname(index)
+
+        kappa_scan_fit_models_wrapper(input_file, index, config_data, output_dir)
+    else:
+        learn_model_wrapper(input_file, dest_file, config_data, index)
