@@ -63,6 +63,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             print('Returning and saving current iteration of model. ')
             return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
+        # Test convergence every 5 iterations
         if converge and itr % 5 == 0:
             # Get current loglikelihood
             curr_ll = model.log_likelihood()

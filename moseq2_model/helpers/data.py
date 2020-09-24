@@ -159,6 +159,26 @@ def select_data_to_model(index_data, select_groups=False):
 
     return use_keys, use_groups
 
+def count_frames(data_dict):
+    '''
+
+    Parameters
+    ----------
+    data_dict (OrderedDict)
+
+    Returns
+    -------
+    total_frames (int)
+    '''
+
+    total_frames = 0
+    for v in data_dict.values():
+        idx = (~np.isnan(v)).all(axis=1)
+        total_frames += np.sum(idx)
+    flush_print(f'Setting kappa to the number of frames: {total_frames}')
+
+    return total_frames
+
 def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys):
     '''
     Sets model training metadata parameters, whitens data,
@@ -184,12 +204,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
 
     if config_data['kappa'] is None:
         # Count total number of frames, then set it as kappa
-        total_frames = 0
-        for v in data_dict.values():
-            idx = (~np.isnan(v)).all(axis=1)
-            total_frames += np.sum(idx)
-        flush_print(f'Setting kappa to the number of frames: {total_frames}')
-        config_data['kappa'] = total_frames
+        config_data['kappa'] = count_frames(data_dict, config_data)
 
     # Optionally hold out sessions for testing
     if config_data['hold_out'] and nkeys >= config_data['nfolds']:
