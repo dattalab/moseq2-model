@@ -204,7 +204,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
 
     if config_data['kappa'] is None:
         # Count total number of frames, then set it as kappa
-        config_data['kappa'] = count_frames(data_dict, config_data)
+        config_data['kappa'] = count_frames(data_dict)
 
     # Optionally hold out sessions for testing
     if config_data['hold_out'] and nkeys >= config_data['nfolds']:
