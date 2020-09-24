@@ -59,7 +59,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             model.resample_model(num_procs=ncpus)
         except KeyboardInterrupt:
             print('Training manually interrupted.')
-            print('Returning and saving current iteration of model. ')
+            print('Returning and saving current model iteration. ')
             return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
         if verbose:
