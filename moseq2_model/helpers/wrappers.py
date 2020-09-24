@@ -38,6 +38,9 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     # an extra option, just flag it to the user and ignore
     dest_file = realpath(dest_file)
 
+    if not os.path.exists(dirname(dest_file)):
+        os.makedirs(dirname(dest_file))
+
     if not os.access(dirname(dest_file), os.W_OK):
         raise IOError('Output directory is not writable.')
 
@@ -69,7 +72,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     groups = list(data_metadata['groups'])
 
     # Get keys to include in training set
-    select_groups = config_data.get('select_groups', True)
+    select_groups = config_data.get('select_groups', False)
     if (index_data != None):
         all_keys, groups = select_data_to_model(index_data, select_groups)
         data_metadata['groups'] = groups
@@ -230,7 +233,7 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, output_dir, config_dat
         parameters += f'-t {config_data["tolerance"]} '
 
     if config_data['cluster_type'] == 'slurm':
-        prefix = f'sbatch -n {config_data["ncpus"]} --mem={config_data["memory"]} '
+        prefix = f'sbatch -c {config_data["ncpus"]} --mem={config_data["memory"]} '
         prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "'
 
     commands = []

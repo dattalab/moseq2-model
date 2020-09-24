@@ -81,6 +81,9 @@ def process_indexfile(index, config_data, data_metadata):
     data_metadata (dict): updated metadata dictionary.
     '''
 
+    if index == None:
+        index = config_data.get('index', '')
+
     # if we have an index file, strip out the groups, match to the scores uuids
     if os.path.exists(str(index)):
         yml = YAML(typ="rt")
