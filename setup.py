@@ -10,6 +10,27 @@ os.system('export CXX="$(which g++-7)"')
 def install(package):
     subprocess.call([sys.executable, "-m", "pip", "install", package])
 
+try:
+    import numpy
+except ImportError:
+    install('numpy')
+
+try:
+    import future
+except ImportError:
+    install('future')
+
+try:
+    import six
+except ImportError:
+    install('six')
+
+try:
+    import cython
+except ImportError:
+    install('cython')
+
+
 def read(rel_path):
     here = os.path.abspath(os.path.dirname(__file__))
     with codecs.open(os.path.join(here, rel_path), 'r') as fp:
