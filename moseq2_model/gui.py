@@ -77,6 +77,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
         config_data['cluster_type'] = cluster_type
 
         if output_dir == None:
+            print('Output directory not specified, saving models to base directory.')
             output_dir = os.path.dirname(index)
 
         kappa_scan_fit_models_wrapper(input_file, index, config_data, output_dir)
