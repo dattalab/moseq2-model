@@ -7,7 +7,7 @@ import ruamel.yaml as yaml
 from .cli import learn_model
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
-def learn_model_command(input_file, dest_file, config_file, index, hold_out=False, nfolds=2, num_iter=100,
+def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
                         max_states=100, npcs=10, kappa=None, min_kappa=None, max_kappa=None, n_models=5, alpha=5.7,
                         gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1, use_checkpoint=False,
                         select_groups=False, percent_split=20, output_dir=None, cluster_type='local', get_cmd=True,
@@ -17,10 +17,7 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
 
     Parameters
     ----------
-    input_file (str): pca scores file path.
-    dest_file (str): path to save model to.
-    config_file (str): configuration file path.
-    index (str): index file path.
+    progress_paths (dict):
     hold_out (bool): indicate whether to hold out data or use train_test_split.
     nfolds (int): number of folds to hold out.
     num_iter (int): number of training iterations.
@@ -41,6 +38,13 @@ def learn_model_command(input_file, dest_file, config_file, index, hold_out=Fals
     -------
     None
     '''
+
+    # Load proper input variables
+    input_file = progress_paths['scores_path']
+    dest_file = progress_paths['model_path']
+    config_file = progress_paths['config_file']
+    index = progress_paths['index_file']
+
 
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
