@@ -12,7 +12,7 @@ import ruamel.yaml as yaml
 from ruamel.yaml import YAML
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-from moseq2_model.train.models import flush_print
+from moseq2_model.util import count_frames
 from sklearn.model_selection import train_test_split
 from moseq2_model.train.util import whiten_all, whiten_each
 
@@ -161,26 +161,6 @@ def select_data_to_model(index_data, select_groups=False):
             use_groups.append(f['group'])
 
     return use_keys, use_groups
-
-def count_frames(data_dict):
-    '''
-
-    Parameters
-    ----------
-    data_dict (OrderedDict)
-
-    Returns
-    -------
-    total_frames (int)
-    '''
-
-    total_frames = 0
-    for v in data_dict.values():
-        idx = (~np.isnan(v)).all(axis=1)
-        total_frames += np.sum(idx)
-    flush_print(f'Setting kappa to the number of frames: {total_frames}')
-
-    return total_frames
 
 def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys):
     '''

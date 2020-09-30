@@ -14,8 +14,7 @@ from cytoolz import first
 from collections import OrderedDict
 from os.path import basename, getctime
 from autoregressive.util import AR_striding
-from moseq2_model.train.models import ARHMM
-from moseq2_model.helpers.data import count_frames
+from moseq2_model.train.models import ARHMM, flush_print
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
     '''
@@ -544,6 +543,27 @@ def get_parameters_from_model(model):
         parameters['nu'] = [obs.nu for obs in model.obs_distns]
 
     return parameters
+
+def count_frames(data_dict):
+    '''
+    Counts the total number of frames loaded from the PCA scores file.
+
+    Parameters
+    ----------
+    data_dict (OrderedDict): Loaded PCA scores OrderedDict object.
+
+    Returns
+    -------
+    total_frames (int): total number of counted frames.
+    '''
+
+    total_frames = 0
+    for v in data_dict.values():
+        idx = (~np.isnan(v)).all(axis=1)
+        total_frames += np.sum(idx)
+    flush_print(f'Setting kappa to the number of frames: {total_frames}')
+
+    return total_frames
 
 def get_parameter_strings(index_file, config_data):
     '''

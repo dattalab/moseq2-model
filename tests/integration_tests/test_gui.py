@@ -34,7 +34,14 @@ class TestGUI(TestCase):
 
         sys.stdin = open(stdin)
 
-        learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
+        progress_paths = {
+            'scores_path': input_file,
+            'model_path': dest_file,
+            'config_file': config_file,
+            'index_file': index
+        }
+
+        learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
                             checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
@@ -58,7 +65,7 @@ class TestGUI(TestCase):
 
         sys.stdin = open(stdin)
 
-        learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
+        learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter, use_checkpoint=True,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
                             checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
