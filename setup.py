@@ -55,7 +55,7 @@ setup(
     include_package_data=True,
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['six==1.14.0', 'h5py==2.10.0',
+    install_requires=['six==1.14.0', 'h5py==2.10.0', 'ipywidgets==7.5.1',
                       'scipy==1.4.1', 'numpy==1.18.3', 'click==7.0', 'cython==0.29.14',
                       'pandas==1.0.5', 'future==0.18.2', 'joblib==0.15.1', 'scikit-learn==0.20.3',
                       'scikit-image==0.16.2', 'setuptools', 'cytoolz==0.10.1', 'tqdm==4.40.0',
