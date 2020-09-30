@@ -2,6 +2,7 @@
 Utility functions for handling loading and saving models and their respective metadata.
 '''
 
+import os
 import h5py
 import click
 import joblib
@@ -14,6 +15,7 @@ from collections import OrderedDict
 from os.path import basename, getctime
 from autoregressive.util import AR_striding
 from moseq2_model.train.models import ARHMM
+from moseq2_model.helpers.data import count_frames
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
     '''
@@ -542,3 +544,147 @@ def get_parameters_from_model(model):
         parameters['nu'] = [obs.nu for obs in model.obs_distns]
 
     return parameters
+
+def get_parameter_strings(index_file, config_data):
+    '''
+    Creates the CLI learn-model parameters string using the given config_data dict contents.
+     Function checks for the following paramters: [npcs, num_iter, separate_trans, robust, e_step,
+      hold_out, max_states, converge, tolerance].
+
+    Parameters
+    ----------
+    index_file (str): Path to index file.
+    config_data (dict): Configuration parameters dict.
+
+    Returns
+    -------
+    parameters (str): String containing all the requested CLI command parameter flags.
+    prefix (str): Prefix string for the learn-model command, used for Slurm functionality.
+    '''
+
+    parameters = f'-i {index_file} --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
+
+    if config_data['separate_trans']:
+        parameters += '--separate-trans '
+
+    if config_data['robust']:
+        parameters += '--robust '
+
+    if config_data['e_step']:
+        parameters += '--e-step '
+
+    if config_data['hold_out']:
+        parameters += f'-h {str(config_data["nfolds"])} '
+
+    if config_data['max_states']:
+        parameters += f'-m {config_data["max_states"]} '
+
+    if config_data['converge']:
+        parameters += '--converge '
+
+        parameters += f'-t {config_data["tolerance"]} '
+
+    # Handle possible Slurm batch functionality
+    prefix = ''
+    if config_data['cluster_type'] == 'slurm':
+        prefix = f'sbatch -c {config_data["ncpus"]} --mem={config_data["memory"]} '
+        prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "'
+
+    return parameters, prefix
+
+def create_command_strings(input_file, index_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p'):
+    '''
+    Creates the CLI learn-model N command strings with parameter flags based on the contents of the configuration
+     dict. Each model will a different kappa value within a given range (for N models to train).
+
+    Parameters
+    ----------
+    input_file (str): Path to PCA Scores
+    index_file (str): Path to index file
+    output_dir (str): Path to directory to save models in.
+    config_data (dict): Configuration parameters dict.
+    kappas (list): List of kappa values to assign to model training commands.
+    model_name_format (str): Filename string format string.
+
+    Returns
+    -------
+    command_string (str): CLI learn-model command strings with the requested parameters separated by newline characters
+    '''
+
+    # Get base command and parameter flags
+    base_command = f'moseq2-model learn-model {input_file} '
+    parameters, prefix = get_parameter_strings(index_file, config_data)
+
+    commands = []
+    for i, k in enumerate(kappas):
+        # Create CLI command
+        cmd = base_command + os.path.join(output_dir, model_name_format.format(str(k), str(i))) + parameters + f'-k {k}'
+
+        # Add possible batch fitting prefix string
+        if config_data['cluster_type'] == 'slurm':
+            cmd = prefix + cmd + '"'
+        commands.append(cmd)
+
+    # Create and return the command string
+    command_string = '\n'.join(commands)
+    return command_string
+
+def get_kappa_within_range(min_kappa, max_kappa, n_models):
+    '''
+    Creates a list of kappa values incremented by the average difference between the
+     inputted min and max kappa values. The values in the outputted list will be >=min_kappa && <=max_kappa.
+
+    Parameters
+    ----------
+    min_kappa (int): Minimum Kappa value
+    max_kappa (int): Maximum Kappa value
+    n_models (int): Number of kappa values to compute within min-max range.
+
+    Returns
+    -------
+    kappa (list): list of int kappa values of len == n_models.
+    '''
+
+    # Get average difference
+    diff_kappa = min_kappa - max_kappa
+    kappa_iter = int(diff_kappa / n_models)
+
+    # Get kappa list
+    kappas = list(range(min_kappa, max_kappa, kappa_iter))
+
+    return kappas
+
+def get_scan_range_kappas(data_dict, config_data):
+    '''
+    Helper function that checks if the user has inputted min and/or max kappa values to scan between,
+     and returns a list of kappa values corresponding to their selected ranges. If no ranges are given,
+     the kappa values will start at nframes/100 and increment by a factor of 10 times for each model.
+
+    Parameters
+    ----------
+    data_dict (OrderedDict): Loaded PCA score dictionary.
+    config_data (dict): Configuration parameters dict.
+
+    Returns
+    -------
+    kappas (list): list of ints corresponding to the kappa value for each model. len(kappas) == config_data['n_models']
+    '''
+
+    if config_data['min_kappa'] == None or config_data['max_kappa'] == None:
+        # Handle either of the missing parameters
+        if config_data['min_kappa'] == None:
+            # Choosing a minimum kappa value (AKA value to begin the scan from)
+            # less than the counted number of frames
+            min_kappa = count_frames(data_dict) / 100
+            config_data['min_kappa'] = min_kappa # default initial kappa value
+
+        # get kappa values for each model to train
+        if config_data['max_kappa'] == None:
+            # If no max is specified, kappa values will be incremented by factors of 10.
+            kappas = [(config_data['min_kappa'] * (10 ** i)) for i in range(config_data['n_models'])]
+        else:
+            kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa', config_data['n_models']])
+    else:
+        kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa', config_data['n_models']])
+
+    return kappas

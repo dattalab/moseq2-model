@@ -13,9 +13,9 @@ from copy import deepcopy
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, run_e_step
 from os.path import join, basename, realpath, dirname, exists
-from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model,
-                               get_current_model, get_loglikelihoods, get_session_groupings)
-from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata, count_frames,
+from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, get_scan_range_kappas,
+                               create_command_strings, get_current_model, get_loglikelihoods, get_session_groupings)
+from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
 def learn_model_wrapper(input_file, dest_file, config_data, index=None):
@@ -186,81 +186,40 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
 
 
 def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_dir):
+    '''
+    Wrapper function that spools multiple model training commands for different kappa values within a
+     given range. (Either n models with kappa values equally spaced between a min and max value, or
+     choosing n kappa values ranging in factors of 10 starting from nframes/100 for n=number of models).
 
-    model_name_format = 'model-{}-{}.p '
+    Parameters
+    ----------
+    input_file (str): Path to PCA Scores
+    index_file (str): Path to index file containing extraction/metadata paths and info
+    config_data (dict): Dict containing model training parameters
+    output_dir (str): Path to output directory to save trained models
+
+    Returns
+    -------
+    command_string (str): CLI command string to sequential
+     (or parallel in case of cluster-type=='slurm') model training commands.
+    '''
 
     data_dict, data_metadata = load_pcs(filename=input_file,
                                         var_name=config_data.get('var_name', 'scores'),
                                         npcs=config_data['npcs'],
                                         load_groups=config_data['load_groups'])
 
-    # get kappa range to scan
-    if config_data['min_kappa'] == None or config_data['max_kappa'] == None:
+    # Get list of kappa values for spooling models
+    kappas = get_scan_range_kappas(data_dict, config_data)
 
-        # Choosing a minimum kappa value (AKA value to begin the scan from)
-        # less than the counted number of frames
-        if config_data['min_kappa'] == None:
-            min_kappa = count_frames(data_dict)/100
-            config_data['min_kappa'] = min_kappa
+    # Get model training command strings
+    command_string = create_command_strings(input_file, index_file, output_dir, config_data, kappas)
 
-        # get kappa values for each model to train
-        if config_data['max_kappa'] == None:
-            kappas = [(config_data['min_kappa'] *(10**i)) for i in range(config_data['n_models'])]
-        else:
-            diff_kappa = config_data['max_kappa'] - config_data['min_kappa']
-            kappa_iter = int(diff_kappa / config_data['n_models'])
-
-            kappas = list(range(config_data['min_kappa'], config_data['max_kappa'], kappa_iter))
-
-    else:
-        diff_kappa = config_data['max_kappa'] - config_data['min_kappa']
-        kappa_iter = int(diff_kappa/config_data['n_models'])
-
-        kappas = list(range(config_data['min_kappa'], config_data['max_kappa'], kappa_iter))
-
-    # get cli command str list
-    base_command = f'moseq2-model learn-model {input_file} '
-
-    parameters = f'-i {index_file} --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
-
-    if config_data['separate_trans']:
-        parameters += '--separate-trans '
-
-    if config_data['robust']:
-        parameters += '--robust '
-
-    if config_data['e_step']:
-        parameters += '--e-step '
-
-    if config_data['hold_out']:
-        parameters += f'-h {str(config_data["nfolds"])} '
-
-    if config_data['max_states']:
-        parameters += f'-m {config_data["max_states"]} '
-
-    if config_data['converge']:
-        parameters += '--converge '
-
-        parameters += f'-t {config_data["tolerance"]} '
-
-    if config_data['cluster_type'] == 'slurm':
-        prefix = f'sbatch -c {config_data["ncpus"]} --mem={config_data["memory"]} '
-        prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "'
-
-    commands = []
-    for i, k in enumerate(kappas):
-        cmd = base_command + os.path.join(output_dir,
-              model_name_format.format(str(k), str(i))) + parameters + f'-k {k}'
-
-        if config_data['cluster_type'] == 'slurm':
-            cmd = prefix + cmd +'"'
-        commands.append(cmd)
-
-    # Display the string
-    command_string = '\n'.join(commands)
+    # Display the command string
     print('Listing scan commands...\n')
     print(command_string)
 
+    # Optionally the CLI command(s)
     if not config_data['get_cmd']:
         os.system(command_string)
 
