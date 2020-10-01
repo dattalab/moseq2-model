@@ -71,7 +71,7 @@ def count_frames(input_file, var_name):
 @click.option("--nlags", type=int, default=3, help="Number of lags to use")
 @click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")
 @click.option("--robust", is_flag=True, help="Use tAR model")
-@click.option("--converge", is_flag=True, help="Use tAR model")
+@click.option("--converge", is_flag=True, help="Stop model training when log-likelihood value converges.")
 @click.option("--tolerance", "-t", type=float, default=1000, help="Tolerance value to check whether model training loglikelihood has converged.")
 @click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
 @click.option("--use-checkpoint", is_flag=True, help='indicate whether to use previously saved checkpoint')
