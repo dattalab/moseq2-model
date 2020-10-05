@@ -6,11 +6,62 @@ import ruamel.yaml as yaml
 from unittest import TestCase
 from tests.unit_tests.test_train_utils import get_model
 from moseq2_model.train.util import whiten_all, train_model
+from autoregressive.models import FastARWeakLimitStickyHDPHMM
 from moseq2_model.helpers.data import get_training_data_splits
 from moseq2_model.util import load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5, \
-                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model
+                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, \
+                    get_current_model, get_session_groupings, get_loglikelihoods
 
 class TestUtils(TestCase):
+
+    def test_get_current_model(self):
+
+        use_checkpoint = False
+        all_checkpoints = []
+
+        test_model, data_dict = get_model()
+        model_parameters = {
+            'gamma': 1000,
+            'alpha': 5.7,
+            'kappa': 900,
+            'nlags': 3,
+            'robust': False,
+            'max_states': 100,
+            'separate_trans': False,
+            'groups': None
+        }
+
+        arhmm, itr = get_current_model(use_checkpoint, all_checkpoints, data_dict, model_parameters)
+
+        assert isinstance(arhmm, FastARWeakLimitStickyHDPHMM)
+        assert itr == 0
+
+    def test_get_session_groupings(self):
+
+        input_data = 'data/test_scores.h5'
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
+
+        all_keys = list(data_dict.keys())
+
+        groupings = get_session_groupings(data_metadata,
+                                          ['default']*len(all_keys),
+                                          all_keys,
+                                          None)
+
+        assert len(groupings) == 2
+        assert groupings == ['default', 'default']
+
+    def test_get_loglikelihoods(self):
+
+        test_model, data_dict = get_model()
+
+        nkeys = len(data_dict.keys())
+        groups = ['default'] * nkeys
+        separate_trans = False
+
+        test_ll = get_loglikelihoods(test_model, data_dict, groups, separate_trans)
+
+        assert len(test_ll) == nkeys
 
     def test_load_pcs(self):
 
