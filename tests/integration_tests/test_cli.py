@@ -2,7 +2,7 @@ import os
 import shutil
 from unittest import TestCase
 from click.testing import CliRunner
-from moseq2_model.cli import learn_model, count_frames
+from moseq2_model.cli import learn_model, count_frames, kappa_scan_fit_models
 
 class TestCLI(TestCase):
     def test_count_frames(self):
@@ -50,3 +50,23 @@ class TestCLI(TestCase):
         os.remove('data/train_val20_summary.png')
         shutil.rmtree(checkpoint_path)
 
+    def test_kappa_scan(self):
+        input_file = 'data/test_scores.h5'
+        dest_dir = 'data/models/'
+
+        index = 'data/test_index.yaml'
+        num_iter = 10
+        max_states = 100
+        npcs = 10
+
+        kappa_scan_params = [input_file, index, dest_dir, '-n', num_iter, '--n-models', 1,
+                        '-m', max_states, '--npcs', npcs, '--robust', '--converge',
+                        '--min-kappa', 180, '--max-kappa', 100000]
+
+        runner = CliRunner()
+
+        result = runner.invoke(kappa_scan_fit_models,
+                               kappa_scan_params,
+                               catch_exceptions=False)
+
+        assert result.exit_code == 0, "CLI Command did not successfully complete"

@@ -84,6 +84,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
             print('Output directory not specified, saving models to base directory.')
             output_dir = os.path.dirname(index)
 
-        kappa_scan_fit_models_wrapper(input_file, index, config_data, output_dir)
+        command = kappa_scan_fit_models_wrapper(input_file, index, config_data, output_dir)
+        return command
     else:
         learn_model_wrapper(input_file, dest_file, config_data, index)

@@ -85,3 +85,42 @@ class TestGUI(TestCase):
         os.remove('data/original_model.p')
         os.remove(dest_file)
         os.remove(stdin)
+
+    def test_kappa_scan(self):
+        input_file = 'data/test_scores.h5'
+        dest_file = 'data/models/model.p'
+        config_file = 'data/config.yaml'
+        index = 'data/test_index.yaml'
+
+        hold_out = True
+        nfolds = 2
+        n_models = 1
+        num_iter = 10
+        max_states = 100
+        npcs = 10
+        kappa = 'scan'
+        min_kappa = 100
+        separate_trans = True
+        robust = True
+        percent_split = 20
+        verbose = True
+
+        # test space-separated input
+        stdin = 'data/stdin.txt'
+        with open(stdin, 'w') as f:
+            f.write('default Group1')
+
+        sys.stdin = open(stdin)
+
+        progress_paths = {
+            'scores_path': input_file,
+            'model_path': dest_file,
+            'config_file': config_file,
+            'index_file': index
+        }
+
+        command = learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds, separate_trans=separate_trans,
+                            num_iter=num_iter, max_states=max_states, npcs=npcs, kappa=kappa, min_kappa=min_kappa,
+                            robust=robust, percent_split=percent_split, verbose=verbose, n_models=n_models, get_cmd=True)
+
+        assert command == 'moseq2-model learn-model data/test_scores.h5 data/model-100-0.p -i data/test_index.yaml --npcs 10 -n 10 --separate-trans --robust -h 2 -m 100 -k 100'

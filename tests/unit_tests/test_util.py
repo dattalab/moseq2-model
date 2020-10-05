@@ -7,10 +7,140 @@ from unittest import TestCase
 from tests.unit_tests.test_train_utils import get_model
 from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
-from moseq2_model.util import load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5, \
-                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model
+from moseq2_model.util import (load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5,
+                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, count_frames,
+                    get_parameter_strings, create_command_strings, get_kappa_within_range, get_scan_range_kappas)
 
 class TestUtils(TestCase):
+
+    def test_count_frames(self):
+        input_data = 'data/test_scores.h5'
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
+
+        nframes = count_frames(data_dict)
+
+        assert nframes == 1800
+
+    def test_get_parameter_strings(self):
+
+        index = 'data/test_index.yaml'
+        config_data = {
+            'npcs': 10,
+            'num_iter': 100,
+            'separate_trans': True,
+            'robust': True,
+            'e_step': True,
+            'hold_out': True,
+            'nfolds': 2,
+            'max_states': 100,
+            'converge': True,
+            'tolerance': 1000,
+            'cluster_type': 'slurm',
+            'ncpus': 1,
+            'memory': '10GB',
+            'partition': 'short',
+            'wall_time': '01:00:00'
+        }
+
+        parameters, prefix = get_parameter_strings(index, config_data)
+        truth_str = f' -i {index} --npcs 10 -n 100 --separate-trans --robust --e-step -h 2 -m 100 --converge -t 1000 '
+        truth_prefix = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "'
+
+        assert parameters == truth_str
+        assert prefix == truth_prefix
+
+    def test_create_command_strings(self):
+        input_file = 'data/test_scores.h5'
+        index_file = 'data/test_index.yaml'
+        output_dir = 'data/models/'
+        kappas = [10]
+
+        config_data = {
+            'npcs': 10,
+            'num_iter': 100,
+            'separate_trans': True,
+            'robust': True,
+            'e_step': True,
+            'hold_out': True,
+            'nfolds': 2,
+            'max_states': 100,
+            'converge': True,
+            'tolerance': 1000,
+            'cluster_type': 'slurm',
+            'ncpus': 1,
+            'memory': '10GB',
+            'partition': 'short',
+            'wall_time': '01:00:00'
+        }
+
+        command_string = create_command_strings(input_file, index_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p')
+
+        truth_output = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "moseq2-model learn-model data/test_scores.h5 data/models/model-10-0.p -i data/test_index.yaml --npcs 10 -n 100 --separate-trans --robust --e-step -h 2 -m 100 --converge -t 1000 -k 10"'
+
+        assert command_string == truth_output
+
+    def test_get_kappa_within_range(self):
+        
+        min_kappa = 10
+        max_kappa = 1000
+        n_models = 3
+
+        test_kappas = get_kappa_within_range(min_kappa, max_kappa, n_models)
+        assert test_kappas == [10, 340, 670]
+
+    def test_get_scan_range_kappas(self):
+
+        input_data = 'data/test_scores.h5'
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
+
+        config_data = {
+            'min_kappa': None,
+            'max_kappa': None,
+            'n_models': 10
+        }
+        
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+        
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 180.0
+        assert max(test_kappas) == 92160.0
+
+        config_data = {
+            'min_kappa': None,
+            'max_kappa': 1e9,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 180.0
+        assert max(test_kappas) == 900000018
+
+        config_data = {
+            'min_kappa': 280,
+            'max_kappa': None,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 280.0
+        assert max(test_kappas) == 143360.0
+
+        config_data = {
+            'min_kappa': 180,
+            'max_kappa': 1e9,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 180.0
+        assert max(test_kappas) < 1e9
 
     def test_load_pcs(self):
 

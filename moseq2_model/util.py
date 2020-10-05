@@ -582,7 +582,7 @@ def get_parameter_strings(index_file, config_data):
     prefix (str): Prefix string for the learn-model command, used for Slurm functionality.
     '''
 
-    parameters = f'-i {index_file} --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
+    parameters = f' -i {index_file} --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
 
     if config_data['separate_trans']:
         parameters += '--separate-trans '
@@ -666,11 +666,11 @@ def get_kappa_within_range(min_kappa, max_kappa, n_models):
     '''
 
     # Get average difference
-    diff_kappa = min_kappa - max_kappa
+    diff_kappa = max_kappa - min_kappa
     kappa_iter = int(diff_kappa / n_models)
 
     # Get kappa list
-    kappas = list(range(min_kappa, max_kappa, kappa_iter))
+    kappas = list(range(int(min_kappa), int(max_kappa), kappa_iter))
 
     return kappas
 
@@ -678,7 +678,7 @@ def get_scan_range_kappas(data_dict, config_data):
     '''
     Helper function that checks if the user has inputted min and/or max kappa values to scan between,
      and returns a list of kappa values corresponding to their selected ranges. If no ranges are given,
-     the kappa values will start at nframes/100 and increment by a factor of 10 times for each model.
+     the kappa values will start at nframes/10 and increment by a factor of 2 times for each model.
 
     Parameters
     ----------
@@ -695,16 +695,16 @@ def get_scan_range_kappas(data_dict, config_data):
         if config_data['min_kappa'] == None:
             # Choosing a minimum kappa value (AKA value to begin the scan from)
             # less than the counted number of frames
-            min_kappa = count_frames(data_dict) / 100
+            min_kappa = count_frames(data_dict) / 10
             config_data['min_kappa'] = min_kappa # default initial kappa value
 
         # get kappa values for each model to train
         if config_data['max_kappa'] == None:
             # If no max is specified, kappa values will be incremented by factors of 10.
-            kappas = [(config_data['min_kappa'] * (10 ** i)) for i in range(config_data['n_models'])]
+            kappas = [(config_data['min_kappa'] * (2 ** i)) for i in range(config_data['n_models'])]
         else:
-            kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa', config_data['n_models']])
+            kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'])
     else:
-        kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa', config_data['n_models']])
+        kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'])
 
     return kappas
