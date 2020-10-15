@@ -4,9 +4,7 @@ users can alter to most accurately process their data.
 '''
 
 import click
-import numpy as np
-from moseq2_model.util import load_pcs
-from moseq2_model.train.models import flush_print
+from moseq2_model.util import count_frames as count_frames_wrapper
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
 orig_init = click.core.Option.__init__
@@ -31,14 +29,7 @@ def cli():
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
 def count_frames(input_file, var_name):
 
-    data_dict, _ = load_pcs(filename=input_file, var_name=var_name,
-                            npcs=10, load_groups=True)
-    total_frames = 0
-    for v in data_dict.values():
-        idx = (~np.isnan(v)).all(axis=1)
-        total_frames += np.sum(idx)
-
-    flush_print('Total frames:', total_frames)
+    count_frames_wrapper(input_file=input_file, var_name=var_name)
 
 
 def modeling_parameters(function):
@@ -61,7 +52,8 @@ def modeling_parameters(function):
     function = click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")(function)
     function = click.option("--percent-split", type=int, default=20, help="Training-validation split percentage")(function)
     function = click.option("--load-groups", "-h", type=bool, default=True, help="Dictates in PC Scores should be loaded with their associated group.")(function)
-    function = click.option("--gamma", "-g", type=float, default=1e3, help="Gamma; probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.")(function)
+    function = click.option("--gamma", "-g", type=float, default=1e3,
+                            help="Gamma; probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.")(function)
     function = click.option("--alpha", "-a", type=float, default=5.7,
                             help="Alpha; probability prior distribution for syllable transition rate.")(function)
     function = click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise for regularization")(function)
@@ -105,14 +97,9 @@ def kappa_scan_parameters(function):
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
 @click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
-def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, var_name, e_step,
-                save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
-                load_groups, kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                converge, tolerance, checkpoint_freq, use_checkpoint, index, default_group, verbose):
+def learn_model(input_file, dest_file, **config_data):
 
-    click_data = click.get_current_context().params
-    learn_model_wrapper(input_file, dest_file, click_data)
+    learn_model_wrapper(input_file, dest_file, config_data)
 
 @cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
 @click.argument('input_file', type=click.Path(exists=True))
@@ -120,14 +107,9 @@ def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
 @click.argument('output_dir', type=click.Path(exists=False))
 @modeling_parameters
 @kappa_scan_parameters
-def kappa_scan_fit_models(input_file, index_file, output_dir, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, var_name, e_step, save_every, save_model, max_states, npcs, whiten, progressbar,
-                percent_split, load_groups, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                converge, tolerance, min_kappa, max_kappa, n_models, get_cmd, prefix, cluster_type, memory,
-                wall_time, partition):
+def kappa_scan_fit_models(input_file, index_file, output_dir, **config_data):
 
-    click_data = click.get_current_context().params
-    kappa_scan_fit_models_wrapper(input_file, index_file, click_data, output_dir)
+    kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_dir)
 
 
 if __name__ == '__main__':

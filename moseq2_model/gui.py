@@ -2,8 +2,8 @@
 GUI front-end function for training ARHMM.
 '''
 
-import os
 import ruamel.yaml as yaml
+from os.path import dirname
 from .cli import learn_model
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
@@ -82,7 +82,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
 
         if output_dir == None:
             print('Output directory not specified, saving models to base directory.')
-            output_dir = os.path.dirname(index)
+            output_dir = dirname(index)
 
         command = kappa_scan_fit_models_wrapper(input_file, index, config_data, output_dir)
         return command
