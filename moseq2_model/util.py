@@ -2,7 +2,6 @@
 Utility functions for handling loading and saving models and their respective metadata.
 '''
 
-import os
 import h5py
 import click
 import joblib
@@ -12,8 +11,8 @@ import numpy as np
 from copy import deepcopy
 from cytoolz import first
 from collections import OrderedDict
-from os.path import basename, getctime
 from autoregressive.util import AR_striding
+from os.path import basename, getctime, join
 from moseq2_model.train.models import ARHMM, flush_print
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
@@ -68,8 +67,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
         # Reading PCs from h5 file
         with h5py.File(filename, 'r') as f:
             if var_name in f:
-                # TODO: consistent string formatting
-                print('Found pcs in {}'.format(var_name))
+                print(f'Found pcs in {var_name}')
                 tmp = f[var_name]
 
                 # Reading in PCs into training dict
@@ -542,19 +540,23 @@ def get_parameters_from_model(model):
 
     return parameters
 
-
-def count_frames(data_dict):
+def count_frames(data_dict=None, input_file=None, var_name='scores'):
     '''
     Counts the total number of frames loaded from the PCA scores file.
 
     Parameters
     ----------
     data_dict (OrderedDict): Loaded PCA scores OrderedDict object.
+    input_file (str): Path to PCA Scores file to load data_dict if not already data_dict == None
+    var_name (str): Path within PCA h5 file to load scores from.
 
     Returns
     -------
     total_frames (int): total number of counted frames.
     '''
+
+    if data_dict == None and input_file != None:
+        data_dict, _ = load_pcs(filename=input_file, var_name=var_name, load_groups=True)
 
     total_frames = 0
     for v in data_dict.values():
@@ -638,7 +640,7 @@ def create_command_strings(input_file, index_file, output_dir, config_data, kapp
     commands = []
     for i, k in enumerate(kappas):
         # Create CLI command
-        cmd = base_command + os.path.join(output_dir, model_name_format.format(k, i)) + parameters + f'-k {k}'
+        cmd = base_command + join(output_dir, model_name_format.format(str(k), str(i))) + parameters + f'-k {k}'
 
         # Add possible batch fitting prefix string
         if config_data['cluster_type'] == 'slurm':

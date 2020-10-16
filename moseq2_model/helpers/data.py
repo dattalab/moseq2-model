@@ -2,7 +2,6 @@
 Helper functions for reading data from index files, and preparing metadata prior to training.
 '''
 
-import os
 import click
 import random
 import warnings
@@ -12,6 +11,7 @@ import ruamel.yaml as yaml
 from ruamel.yaml import YAML
 import matplotlib.pyplot as plt
 from collections import OrderedDict
+from os.path import join, exists, dirname
 from sklearn.model_selection import train_test_split
 from moseq2_model.util import count_frames, flush_print
 from moseq2_model.train.util import whiten_all, whiten_each
@@ -85,8 +85,8 @@ def process_indexfile(index, config_data, data_metadata):
         index = config_data.get('index', '')
 
     # if we have an index file, strip out the groups, match to the scores uuids
-    if os.path.exists(index):
-        # TODO: use yaml.safe_load instead of this
+    # TODO: use yaml.safe_load instead of this
+    if exists(str(index)):
         yml = YAML(typ="rt")
         with open(index, "r") as f:
             # reading in array of files
@@ -109,7 +109,8 @@ def process_indexfile(index, config_data, data_metadata):
         # Optionally display metadata to select groups to model
         if config_data.get('select_groups', False):
             for i in range(len(selection_metadata['subjectNames'])):
-                print(f'[{i + 1}]', 'Session Name:', selection_metadata['sessionNames'][i], '; Subject Name:', selection_metadata['subjectNames'][i], '; group:',
+                print(f'[{i + 1}]', 'Session Name:', selection_metadata['sessionNames'][i],
+                      '; Subject Name:', selection_metadata['subjectNames'][i], '; group:',
                       selection_metadata['i_groups'][i], '; Key:', selection_metadata['uuids'][i])
     else:
         index_data = None
@@ -138,8 +139,8 @@ def select_data_to_model(index_data, select_groups=False):
     if select_groups:
         while(len(use_groups) == 0):
             # Prompt user to select groups to include in training set
-            groups_to_train = input(
-                "Input comma/space-separated names of the groups to model. Empty string to model all the sessions/groups in the index file.")
+            groups_to_train = input("Input comma/space-separated names of the groups to model. "
+                                    "Empty string to model all the sessions/groups in the index file.")
             if ',' in groups_to_train:
                 # Parse multiple inputted groups if comma is found
                 sel_groups = [g.strip() for g in groups_to_train.split(',')]
@@ -208,6 +209,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
 
         # Make list of held out session uuids
         hold_out_list = [all_keys[k] for k in splits[0].astype('int').tolist()]
+
         # Put remainder of the data in the training set
         train_list = [k for k in all_keys if k not in hold_out_list]
         click.echo("Holding out " + str(hold_out_list))
@@ -390,11 +392,11 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
 
         # Saving plots
         if config_data['hold_out']:
-            img_path = os.path.join(os.path.dirname(dest_file), 'train_heldout_summary.png')
+            img_path = join(dirname(dest_file), 'train_heldout_summary.png')
             plt.title('ARHMM Training Summary With ' + str(config_data['nfolds']) + ' Folds')
             plt.savefig(img_path)
         else:
-            img_path = os.path.join(os.path.dirname(dest_file), f'train_val{config_data["percent_split"]}_summary.png')
+            img_path = join(dirname(dest_file), f'train_val{config_data["percent_split"]}_summary.png')
             plt.title('ARHMM Training Summary With ' + str(config_data["percent_split"]) + '% Train-Val Split')
             plt.savefig(img_path)
 

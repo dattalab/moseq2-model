@@ -64,16 +64,6 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             print('Returning and saving current iteration of model. ')
             return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
-        # Test convergence every 5 iterations
-        if converge and itr % 5 == 0:
-            # Get current loglikelihood
-            curr_ll = model.log_likelihood()
-            iter_lls.append(curr_ll)
-
-            # Check if loglikelihood increase is less than convergence tolerance
-            if (curr_ll - iter_lls[-2]) <= tolerance:
-                return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
-
         if verbose:
             # Optionally get iteration log-likelihood values
             summ_stats = {
@@ -89,25 +79,72 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             # Compute iteration training and validation log-likelihoods
             iter_lls, iter_holls = get_model_summary(**summ_stats)
 
+        # Test convergence every 5 iterations
+        if converge and itr % 5 == 0:
+            # Get current loglikelihood
+            curr_ll = model.log_likelihood()
+            iter_lls.append(curr_ll)
+
+            # Check if loglikelihood increase is less than convergence tolerance
+            if check_convergence(curr_ll, iter_lls, tolerance):
+                return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
+
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
-            # Pack the data to save in checkpoint
-            save_data = {
-                'iter': itr + 1,
-                'model': model,
-                'log_likelihoods': model.log_likelihood(),
-                'labels': get_labels_from_model(model)
-            }
-            # Format checkpoint filename
-            # TODO: standardize your string formatting
-            checkpoint_file = "{0}_{2}.{1}".format(
-                *checkpoint_file.replace(f'_{itr-checkpoint_freq}', '').rsplit('.', 1) + [itr]
-            )
-            # Save checkpoint
-            save_arhmm_checkpoint(checkpoint_file, save_data)
+            training_checkpoint(model, itr, checkpoint_file, checkpoint_freq)
 
     return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
+
+def check_convergence(curr_ll, iter_lls, tolerance):
+    '''
+    Checks whether the model log-likelihood increase is below the given tolerance threshold, signalling that the
+     modeling has converged.
+
+    Parameters
+    ----------
+    curr_ll (float): Current log-likelihood value
+    iter_lls (list): List of computed log-likelihoods from previous iterations
+    tolerance (float): Tolerance threshold value that determines whether the model LLs have plateaued
+
+    Returns
+    -------
+    converged (bool): Boolean to decide whether to stop model training if log-likelihoods have converged
+    '''
+
+    converged = (curr_ll - iter_lls[-2]) <= tolerance
+    return converged
+
+
+def training_checkpoint(model, itr, checkpoint_file, checkpoint_freq):
+    '''
+    Formats the model checkpoint filename and saves the model checkpoint
+
+    Parameters
+    ----------
+    model (ARHMM): Model being trained.
+    itr (itr): Current modeling iteration.
+    checkpoint_file (str): Model checkpoint file name.
+    checkpoint_freq (int): Model checkpointing iteration frequency
+
+    Returns
+    -------
+    '''
+
+    # Pack the data to save in checkpoint
+    save_data = {
+        'iter': itr + 1,
+        'model': model,
+        'log_likelihoods': model.log_likelihood(),
+        'labels': get_labels_from_model(model)
+    }
+
+    # Format checkpoint filename
+    new_checkpoint_filename = checkpoint_file.replace(f'_{itr - checkpoint_freq}', '').rsplit('.', 1) + [itr]
+    checkpoint_file = f"{new_checkpoint_filename[0]}_{new_checkpoint_filename[2]}.{new_checkpoint_filename[1]}"
+
+    # Save checkpoint
+    save_arhmm_checkpoint(checkpoint_file, save_data)
 
 def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
     '''
