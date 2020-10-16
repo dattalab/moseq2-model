@@ -45,18 +45,16 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_file = progress_paths['config_file']
     index = progress_paths['index_file']
 
-
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
 
     # Get default CLI params
-    objs = learn_model.params
+    params = {tmp.name: tmp.default for tmp in learn_model.params if not tmp.required}
+    # merge default params and config data, preferring values in config data
+    config_data = {**params, **config_data}
 
-    params = {tmp.name: tmp.default for tmp in objs if not tmp.required}
-    for k, v in params.items():
-        if k not in config_data.keys():
-            config_data[k] = v
-
+    # TODO: does the documentation reflect that the parameters in the learn_model_command function
+    # will override the ones set in the config file?
     config_data['alpha'] = alpha
     config_data['gamma'] = gamma
     config_data['kappa'] = kappa
@@ -73,6 +71,8 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_data['select_groups'] = select_groups
     config_data['use_checkpoint'] = use_checkpoint
 
+    # TODO: kappa scan should be a separate gui function, each takes different parameters
+    # TODO: none of the slurm keywords that are found in the cli are found here in the gui version of scan
     if kappa == 'scan':
         config_data['min_kappa'] = min_kappa
         config_data['max_kappa'] = max_kappa

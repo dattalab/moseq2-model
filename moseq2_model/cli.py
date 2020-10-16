@@ -92,7 +92,7 @@ def learn_model(input_file, dest_file, **cli_kwargs):
 
 @cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
 @click.argument('input_file', type=click.Path(exists=True))
-@click.argument('index_file', type=click.Path(exists=True))
+@click.argument('index_file', type=click.Path(exists=True))  # TODO: why is index required here but not in 'learn-model'? Maybe shouldn't be required here either
 @click.argument('output_dir', type=click.Path(exists=False))
 @click.option('--min-kappa', type=float, default=None, help='Minimum kappa value to train model on.')
 @click.option('--max-kappa', type=float, default=None, help='Maximum kappa value to train model on.')
