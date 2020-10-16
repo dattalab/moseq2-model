@@ -12,8 +12,8 @@ import ruamel.yaml as yaml
 from ruamel.yaml import YAML
 import matplotlib.pyplot as plt
 from collections import OrderedDict
-from moseq2_model.util import count_frames
 from sklearn.model_selection import train_test_split
+from moseq2_model.util import count_frames, flush_print
 from moseq2_model.train.util import whiten_all, whiten_each
 
 
@@ -85,7 +85,8 @@ def process_indexfile(index, config_data, data_metadata):
         index = config_data.get('index', '')
 
     # if we have an index file, strip out the groups, match to the scores uuids
-    if os.path.exists(str(index)):
+    if os.path.exists(index):
+        # TODO: use yaml.safe_load instead of this
         yml = YAML(typ="rt")
         with open(index, "r") as f:
             # reading in array of files
@@ -187,7 +188,9 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
 
     if config_data['kappa'] is None:
         # Count total number of frames, then set it as kappa
-        config_data['kappa'] = count_frames(data_dict)
+        total_frames = count_frames(data_dict)
+        flush_print(f'Setting kappa to the number of frames: {total_frames}')
+        config_data['kappa'] = total_frames
 
     # Optionally hold out sessions for testing
     if config_data['hold_out'] and nkeys >= config_data['nfolds']:
@@ -214,7 +217,6 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         config_data['hold_out'] = False
         hold_out_list = None
         train_list = all_keys
-        test_data = None
 
     if config_data['ncpus'] > len(train_list):
         # Setting number of allocated cpus equal to number of training sessions

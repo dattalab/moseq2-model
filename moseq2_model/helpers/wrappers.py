@@ -117,8 +117,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     groupings = get_session_groupings(data_metadata, list(data_metadata['groups']), all_keys, hold_out_list)
 
     # Train ARHMM
-    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model\
-    (
+    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
         model=arhmm,
         num_iter=config_data['num_iter'],
         ncpus=config_data['ncpus'],
@@ -204,10 +203,8 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_di
      (or parallel in case of cluster-type=='slurm') model training commands.
     '''
 
-    data_dict, data_metadata = load_pcs(filename=input_file,
-                                        var_name=config_data.get('var_name', 'scores'),
-                                        npcs=config_data['npcs'],
-                                        load_groups=config_data['load_groups'])
+    data_dict, _ = load_pcs(filename=input_file, var_name=config_data.get('var_name', 'scores'),
+                            npcs=config_data['npcs'], load_groups=config_data['load_groups'])
 
     # Get list of kappa values for spooling models
     kappas = get_scan_range_kappas(data_dict, config_data)
@@ -216,6 +213,8 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_di
     command_string = create_command_strings(input_file, index_file, output_dir, config_data, kappas)
 
     # Display the command string
+    # TODO: this should be an option, as well as saving the commands to a
+    # bash file for running each model
     print('Listing scan commands...\n')
     print(command_string)
 

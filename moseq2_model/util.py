@@ -68,6 +68,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
         # Reading PCs from h5 file
         with h5py.File(filename, 'r') as f:
             if var_name in f:
+                # TODO: consistent string formatting
                 print('Found pcs in {}'.format(var_name))
                 tmp = f[var_name]
 
@@ -89,6 +90,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
             if 'uuids' in f:
+                # TODO: verify that this branch of code is working correctly
                 # TODO: make sure uuids is in f, and not uuid
                 metadata['uuids'] = f['uuid'][()]
             elif h5_key_is_uuid:
@@ -165,6 +167,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans):
 
     return ll
 
+# TODO: what is groups really being used for here? Is there a cleaner way this function can be written?
 def get_session_groupings(data_metadata, groups, all_keys, hold_out_list):
     '''
     Creates a list or tuple of assigned groups for training and (optionally)
@@ -187,11 +190,8 @@ def get_session_groupings(data_metadata, groups, all_keys, hold_out_list):
 
     if hold_out_list != None:
         # Get held out groups
-        if groups == None:
-            train_g, hold_g = [], []
-        else:
-            hold_g = []
-            train_g = []
+        train_g, hold_g = [], []
+        if groups is not None:
             # remove held out group
             for i in range(len(all_keys)):
                 if all_keys[i] in hold_out_list:
@@ -205,12 +205,12 @@ def get_session_groupings(data_metadata, groups, all_keys, hold_out_list):
 
     else:
         # set default group
-        if groups == None:
-            groupings = []
-        else:
+        groupings = []
+        if groups is not None:
             groupings = list(groups)
 
     return groupings
+
 
 def save_dict(filename, obj_to_save=None):
     '''
@@ -233,7 +233,7 @@ def save_dict(filename, obj_to_save=None):
     elif filename.endswith('.z'):
         print('Saving compressed pickle', filename)
         joblib.dump(obj_to_save, filename, compress=('zlib', 4))
-    elif filename.endswith('.pkl') | filename.endswith('.p'):
+    elif filename.endswith(('.pkl', '.p')):
         print('Saving pickle', filename)
         joblib.dump(obj_to_save, filename, compress=0)
     elif filename.endswith('.h5'):
@@ -242,7 +242,6 @@ def save_dict(filename, obj_to_save=None):
             dict_to_h5(f, obj_to_save)
     else:
         raise ValueError('Did not understand filetype')
-
 
 
 def dict_to_h5(h5file, export_dict, path='/'):
@@ -308,6 +307,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
         s.data = AR_striding(t.astype('float32'), nlags)
 
     return mdl_dict
+
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
     '''
@@ -451,19 +451,17 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
     return_list (list): list of selected loaded variables
     '''
 
-    f = h5py.File(filename, 'r')
     return_list = []
+    with h5py.File(filename, 'r') as f:
 
-    if var_name in f.keys():
+        if var_name in f:
+            tmp = f[var_name]
 
-        tmp = f[var_name]
-
-        # change unichr to chr for python 3
-
-        for i in range(len(tmp)):
-            tmp2 = f[tmp[i][0]]
-            uni_list = [''.join(chr(c)) for c in tmp2]
-            return_list.append(''.join(uni_list))
+            # change unichr to chr for python 3
+            for i in range(len(tmp)):
+                tmp2 = f[tmp[i][0]]
+                uni_list = [''.join(chr(c)) for c in tmp2]
+                return_list.append(''.join(uni_list))
 
     return return_list
 
@@ -544,6 +542,7 @@ def get_parameters_from_model(model):
 
     return parameters
 
+
 def count_frames(data_dict):
     '''
     Counts the total number of frames loaded from the PCA scores file.
@@ -561,9 +560,9 @@ def count_frames(data_dict):
     for v in data_dict.values():
         idx = (~np.isnan(v)).all(axis=1)
         total_frames += np.sum(idx)
-    flush_print(f'Setting kappa to the number of frames: {total_frames}')
 
     return total_frames
+
 
 def get_parameter_strings(index_file, config_data):
     '''
@@ -594,7 +593,7 @@ def get_parameter_strings(index_file, config_data):
         parameters += '--e-step '
 
     if config_data['hold_out']:
-        parameters += f'-h {str(config_data["nfolds"])} '
+        parameters += f'-h {config_data["nfolds"]} '
 
     if config_data['max_states']:
         parameters += f'-m {config_data["max_states"]} '
@@ -611,6 +610,7 @@ def get_parameter_strings(index_file, config_data):
         prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "'
 
     return parameters, prefix
+
 
 def create_command_strings(input_file, index_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p'):
     '''
@@ -638,7 +638,7 @@ def create_command_strings(input_file, index_file, output_dir, config_data, kapp
     commands = []
     for i, k in enumerate(kappas):
         # Create CLI command
-        cmd = base_command + os.path.join(output_dir, model_name_format.format(str(k), str(i))) + parameters + f'-k {k}'
+        cmd = base_command + os.path.join(output_dir, model_name_format.format(k, i)) + parameters + f'-k {k}'
 
         # Add possible batch fitting prefix string
         if config_data['cluster_type'] == 'slurm':
@@ -648,6 +648,7 @@ def create_command_strings(input_file, index_file, output_dir, config_data, kapp
     # Create and return the command string
     command_string = '\n'.join(commands)
     return command_string
+
 
 def get_kappa_within_range(min_kappa, max_kappa, n_models):
     '''
@@ -666,14 +667,14 @@ def get_kappa_within_range(min_kappa, max_kappa, n_models):
     '''
 
     # Get average difference
-    diff_kappa = max_kappa - min_kappa
-    kappa_iter = int(diff_kappa / n_models)
-
-    # Get kappa list
-    kappas = list(range(int(min_kappa), int(max_kappa), kappa_iter))
+    kappas = np.linspace(min_kappa, max_kappa, n_models).astype('int')
 
     return kappas
 
+
+# TODO: talk to Win about the logic behind setting these as the default min/max kappa values
+# TODO: Why is the default behavior to double kappa every iteration here, but to linearly interpolate
+# - in get_kappa_within_range?
 def get_scan_range_kappas(data_dict, config_data):
     '''
     Helper function that checks if the user has inputted min and/or max kappa values to scan between,

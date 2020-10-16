@@ -9,6 +9,7 @@ from functools import partial
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
+# TODO: talk to Win about convergence and tolerance. Also, what do the docs currently say about how these should be used?
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
@@ -98,6 +99,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 'labels': get_labels_from_model(model)
             }
             # Format checkpoint filename
+            # TODO: standardize your string formatting
             checkpoint_file = "{0}_{2}.{1}".format(
                 *checkpoint_file.replace(f'_{itr-checkpoint_freq}', '').rsplit('.', 1) + [itr]
             )

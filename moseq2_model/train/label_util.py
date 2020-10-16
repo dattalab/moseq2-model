@@ -1,3 +1,4 @@
+# TODO: delete this entire module. It's not used in moseq2-model, so shouldn't be here for the release.
 '''
 Syllable label information utility functions.
 '''

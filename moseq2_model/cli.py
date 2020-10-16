@@ -26,6 +26,8 @@ def cli():
     pass
 
 
+# TODO: you have 2 definitions of count_frames - replace the contents of this cli function with
+# the count_frames you wrote in util.py
 @cli.command(name='count-frames', help="Counts number of frames in given h5 file (pca_scores)")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
@@ -68,6 +70,7 @@ def modeling_parameters(function):
     function = click.option("--nlags", type=int, default=3, help="Number of lags to use")(function)
     function = click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")(function)
     function = click.option("--robust", is_flag=True, help="Use tAR model")(function)
+    # TODO: talk to Win about convergence and tolerance
     function = click.option("--converge", is_flag=True, help="Train model until loglikelihood converges.")(function)
     function = click.option("--tolerance", "-t", type=float, default=1000,
                         help="Tolerance value to check whether model training loglikelihood has converged.")(function)

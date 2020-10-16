@@ -1,3 +1,4 @@
+# TODO: delete this entire module. It is not being used in moseq2-model, so shouldn't be here in the release.
 '''
 Contains a model class that is compatible with scikit-learn's GridsearchCV api.
 This class extends other functionality, such as visually inspecting model
