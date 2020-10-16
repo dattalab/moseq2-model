@@ -74,25 +74,6 @@ def modeling_parameters(function):
 
     return function
 
-def kappa_scan_parameters(function):
-    function = click.option('--min-kappa', type=float, default=None,
-                            help='Minimum kappa value to train model on.')(function)
-    function = click.option('--max-kappa', type=float, default=None,
-                            help='Maximum kappa value to train model on.')(function)
-    function = click.option('--n-models', type=int, default=10,
-                            help='Minimum kappa value to train model on.')(function)
-    function = click.option('--prefix', type=str, default='',
-                            help='Batch command string to prefix model training command.')(function)
-    function = click.option('--cluster-type', type=click.Choice(['local', 'slurm']), default='local',
-                            help='Platform to train models on')(function)
-    function = click.option('--ncpus', '-n', type=int, default=4, help="Number of CPUs")(function)
-    function = click.option('--memory', '-m', type=str, default="5GB", help="RAM string")(function)
-    function = click.option('--wall-time', '-w', type=str, default='3:00:00', help="Wall time")(function)
-    function = click.option('--partition', type=str, default='short', help="Partition name")(function)
-    function = click.option("--get-cmd", is_flag=True, help="Print scan command strings.")(function)
-
-    return function
-
 # this is the entry point for learning models over Kubernetes, expose all
 # parameters we could/would possibly scan over
 @cli.command(name="learn-model", help="Trains ARHMM on PCA Scores with given training parameters")
@@ -105,29 +86,28 @@ def kappa_scan_parameters(function):
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group to use for separate-trans")
 @click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
-def learn_model(input_file, dest_file, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, var_name, e_step,
-                save_every, save_model, max_states, npcs, whiten, progressbar, percent_split,
-                load_groups, kappa, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                converge, tolerance, checkpoint_freq, use_checkpoint, index, default_group, verbose):
+def learn_model(input_file, dest_file, **cli_kwargs):
 
-    click_data = click.get_current_context().params
-    learn_model_wrapper(input_file, dest_file, click_data)
+    learn_model_wrapper(input_file, dest_file, cli_kwargs)
 
 @cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
 @click.argument('input_file', type=click.Path(exists=True))
 @click.argument('index_file', type=click.Path(exists=True))
 @click.argument('output_dir', type=click.Path(exists=False))
+@click.option('--min-kappa', type=float, default=None, help='Minimum kappa value to train model on.')
+@click.option('--max-kappa', type=float, default=None, help='Maximum kappa value to train model on.')
+@click.option('--n-models', type=int, default=10, help='Minimum kappa value to train model on.')
+@click.option('--prefix', type=str, default='', help='Batch command string to prefix model training command.')
+@click.option('--cluster-type', type=click.Choice(['local', 'slurm']), default='local', help='Platform to train models on')
+@click.option('--ncpus', '-n', type=int, default=4, help="Number of CPUs")
+@click.option('--memory', '-m', type=str, default="5GB", help="RAM string")
+@click.option('--wall-time', '-w', type=str, default='3:00:00', help="Wall time")
+@click.option('--partition', type=str, default='short', help="Partition name")
+@click.option("--get-cmd", is_flag=True, help="Print scan command strings.")
 @modeling_parameters
-@kappa_scan_parameters
-def kappa_scan_fit_models(input_file, index_file, output_dir, hold_out, hold_out_seed, nfolds, ncpus,
-                num_iter, var_name, e_step, save_every, save_model, max_states, npcs, whiten, progressbar,
-                percent_split, load_groups, gamma, alpha, noise_level, nlags, separate_trans, robust,
-                converge, tolerance, min_kappa, max_kappa, n_models, get_cmd, prefix, cluster_type, memory,
-                wall_time, partition):
+def kappa_scan_fit_models(input_file, index_file, output_dir, **cli_kwargs):
 
-    click_data = click.get_current_context().params
-    kappa_scan_fit_models_wrapper(input_file, index_file, click_data, output_dir)
+    kappa_scan_fit_models_wrapper(input_file, index_file, cli_kwargs, output_dir)
 
 
 if __name__ == '__main__':
