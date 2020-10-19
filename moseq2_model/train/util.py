@@ -2,18 +2,19 @@
 ARHMM utility functions
 '''
 
+import math
 import numpy as np
 from cytoolz import valmap
 from tqdm.auto import tqdm
+from scipy.stats import norm
 from functools import partial
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
-# TODO: talk to Win about convergence and tolerance. Also, what do the docs currently say about how these should be used?
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
-                converge=False, tolerance=1000, verbose=False):
+                converge=False, check_every=5, verbose=False):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -80,13 +81,14 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             iter_lls, iter_holls = get_model_summary(**summ_stats)
 
         # Test convergence every 5 iterations
-        if converge and itr % 5 == 0:
+        if converge and itr % check_every == 0:
             # Get current loglikelihood
             curr_ll = model.log_likelihood()
-            iter_lls.append(curr_ll)
+            if not verbose:
+                iter_lls.append(curr_ll)
 
             # Check if loglikelihood increase is less than convergence tolerance
-            if check_convergence(curr_ll, iter_lls, tolerance):
+            if check_convergence(iter_lls):
                 return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
 
         # checkpoint if needed
@@ -95,26 +97,34 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
     return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
-
-def check_convergence(curr_ll, iter_lls, tolerance):
+def check_convergence(iter_lls):
     '''
     Checks whether the model log-likelihood increase is below the given tolerance threshold, signalling that the
      modeling has converged.
 
     Parameters
     ----------
-    curr_ll (float): Current log-likelihood value
     iter_lls (list): List of computed log-likelihoods from previous iterations
-    tolerance (float): Tolerance threshold value that determines whether the model LLs have plateaued
 
     Returns
     -------
     converged (bool): Boolean to decide whether to stop model training if log-likelihoods have converged
     '''
 
-    converged = (curr_ll - iter_lls[-2]) <= tolerance
-    return converged
+    # mean
+    theta_mu = np.mean(iter_lls)
 
+    # sigma
+    if len(iter_lls) > 1:
+        theta_sigma = np.sum([(x-theta_mu)**2 for x in iter_lls])/len(iter_lls)
+        ll0 = np.log(norm.pdf(iter_lls[-2], theta_mu, theta_sigma))
+        ll = np.log(norm.pdf(iter_lls[-1], theta_mu, theta_sigma))
+
+        converged = math.isclose(ll0-ll, 0, abs_tol=0.2) and (ll0-ll) >= 0
+    else:
+        converged = False
+
+    return converged
 
 def training_checkpoint(model, itr, checkpoint_file, checkpoint_freq):
     '''

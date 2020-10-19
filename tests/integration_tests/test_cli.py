@@ -55,13 +55,13 @@ class TestCLI(TestCase):
         dest_dir = 'data/models/'
 
         index = 'data/test_index.yaml'
-        num_iter = 10
-        max_states = 100
-        npcs = 10
+        num_iter = 5
+        max_states = 20
+        npcs = 7
 
-        kappa_scan_params = [input_file, index, dest_dir, '-n', num_iter, '--n-models', 1,
+        kappa_scan_params = [input_file, dest_dir, '-i', index, '-n', num_iter,
                         '-m', max_states, '--npcs', npcs, '--robust', '--converge',
-                        '--min-kappa', 180, '--max-kappa', 100000]
+                        '--min-kappa', 4, '--max-kappa', 8, '--out-script', 'train_out.sh']
 
         runner = CliRunner()
 
@@ -70,3 +70,5 @@ class TestCLI(TestCase):
                                catch_exceptions=False)
 
         assert result.exit_code == 0, "CLI Command did not successfully complete"
+        assert os.path.exists('./data/models/train_out.sh')
+        shutil.rmtree('./data/models/')

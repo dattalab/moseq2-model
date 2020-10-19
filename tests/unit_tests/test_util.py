@@ -9,7 +9,7 @@ from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
 from moseq2_model.util import (load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5,
                     append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, count_frames,
-                    get_parameter_strings, create_command_strings, get_kappa_within_range, get_scan_range_kappas)
+                    get_parameter_strings, create_command_strings, get_scan_range_kappas)
 
 class TestUtils(TestCase):
 
@@ -25,6 +25,7 @@ class TestUtils(TestCase):
 
         index = 'data/test_index.yaml'
         config_data = {
+            'index': index,
             'npcs': 10,
             'num_iter': 100,
             'separate_trans': True,
@@ -42,8 +43,8 @@ class TestUtils(TestCase):
             'wall_time': '01:00:00'
         }
 
-        parameters, prefix = get_parameter_strings(index, config_data)
-        truth_str = f' -i {index} --npcs 10 -n 100 --separate-trans --robust --e-step -h 2 -m 100 --converge -t 1000 '
+        parameters, prefix = get_parameter_strings(config_data)
+        truth_str = f' --npcs 10 -n 100 -i {index} --separate-trans --robust --e-step -h 2 -m 100 --converge '
         truth_prefix = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "'
 
         assert parameters == truth_str
@@ -56,6 +57,7 @@ class TestUtils(TestCase):
         kappas = [10]
 
         config_data = {
+            'index': index_file,
             'npcs': 10,
             'num_iter': 100,
             'separate_trans': True,
@@ -73,20 +75,12 @@ class TestUtils(TestCase):
             'wall_time': '01:00:00'
         }
 
-        command_string = create_command_strings(input_file, index_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p')
+        command_string = create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p')
 
-        truth_output = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "moseq2-model learn-model data/test_scores.h5 data/models/model-10-0.p -i data/test_index.yaml --npcs 10 -n 100 --separate-trans --robust --e-step -h 2 -m 100 --converge -t 1000 -k 10"'
+        truth_output = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "moseq2-model learn-model data/test_scores.h5' \
+                       ' data/models/model-10-0.p --npcs 10 -n 100 -i data/test_index.yaml --separate-trans --robust --e-step -h 2 -m 100 --converge -k 10"'
 
         assert command_string == truth_output
-
-    def test_get_kappa_within_range(self):
-        
-        min_kappa = 10
-        max_kappa = 1000
-        n_models = 3
-
-        test_kappas = get_kappa_within_range(min_kappa, max_kappa, n_models)
-        assert test_kappas == [10, 340, 670]
 
     def test_get_scan_range_kappas(self):
 
@@ -103,23 +97,23 @@ class TestUtils(TestCase):
         
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 180.0
-        assert max(test_kappas) == 92160.0
+        assert min(test_kappas) == 100
+        assert max(test_kappas) == 10000000
 
         config_data = {
             'min_kappa': None,
-            'max_kappa': 1e9,
+            'max_kappa': 6,
             'n_models': 10
         }
 
         test_kappas = get_scan_range_kappas(data_dict, config_data)
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 180.0
-        assert max(test_kappas) == 900000018
+        assert min(test_kappas) == 100
+        assert max(test_kappas) == 1e6
 
         config_data = {
-            'min_kappa': 280,
+            'min_kappa': 1,
             'max_kappa': None,
             'n_models': 10
         }
@@ -127,20 +121,76 @@ class TestUtils(TestCase):
         test_kappas = get_scan_range_kappas(data_dict, config_data)
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 280.0
-        assert max(test_kappas) == 143360.0
+        assert min(test_kappas) == 10.0
+        assert max(test_kappas) == 1e7
 
         config_data = {
-            'min_kappa': 180,
-            'max_kappa': 1e9,
+            'min_kappa': 3,
+            'max_kappa': 5,
             'n_models': 10
         }
 
         test_kappas = get_scan_range_kappas(data_dict, config_data)
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 180.0
-        assert max(test_kappas) < 1e9
+        assert min(test_kappas) == 1e3
+        assert max(test_kappas) == 1e5
+
+        config_data = {
+            'scan_scale': 'linear',
+            'min_kappa': None,
+            'max_kappa': None,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 18
+        assert max(test_kappas) == 18000000
+
+        config_data = {
+            'scan_scale': 'linear',
+            'min_kappa': 3,
+            'max_kappa': None,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 1
+        assert max(test_kappas) == 18000000
+
+        config_data = {
+            'scan_scale': 'linear',
+            'min_kappa': None,
+            'max_kappa': 6,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 18
+        assert max(test_kappas) == 1800000000
+
+        config_data = {
+            'scan_scale': 'linear',
+            'min_kappa': 2,
+            'max_kappa': 4,
+            'n_models': 10
+        }
+
+        test_kappas = get_scan_range_kappas(data_dict, config_data)
+
+        # For nframes == 1800
+        assert len(test_kappas) == 10
+        assert min(test_kappas) == 18
+        assert max(test_kappas) == 18000000
 
     def test_load_pcs(self):
 
@@ -153,15 +203,45 @@ class TestUtils(TestCase):
         assert(metadata['groups'][0] == 'test')
 
         input_data = 'data/test_scores.h5'
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True, h5_key_is_uuid=False)
+
+        assert list(data_dict.keys()) == data_metadata['uuids']
+
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         assert list(data_dict.keys()) == data_metadata['uuids']
+
+        outfile = 'data/saved_dict.p'
+        save_dict(outfile, data_dict)
+
+        data_dict, data_metadata = load_pcs(outfile, var_name='scores', load_groups=True)
+
+        assert list(data_dict.keys()) == data_metadata['uuids']
+        os.remove(outfile)
 
     def test_save_dict(self):
         input_data = 'data/test_scores.h5'
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         outfile = 'data/saved_dict.pkl'
+        save_dict(outfile, data_dict)
+
+        assert os.path.exists(outfile)
+        os.remove(outfile)
+
+        outfile = 'data/saved_dict.h5'
+        save_dict(outfile, data_dict)
+
+        assert os.path.exists(outfile)
+        os.remove(outfile)
+
+        outfile = 'data/saved_dict.z'
+        save_dict(outfile, data_dict)
+
+        assert os.path.exists(outfile)
+        os.remove(outfile)
+
+        outfile = 'data/saved_dict.mat'
         save_dict(outfile, data_dict)
 
         assert os.path.exists(outfile)
@@ -182,16 +262,42 @@ class TestUtils(TestCase):
 
     def test_dict_to_h5(self):
         input_data = 'data/test_scores.h5'
-        outdict = h5_to_dict(input_data, 'scores')
-        assert isinstance(outdict, dict)
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
+        assert isinstance(data_dict, dict)
 
         outpath = 'data/out_scores.h5'
 
         tmp_h5 = h5py.File(outpath, 'w')
-        dict_to_h5(tmp_h5, outdict)
+        dict_to_h5(tmp_h5, data_dict)
 
         assert os.path.exists(outpath)
         os.remove(outpath)
+
+        outpath = 'data/out_scores.h5'
+        test_dict = {
+            'int-test': 1,
+            'float': 1.12432,
+            'list': [1, 2, 3, 4],
+            'np': np.array([[[1],[2],[3]],[[4],[5],[6]]]).astype(np.object),
+            'dict': {
+                'test': 12
+            },
+            12: 'int key test',
+            (1, 2): 'tuple key test'
+        }
+
+        tmp_h5 = h5py.File(outpath, 'w')
+        dict_to_h5(tmp_h5, test_dict)
+
+        assert os.path.exists(outpath)
+        os.remove(outpath)
+
+        test_dict = {
+            'tup': (1,2,3)
+        }
+
+        tmp_h5 = h5py.File(outpath, 'w')
+        self.assertRaises(ValueError, dict_to_h5, tmp_h5, test_dict)
 
     def test_load_h5_to_dict(self):
         input_data = 'data/test_scores.h5'

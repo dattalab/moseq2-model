@@ -34,8 +34,6 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     None
     '''
 
-    # TODO: graceful handling of extra parameters: orchestra this fails catastrophically if we pass
-    # an extra option, just flag it to the user and ignore
     dest_file = realpath(dest_file)
 
     if not exists(dirname(dest_file)):
@@ -49,7 +47,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     checkpoint_freq = config_data.get('checkpoint_freq', -1)
 
     if checkpoint_freq < 0:
-        checkpoint_freq = config_data.get('num_iter', 100) + 1
+        checkpoint_freq = None
     else:
         if not exists(checkpoint_path):
             os.makedirs(checkpoint_path)
@@ -114,7 +112,10 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         config_data['num_iter'] = 1000
 
     # Get data groupings for verbose train vs. test log-likelihood estimation and graphing
-    groupings = get_session_groupings(data_metadata, list(data_metadata['groups']), all_keys, hold_out_list)
+    groupings = list(groups)
+
+    if hold_out_list != None and groups != None:
+        groupings = get_session_groupings(data_metadata, all_keys, hold_out_list)
 
     # Train ARHMM
     arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
@@ -131,7 +132,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         separate_trans=config_data['separate_trans'],
         groups=groupings,
         converge=config_data['converge'],
-        tolerance=config_data['tolerance'],
+        check_every=config_data['check_every'],
         verbose=config_data['verbose']
     )
 
@@ -184,7 +185,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         return img_path
 
 
-def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_dir):
+def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
     '''
     Wrapper function that spools multiple model training commands for different kappa values within a
      given range. (Either n models with kappa values equally spaced between a min and max value, or
@@ -193,7 +194,6 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_di
     Parameters
     ----------
     input_file (str): Path to PCA Scores
-    index_file (str): Path to index file containing extraction/metadata paths and info
     config_data (dict): Dict containing model training parameters
     output_dir (str): Path to output directory to save trained models
 
@@ -210,16 +210,22 @@ def kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_di
     kappas = get_scan_range_kappas(data_dict, config_data)
 
     # Get model training command strings
-    command_string = create_command_strings(input_file, index_file, output_dir, config_data, kappas)
+    command_string = create_command_strings(input_file, output_dir, config_data, kappas)
 
-    # Display the command string
-    # TODO: this should be an option, as well as saving the commands to a
-    # bash file for running each model
-    print('Listing scan commands...\n')
-    print(command_string)
+    # Ensure output directory exists
+    if not exists(dirname(config_data['out_script'])):
+        os.makedirs(dirname(config_data['out_script']))
+
+    # Write command string to file
+    with open(config_data['out_script'], 'w') as f:
+        f.write(command_string)
 
     # Optionally the CLI command(s)
-    if not config_data['get_cmd']:
+    if config_data['get_cmd']:
+        # Display the command string
+        print('Listing scan commands...\n')
+        print(command_string)
+    elif config_data['run_cmd']:
         os.system(command_string)
 
     return command_string

@@ -96,6 +96,23 @@ class TestDataHelpers(TestCase):
         assert train_list == all_keys, "Loaded uuids do not match total number of uuids"
         assert hold_out_list == None, "Some of the data is unintentionally held out"
 
+        config_data['whiten'] = 'each'
+        config_data['noise_level'] = 1
+        config_data, data_dict1, model_parameters, train_list, hold_out_list = \
+            prepare_model_metadata(data_dict, data_metadata, config_data, len(all_keys), all_keys)
+
+        assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
+        assert train_list == all_keys, "Loaded uuids do not match total number of uuids"
+        assert hold_out_list == None, "Some of the data is unintentionally held out"
+
+        config_data['whiten'] = 'none'
+        config_data, data_dict1, model_parameters, train_list, hold_out_list = \
+            prepare_model_metadata(data_dict, data_metadata, config_data, len(all_keys), all_keys)
+
+        assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
+        assert train_list == all_keys, "Loaded uuids do not match total number of uuids"
+        assert hold_out_list == None, "Some of the data is unintentionally held out"
+
     def test_get_heldout_data_splits(self):
         input_file = 'data/test_scores.h5'
         config_file = 'data/config.yaml'

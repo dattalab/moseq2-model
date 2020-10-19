@@ -11,9 +11,9 @@ import numpy as np
 from copy import deepcopy
 from cytoolz import first
 from collections import OrderedDict
+from moseq2_model.train.models import ARHMM
 from autoregressive.util import AR_striding
-from os.path import basename, getctime, join
-from moseq2_model.train.models import ARHMM, flush_print
+from os.path import basename, getctime, join, exists
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
     '''
@@ -63,6 +63,8 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             for k, v in data_dict.items():
                 data_dict[k] = v[:, :npcs]
 
+        metadata['uuids'] = list(data_dict.keys())
+
     elif filename.endswith('.h5'):
         # Reading PCs from h5 file
         with h5py.File(filename, 'r') as f:
@@ -87,12 +89,10 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             else:
                 raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
-            if 'uuids' in f:
-                # TODO: verify that this branch of code is working correctly
-                # TODO: make sure uuids is in f, and not uuid
-                metadata['uuids'] = f['uuid'][()]
-            elif h5_key_is_uuid:
+            if h5_key_is_uuid:
                 metadata['uuids'] = list(data_dict.keys())
+            elif 'metadata' in f:
+                metadata['uuids'] = list(f['metadata'].keys())
     else:
         raise ValueError('Did not understand filetype')
 
@@ -165,8 +165,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans):
 
     return ll
 
-# TODO: what is groups really being used for here? Is there a cleaner way this function can be written?
-def get_session_groupings(data_metadata, groups, all_keys, hold_out_list):
+def get_session_groupings(data_metadata, all_keys, hold_out_list):
     '''
     Creates a list or tuple of assigned groups for training and (optionally)
     held out data.
@@ -184,28 +183,15 @@ def get_session_groupings(data_metadata, groups, all_keys, hold_out_list):
     and held-out groups (if held_out_list exists)
     '''
 
-    groupings = None
+    # Get held out groups
+    hold_g = [data_metadata['groups'][i] for i, k in enumerate(all_keys) if k in hold_out_list]
+    train_g = [data_metadata['groups'][i] for i, k in enumerate(all_keys) if k not in hold_out_list]
 
-    if hold_out_list != None:
-        # Get held out groups
-        train_g, hold_g = [], []
-        if groups is not None:
-            # remove held out group
-            for i in range(len(all_keys)):
-                if all_keys[i] in hold_out_list:
-                    hold_g.append(data_metadata['groups'][i])
-                else:
-                    train_g.append(data_metadata['groups'][i])
-
-        # Ensure training groups were found before setting grouping
-        if len(train_g) != 0:
-            groupings = (train_g, hold_g)
-
+    # Ensure training groups were found before setting grouping
+    if len(train_g) != 0:
+        groupings = (train_g, hold_g)
     else:
-        # set default group
-        groupings = []
-        if groups is not None:
-            groupings = list(groups)
+        groupings = None
 
     return groupings
 
@@ -267,7 +253,7 @@ def dict_to_h5(h5file, export_dict, path='/'):
 
         # Write dict item to h5 based on its data-type
         if isinstance(item, np.ndarray) and item.dtype == np.object:
-            dt = h5py.special_dtype(vlen=item.flat[0].dtype)
+            dt = h5py.special_dtype(vlen=np.array(item.flat[0]).dtype)
             h5file.create_dataset(path+key, item.shape, dtype=dt, compression='gzip')
             for tup, _ in np.ndenumerate(item):
                 if item[tup] is not None:
@@ -566,7 +552,7 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
     return total_frames
 
 
-def get_parameter_strings(index_file, config_data):
+def get_parameter_strings(config_data):
     '''
     Creates the CLI learn-model parameters string using the given config_data dict contents.
      Function checks for the following paramters: [npcs, num_iter, separate_trans, robust, e_step,
@@ -583,7 +569,11 @@ def get_parameter_strings(index_file, config_data):
     prefix (str): Prefix string for the learn-model command, used for Slurm functionality.
     '''
 
-    parameters = f' -i {index_file} --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
+    parameters = f' --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
+
+    if isinstance(config_data['index'], str):
+        if exists(config_data['index']):
+            parameters += f'-i {config_data["index"]} '
 
     if config_data['separate_trans']:
         parameters += '--separate-trans '
@@ -603,8 +593,6 @@ def get_parameter_strings(index_file, config_data):
     if config_data['converge']:
         parameters += '--converge '
 
-        parameters += f'-t {config_data["tolerance"]} '
-
     # Handle possible Slurm batch functionality
     prefix = ''
     if config_data['cluster_type'] == 'slurm':
@@ -614,7 +602,7 @@ def get_parameter_strings(index_file, config_data):
     return parameters, prefix
 
 
-def create_command_strings(input_file, index_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p'):
+def create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p'):
     '''
     Creates the CLI learn-model N command strings with parameter flags based on the contents of the configuration
      dict. Each model will a different kappa value within a given range (for N models to train).
@@ -635,7 +623,7 @@ def create_command_strings(input_file, index_file, output_dir, config_data, kapp
 
     # Get base command and parameter flags
     base_command = f'moseq2-model learn-model {input_file} '
-    parameters, prefix = get_parameter_strings(index_file, config_data)
+    parameters, prefix = get_parameter_strings(config_data)
 
     commands = []
     for i, k in enumerate(kappas):
@@ -651,37 +639,24 @@ def create_command_strings(input_file, index_file, output_dir, config_data, kapp
     command_string = '\n'.join(commands)
     return command_string
 
-
-def get_kappa_within_range(min_kappa, max_kappa, n_models):
-    '''
-    Creates a list of kappa values incremented by the average difference between the
-     inputted min and max kappa values. The values in the outputted list will be >=min_kappa && <=max_kappa.
-
-    Parameters
-    ----------
-    min_kappa (int): Minimum Kappa value
-    max_kappa (int): Maximum Kappa value
-    n_models (int): Number of kappa values to compute within min-max range.
-
-    Returns
-    -------
-    kappa (list): list of int kappa values of len == n_models.
-    '''
-
-    # Get average difference
-    kappas = np.linspace(min_kappa, max_kappa, n_models).astype('int')
-
-    return kappas
-
-
-# TODO: talk to Win about the logic behind setting these as the default min/max kappa values
-# TODO: Why is the default behavior to double kappa every iteration here, but to linearly interpolate
-# - in get_kappa_within_range?
 def get_scan_range_kappas(data_dict, config_data):
     '''
-    Helper function that checks if the user has inputted min and/or max kappa values to scan between,
-     and returns a list of kappa values corresponding to their selected ranges. If no ranges are given,
-     the kappa values will start at nframes/10 and increment by a factor of 2 times for each model.
+    Helper function that returns the kappa values to train models on based on the user's selected scanning scale range.
+    Different default range values will be selected if min/max_kappa are None. Otherwise, min_kappa and max_kappa
+    represent exponent ranges to get kappa values within.
+
+    For example, scan_scale = 'log'; nframes = 1800; min_kappa = 3; max_kappa = 5; n_models = 10;
+    min(kappas) == 1e3; max(kappas) == 1e5; kappas = [1000, 1668, 2782, 4641, 7742, 12915, 21544, 35938, 59948, 100000]
+
+    Another Exmaple:
+    nframes = 1800
+    'scan_scale': 'linear',
+    'min_kappa': 2,
+    'max_kappa': 4,
+    'n_models': 10
+    min(kappas) == 18
+    max(kappas) == 18000000
+    kappas == [18, 2000016, 4000014, 6000012, 8000010, 10000008, 12000006, 14000004, 16000002, 18000000]
 
     Parameters
     ----------
@@ -690,24 +665,43 @@ def get_scan_range_kappas(data_dict, config_data):
 
     Returns
     -------
-    kappas (list): list of ints corresponding to the kappa value for each model. len(kappas) == config_data['n_models']
+    kappas (list): list of ints corresponding to the kappa value for each model.
     '''
 
-    if config_data['min_kappa'] == None or config_data['max_kappa'] == None:
+    nframes = count_frames(data_dict)
+
+    if config_data.get('scan_scale', 'log') == 'log':
+        # Get log scan range
+        factor = float(len(str(nframes)))
+        if config_data['min_kappa'] == None:
+            min_factor = factor - 2 # Set default value
+        else:
+            min_factor = config_data['min_kappa']
+        if config_data['max_kappa'] == None:
+            max_factor = factor + 3 # Set default value
+        else:
+            max_factor = config_data['max_kappa']
+
+        config_data['use_range'] = (min_factor, max_factor, config_data['n_models'],)
+        kappas = np.logspace(*config_data['use_range']).astype(int).tolist()
+
+    elif config_data['scan_scale'] == 'linear':
+        # Get linear scan range
         # Handle either of the missing parameters
         if config_data['min_kappa'] == None:
             # Choosing a minimum kappa value (AKA value to begin the scan from)
             # less than the counted number of frames
-            min_kappa = count_frames(data_dict) / 10
-            config_data['min_kappa'] = min_kappa # default initial kappa value
-
-        # get kappa values for each model to train
+            config_data['min_kappa'] = min(nframes, nframes / 1e2)  # default initial kappa value
+        else:
+            config_data['min_kappa'] = nframes/(10**config_data['min_kappa'])
         if config_data['max_kappa'] == None:
             # If no max is specified, kappa values will be incremented by factors of 10.
-            kappas = [(config_data['min_kappa'] * (2 ** i)) for i in range(config_data['n_models'])]
+            config_data['max_kappa'] = max(nframes, nframes * 1e4)  # default initial kappa values
         else:
-            kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'])
-    else:
-        kappas = get_kappa_within_range(config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'])
+            config_data['max_kappa'] = nframes * (10**config_data['max_kappa'])
+
+        config_data['use_range'] = (config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'],)
+
+        kappas = np.linspace(*config_data['use_range']).astype(int).tolist()
 
     return kappas

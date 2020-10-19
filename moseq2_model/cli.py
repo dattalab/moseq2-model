@@ -3,7 +3,9 @@ CLI front-end operations. This module contains all the functionality and configu
 users can alter to most accurately process their data.
 '''
 
+import os
 import click
+from os.path import join
 from moseq2_model.util import count_frames as count_frames_wrapper
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
@@ -24,8 +26,6 @@ def cli():
     pass
 
 
-# TODO: you have 2 definitions of count_frames - replace the contents of this cli function with
-# the count_frames you wrote in util.py
 @cli.command(name='count-frames', help="Counts number of frames in given h5 file (pca_scores)")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
@@ -62,10 +62,9 @@ def modeling_parameters(function):
     function = click.option("--nlags", type=int, default=3, help="Number of lags to use")(function)
     function = click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")(function)
     function = click.option("--robust", is_flag=True, help="Use tAR model")(function)
-    # TODO: talk to Win about convergence and tolerance
     function = click.option("--converge", is_flag=True, help="Train model until loglikelihood converges.")(function)
-    function = click.option("--tolerance", "-t", type=float, default=1000,
-                        help="Tolerance value to check whether model training loglikelihood has converged.")(function)
+    function = click.option("--check-every", type=int, default=5,
+                            help="Increment to check whether the model training has converged.")(function)
 
     return function
 
@@ -87,23 +86,26 @@ def learn_model(input_file, dest_file, **config_data):
 
 @cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
 @click.argument('input_file', type=click.Path(exists=True))
-@click.argument('index_file', type=click.Path(exists=True))  # TODO: why is index required here but not in 'learn-model'? Maybe shouldn't be required here either
 @click.argument('output_dir', type=click.Path(exists=False))
-@click.option('--min-kappa', type=float, default=None, help='Minimum kappa value to train model on.')
-@click.option('--max-kappa', type=float, default=None, help='Maximum kappa value to train model on.')
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
+@click.option("--out-script", type=click.Path(), default=join(os.getcwd(), 'train_out.sh'), help="Path to output bash script file containing all model training commands.")
 @click.option('--n-models', type=int, default=10, help='Minimum kappa value to train model on.')
 @click.option('--prefix', type=str, default='', help='Batch command string to prefix model training command.')
 @click.option('--cluster-type', type=click.Choice(['local', 'slurm']), default='local', help='Platform to train models on')
+@click.option('--scan-scale', type=click.Choice(['log', 'linear']), default='log', help='Scale to scan kappa values at.')
+@click.option('--min-kappa', type=float, default=None, help='Minimum kappa value to train model on.')
+@click.option('--max-kappa', type=float, default=None, help='Maximum kappa value to train model on.')
 @click.option('--ncpus', '-n', type=int, default=4, help="Number of CPUs")
 @click.option('--memory', '-m', type=str, default="5GB", help="RAM string")
 @click.option('--wall-time', '-w', type=str, default='3:00:00', help="Wall time")
 @click.option('--partition', type=str, default='short', help="Partition name")
 @click.option("--get-cmd", is_flag=True, help="Print scan command strings.")
+@click.option("--run-cmd", is_flag=True, help="Run scan command strings.")
 @modeling_parameters
-@kappa_scan_parameters
-def kappa_scan_fit_models(input_file, index_file, output_dir, **config_data):
+def kappa_scan_fit_models(input_file, output_dir, **config_data):
 
-    kappa_scan_fit_models_wrapper(input_file, index_file, config_data, output_dir)
+    config_data['out_script'] = join(output_dir, config_data['out_script'])
+    kappa_scan_fit_models_wrapper(input_file, config_data, output_dir)
 
 
 if __name__ == '__main__':

@@ -8,12 +8,12 @@ import warnings
 import numpy as np
 from cytoolz import pluck
 import ruamel.yaml as yaml
-from ruamel.yaml import YAML
 import matplotlib.pyplot as plt
 from collections import OrderedDict
 from os.path import join, exists, dirname
+from moseq2_model.util import count_frames
+from moseq2_model.train.models import flush_print
 from sklearn.model_selection import train_test_split
-from moseq2_model.util import count_frames, flush_print
 from moseq2_model.train.util import whiten_all, whiten_each
 
 
@@ -85,12 +85,10 @@ def process_indexfile(index, config_data, data_metadata):
         index = config_data.get('index', '')
 
     # if we have an index file, strip out the groups, match to the scores uuids
-    # TODO: use yaml.safe_load instead of this
     if exists(str(index)):
-        yml = YAML(typ="rt")
         with open(index, "r") as f:
             # reading in array of files
-            yml_metadata = yml.load(f)["files"]
+            yml_metadata = yaml.safe_load(f)["files"]
 
             # reading corresponding groups and uuids
             yml_groups, yml_uuids = zip(*pluck(['group', 'uuid'], yml_metadata))
@@ -299,10 +297,7 @@ def get_training_data_splits(config_data, data_dict):
 
     Returns
     -------
-    train_list (list): list of all the keys included in the model.
-    train_data (OrderedDict): all the of the key-value pairs included in the model.
     training_data (OrderedDict): the split percentage of the training data.
-    hold_out_list (list): None
     validation_data (OrderedDict): the split percentage of the validation data
     nt_frames (list): list of length of each session in the split training data.
     '''
