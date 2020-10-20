@@ -42,6 +42,7 @@ class TestTrainUtils(TestCase):
         config_file = 'data/config.yaml'
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
+            config_data['percent_split'] = 1
 
         model, data_dict = get_model()
 
@@ -67,8 +68,8 @@ class TestTrainUtils(TestCase):
         assert isinstance(lls, float)
         assert len(labels) == 2
         assert len(labels[0]) == 908
-        assert len(iter_lls) == 5
-        assert len(iter_holls) == 5
+        assert len(iter_lls) == 2
+        assert len(iter_holls) == 2
         assert len(group_idx) == 1
         assert group_idx == ['default']
 
@@ -80,7 +81,7 @@ class TestTrainUtils(TestCase):
         model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
                                                                           num_iter=5, train_data=training_data,
                                                                           val_data=validation_data, separate_trans=True,
-                                                                          groups=['default', 'Group1'],
+                                                                          groups=['default', 'Group1'], check_every=1,
                                                                           num_frames=[900, 900], verbose=True)
         assert isinstance(model, FastARWeakLimitStickyHDPHMMSeparateTrans)
         assert isinstance(lls, float)
