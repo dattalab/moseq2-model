@@ -14,7 +14,7 @@ from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
-                converge=False, check_every=5, verbose=False):
+                converge=False, verbose=False, check_every=2):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -35,6 +35,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     val_data (OrderedDict): dict of validation data (only if verbose = True)
     separate_trans (bool): using different transition matrices
     groups (list): list of groups included in modeling (only if verbose = True)
+    converge (bool): Train model until the log-likelihoods converge
     verbose (bool): Compute model summary.
 
     Returns
@@ -65,31 +66,32 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             print('Returning and saving current iteration of model. ')
             return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
-        if verbose:
-            # Optionally get iteration log-likelihood values
-            summ_stats = {
-                'model': model,
-                'groups': groups,
-                'train_data': train_data,
-                'val_data': val_data,
-                'separate_trans': separate_trans,
-                'num_frames': num_frames,
-                'iter_lls': iter_lls,
-                'iter_holls': iter_holls
-            }
+        summ_stats = {
+            'model': model,
+            'groups': groups,
+            'train_data': train_data,
+            'val_data': val_data,
+            'separate_trans': separate_trans,
+            'num_frames': num_frames,
+            'iter_lls': iter_lls,
+            'iter_holls': iter_holls
+        }
+
+        # Test convergence every 5 iterations
+        if (converge or verbose) and ((itr+1) % check_every == 0):
             # Compute iteration training and validation log-likelihoods
             iter_lls, iter_holls = get_model_summary(**summ_stats)
 
-        # Test convergence every 5 iterations
-        if converge and itr % check_every == 0:
             # Get current loglikelihood
             curr_ll = model.log_likelihood()
-            if not verbose:
-                iter_lls.append(curr_ll)
 
             # Check if loglikelihood increase is less than convergence tolerance
-            if check_convergence(iter_lls):
-                return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
+            if converge:
+                if check_convergence(iter_lls):
+                    return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
+        elif converge:
+            # Compute iteration training and validation log-likelihoods
+            iter_lls, iter_holls = get_model_summary(**summ_stats)
 
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
@@ -102,6 +104,9 @@ def check_convergence(iter_lls):
     Checks whether the model log-likelihood increase is below the given tolerance threshold, signalling that the
      modeling has converged.
 
+    Reference for Maximum Likelihood Estimation:
+    https://medium.com/@rrfd/what-is-maximum-likelihood-estimation-examples-in-python-791153818030
+
     Parameters
     ----------
     iter_lls (list): List of computed log-likelihoods from previous iterations
@@ -111,16 +116,18 @@ def check_convergence(iter_lls):
     converged (bool): Boolean to decide whether to stop model training if log-likelihoods have converged
     '''
 
-    # mean
-    theta_mu = np.mean(iter_lls)
 
-    # sigma
-    if len(iter_lls) > 1:
+    if len(iter_lls) > 4:
+        # mean
+        theta_mu = np.mean(iter_lls)
+        # sigma
         theta_sigma = np.sum([(x-theta_mu)**2 for x in iter_lls])/len(iter_lls)
-        ll0 = np.log(norm.pdf(iter_lls[-2], theta_mu, theta_sigma))
-        ll = np.log(norm.pdf(iter_lls[-1], theta_mu, theta_sigma))
 
-        converged = math.isclose(ll0-ll, 0, abs_tol=0.2) and (ll0-ll) >= 0
+        # sampled log-likelihood differences
+        ll0 = np.log(abs(norm.pdf(iter_lls[-2], theta_mu, theta_sigma)))
+        ll = np.log(abs(norm.pdf(iter_lls[-1], theta_mu, theta_sigma)))
+        print('normalized LL difference', ll0-ll)
+        converged = math.isclose(ll0-ll, 0, abs_tol=0.25) and (ll0-ll) >= 0
     else:
         converged = False
 

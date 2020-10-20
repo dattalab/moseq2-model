@@ -5,6 +5,7 @@ Helper functions for reading data from index files, and preparing metadata prior
 import click
 import random
 import warnings
+import itertools
 import numpy as np
 from cytoolz import pluck
 import ruamel.yaml as yaml
@@ -341,7 +342,10 @@ def graph_helper(groups, lls, legend, iterations, ll_type='train'):
     None
     '''
 
-    for i, g in enumerate(groups):
+    if isinstance(groups[0], list):
+        groups = list(itertools.chain.from_iterable(groups))
+
+    for i, g in enumerate(list(set(groups))):
         # Set dynamic line widths and formats
         lw = 10 - 8 * i / len(lls)
         ls = ['-', '--', '-.', ':'][i % 4]
@@ -373,26 +377,25 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
     if config_data['hold_out']:
         ll_type = 'held_out'
 
-    if config_data['verbose']:
-        # Graphing loglikelihood summary if verbose==True
-        iterations = [i for i in range(len(iter_lls))]
-        legend = []
-        graph_helper(group_idx, iter_lls, legend, iterations)
-        graph_helper(group_idx, iter_holls, legend, iterations, ll_type=ll_type)
+    # Graphing loglikelihood summary if verbose==True
+    iterations = [i for i in range(len(iter_lls))]
+    legend = []
+    graph_helper(group_idx, iter_lls, legend, iterations)
+    graph_helper(group_idx, iter_holls, legend, iterations, ll_type=ll_type)
 
-        plt.legend(legend)
+    plt.legend(legend)
 
-        plt.ylabel('Average Syllable Log-Likelihood')
-        plt.xlabel('Iterations')
+    plt.ylabel('Average Syllable Log-Likelihood')
+    plt.xlabel('Iterations')
 
-        # Saving plots
-        if config_data['hold_out']:
-            img_path = join(dirname(dest_file), 'train_heldout_summary.png')
-            plt.title('ARHMM Training Summary With ' + str(config_data['nfolds']) + ' Folds')
-            plt.savefig(img_path)
-        else:
-            img_path = join(dirname(dest_file), f'train_val{config_data["percent_split"]}_summary.png')
-            plt.title('ARHMM Training Summary With ' + str(config_data["percent_split"]) + '% Train-Val Split')
-            plt.savefig(img_path)
+    # Saving plots
+    if config_data['hold_out']:
+        img_path = join(dirname(dest_file), 'train_heldout_summary.png')
+        plt.title('ARHMM Training Summary With ' + str(config_data['nfolds']) + ' Folds')
+        plt.savefig(img_path)
+    else:
+        img_path = join(dirname(dest_file), f'train_val{config_data["percent_split"]}_summary.png')
+        plt.title('ARHMM Training Summary With ' + str(config_data["percent_split"]) + '% Train-Val Split')
+        plt.savefig(img_path)
 
-        return img_path
+    return img_path

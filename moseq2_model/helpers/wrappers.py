@@ -136,9 +136,6 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         verbose=config_data['verbose']
     )
 
-    ## Graph training summary
-    img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
-
     click.echo('Computing likelihoods on each training dataset...')
     # Get training log-likelihoods
     train_ll = get_loglikelihoods(arhmm, train_data, list(data_metadata['groups']), config_data['separate_trans'])
@@ -181,7 +178,8 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
     # Save model
     save_dict(filename=str(dest_file), obj_to_save=export_dict)
 
-    if config_data['verbose']:
+    if config_data['verbose'] and len(iter_lls) > 0:
+        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
         return img_path
 
 

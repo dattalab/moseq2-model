@@ -130,13 +130,13 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and robust:
-        # Loading C-accelerated t-distributed ARHMM
+        # Loading t-distributed ARHMM
         if not silent:
             flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif separate_trans and robust:
-        # Loading C-accelerated t-distributed ARHMM with separate transition graphs
+        # Loading t-distributed ARHMM with separate transition graphs
         if not silent:
             flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]

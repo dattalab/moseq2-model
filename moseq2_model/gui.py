@@ -8,8 +8,8 @@ from os.path import dirname, join
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
 def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
-                        max_states=100, npcs=10, kappa=None, min_kappa=None, max_kappa=None, n_models=5, alpha=5.7,
-                        gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1, use_checkpoint=False,
+                        max_states=100, npcs=10, scan_scale='log', kappa=None, min_kappa=None, max_kappa=None, n_models=5,
+                        alpha=5.7, gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1, use_checkpoint=False,
                         converge=False, check_every=5, select_groups=False, percent_split=20, output_dir=None,
                         out_script='train_out.sh', cluster_type='local', get_cmd=True, run_cmd=False, prefix='',
                         memory='16GB', wall_time='3:00:00', partition='short', verbose=False):
@@ -26,6 +26,10 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     max_states (int): maximum number of model states.
     npcs (int): number of PCs to include in analysis.
     kappa (float): probability prior distribution for syllable duration. Larger kappa = longer syllable durations.
+    min_kappa (int):
+    max_kappa (int):
+    n_models (int):
+    scan_scale (str):
     separate_trans (bool): indicate whether to compute separate syllable transition matrices for each group.
     robust (bool): indicate whether to use a t-distributed syllable label distribution. (robust-ARHMM)
     checkpoint_freq (int): frequency at which to save model checkpoints
@@ -33,6 +37,10 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     alpha (float): probability prior distribution for syllable transition rate.
     gamma (float): probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.
     select_groups (bool): indicates to display all sessions and choose subset of groups to model alone.
+    check_every (int):
+    select_groups (bool):
+    get_cmd (bool):
+    run_cmd (bool):
     percent_split (int): train-validation data split ratio percentage.
     output_dir (str): directory to store multiple trained models via kappa-scan
     out_script (str): name of the script containing all the kappa scanning commands.
@@ -41,7 +49,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     memory (str): amount of memory in GB to allocate to each training job.
     wall_time (str): maximum time for a slurm job to run.
     partition (str): slurm partition name to run training jobs on.
-    verbose (bool): compute modeling summary (Warning current implementation is slow).
+    verbose (bool): compute modeling summary (Warning current implementation is can slow down training).
 
     Returns
     -------
@@ -88,6 +96,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
 
     if kappa == 'scan':
         config_data['index'] = index
+        config_data['scan_scale'] = scan_scale
         config_data['min_kappa'] = min_kappa
         config_data['max_kappa'] = max_kappa
         config_data['n_models'] = n_models
