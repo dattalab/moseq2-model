@@ -98,7 +98,7 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 100
-        assert max(test_kappas) == 10000000
+        assert max(test_kappas) == 1000000
 
         config_data = {
             'min_kappa': None,
@@ -122,7 +122,7 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 10.0
-        assert max(test_kappas) == 1e7
+        assert max(test_kappas) == 1e6
 
         config_data = {
             'min_kappa': 3,
@@ -148,7 +148,7 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 18
-        assert max(test_kappas) == 18000000
+        assert max(test_kappas) == 180000
 
         config_data = {
             'scan_scale': 'linear',
@@ -162,7 +162,7 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 1
-        assert max(test_kappas) == 18000000
+        assert max(test_kappas) == 180000
 
         config_data = {
             'scan_scale': 'linear',

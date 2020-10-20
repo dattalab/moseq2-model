@@ -678,7 +678,7 @@ def get_scan_range_kappas(data_dict, config_data):
         else:
             min_factor = config_data['min_kappa']
         if config_data['max_kappa'] == None:
-            max_factor = factor + 3 # Set default value
+            max_factor = factor + 2 # Set default value
         else:
             max_factor = config_data['max_kappa']
 
@@ -696,7 +696,7 @@ def get_scan_range_kappas(data_dict, config_data):
             config_data['min_kappa'] = nframes/(10**config_data['min_kappa'])
         if config_data['max_kappa'] == None:
             # If no max is specified, kappa values will be incremented by factors of 10.
-            config_data['max_kappa'] = max(nframes, nframes * 1e4)  # default initial kappa values
+            config_data['max_kappa'] = max(nframes, nframes * 1e2)  # default initial kappa values
         else:
             config_data['max_kappa'] = nframes * (10**config_data['max_kappa'])
 
