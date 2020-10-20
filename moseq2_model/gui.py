@@ -26,10 +26,10 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     max_states (int): maximum number of model states.
     npcs (int): number of PCs to include in analysis.
     kappa (float): probability prior distribution for syllable duration. Larger kappa = longer syllable durations.
-    min_kappa (int):
-    max_kappa (int):
-    n_models (int):
-    scan_scale (str):
+    min_kappa (int): Minimum kappa exponent to train model on. if min_kappa = 3; min(kappas) == 1e3
+    max_kappa (int): Maximum kappa exponent to train model on. if min_kappa = 5; min(kappas) == 1e5
+    n_models (int): Number of models to spawn to scan kappa values
+    scan_scale (str): Scale factor to generate scanning kappa values. ['log', 'linear']
     separate_trans (bool): indicate whether to compute separate syllable transition matrices for each group.
     robust (bool): indicate whether to use a t-distributed syllable label distribution. (robust-ARHMM)
     checkpoint_freq (int): frequency at which to save model checkpoints
@@ -37,10 +37,10 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     alpha (float): probability prior distribution for syllable transition rate.
     gamma (float): probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.
     select_groups (bool): indicates to display all sessions and choose subset of groups to model alone.
-    check_every (int):
-    select_groups (bool):
-    get_cmd (bool):
-    run_cmd (bool):
+    check_every (int): number of iterations between each training convergence check.
+    select_groups (bool): indicates whether to interactively select data to model by group name.
+    get_cmd (bool): indicates to print all the kappa scan learn-model command outputs.
+    run_cmd (bool): indicates to run all the kappa scan learn-model commands.
     percent_split (int): train-validation data split ratio percentage.
     output_dir (str): directory to store multiple trained models via kappa-scan
     out_script (str): name of the script containing all the kappa scanning commands.
