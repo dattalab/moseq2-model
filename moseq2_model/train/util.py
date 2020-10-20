@@ -37,6 +37,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     groups (list): list of groups included in modeling (only if verbose = True)
     converge (bool): Train model until the log-likelihoods converge
     verbose (bool): Compute model summary.
+    check_every (int): iteration frequency to check whether the model log-likelihoods have converged
 
     Returns
     -------
