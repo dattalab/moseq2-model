@@ -178,7 +178,21 @@ class TestDataHelpers(TestCase):
 
         iter_lls = [12, 15, 19]
         iter_holls = [2, 5, 9]
-        group_idx = ['default', 'default', 'default']
+        group_idx = ['default']
+
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+            config_data['hold_out'] = True
+            config_data['verbose'] = True
+
+        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
+
+        assert os.path.exists(img_path), "Something went wrong; graph was not created."
+        os.remove(img_path)
+
+        iter_lls = [[12, 12.5], [15, 16], [19, 20]]
+        iter_holls = [[2, 3], [5, 5], [9, 10]]
+        group_idx = [['default', 'test1']]
 
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)

@@ -352,11 +352,17 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
     widths = np.linspace(1, 10, len(set(group_idx)))
     styles = itertools.cycle(['-', '--', '-.', ':'])
 
-    for group, ll, lw, ls in zip(list(set(group_idx)), [iter_lls], widths, styles):
+    if not isinstance(iter_lls[0], list):
+        iter_lls = [iter_lls]
+        iter_holls = [iter_holls]
+    else:
+        iterations = list(range(len(iter_lls[0])))
+
+    for group, ll, lw, ls in zip(list(set(group_idx)), iter_lls, widths, styles):
         plt.plot(iterations, ll, linewidth=lw, linestyle=ls, label=f'train: {group}')
 
-    for group, ll, lw, ls in zip(list(set(group_idx)), [iter_holls], widths, styles):
-        plt.plot(list(range(len(iter_holls))), ll, linewidth=lw, linestyle=ls, label=f'{ll_type}: {group}')
+    for group, ll, lw, ls in zip(list(set(group_idx)), iter_holls, widths, styles):
+        plt.plot(iterations, ll, linewidth=lw, linestyle=ls, label=f'{ll_type}: {group}')
 
     plt.legend()
     plt.ylabel('Average Syllable Log-Likelihood')
