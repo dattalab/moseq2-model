@@ -62,15 +62,16 @@ def learn_model_wrapper(input_file, dest_file, config_data):
                                         load_groups=config_data['load_groups'])
 
     # Parse index file and update metadata information; namely groups
-    index_data, data_metadata = process_indexfile(config_data.get('index', None), config_data, data_metadata, config_data['default_group'])
+    select_groups = config_data.get('select_groups', False)
+    index_data, data_metadata = process_indexfile(config_data.get('index', None), data_metadata,
+                                                  config_data['default_group'], select_groups)
 
     # Get all training session uuids
     all_keys = list(data_dict)
     groups = list(data_metadata['groups'])
 
     # Get keys to include in training set
-    select_groups = config_data.get('select_groups', False)
-    if index_data != None:
+    if index_data is not None:
         all_keys, groups = select_data_to_model(index_data, select_groups)
         data_metadata['groups'] = groups
         data_metadata['uuids'] = all_keys
