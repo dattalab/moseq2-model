@@ -7,7 +7,7 @@ from moseq2_model.util import load_pcs
 from moseq2_model.train.models import ARHMM
 from moseq2_model.helpers.data import prepare_model_metadata, get_training_data_splits
 from moseq2_model.train.util import train_model, get_labels_from_model, whiten_all, whiten_each, \
-                                    run_e_step, zscore_all, zscore_each, get_crosslikes, check_convergence
+                                    run_e_step, zscore_all, zscore_each, get_crosslikes
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 
 def get_model(separate_trans=False, robust=False, groups=[]):
@@ -91,18 +91,6 @@ class TestTrainUtils(TestCase):
         assert len(iter_holls) == 5
         assert len(group_idx) == 2
         assert group_idx == ['default', 'Group1']
-
-    def test_check_convergence(self):
-
-        iter_lls = [-1200000, -1000, 1, 1000, 10000, 10000, 10000, 10000, 10000, 10000]
-
-        test_converged = check_convergence(iter_lls)
-        assert test_converged == True
-
-        iter_lls = [-1200000]
-
-        test_converged = check_convergence(iter_lls)
-        assert test_converged == False
 
     def test_get_labels_from_model(self):
 

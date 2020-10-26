@@ -108,12 +108,11 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         'initial': itr
     }
 
-    if config_data['converge']:
-        config_data['num_iter'] = 1000
-
     # Get data groupings for verbose train vs. test log-likelihood estimation and graphing
     if hold_out_list != None and groups != None:
         groupings = get_session_groupings(data_metadata, all_keys, hold_out_list)
+    else:
+        groupings = None
 
     # Train ARHMM
     arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
@@ -129,7 +128,6 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         val_data=test_data,
         separate_trans=config_data['separate_trans'],
         groups=groupings,
-        converge=config_data['converge'],
         check_every=config_data['check_every'],
         verbose=config_data['verbose']
     )
@@ -221,7 +219,7 @@ def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
         # Display the command string
         print('Listing kappa scan commands...\n')
         print(command_string)
-    elif config_data['run_cmd']:
+    if config_data['run_cmd']:
         # Or run the kappa scan
         print('Running kappa scan commands')
         os.system(command_string)

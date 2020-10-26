@@ -14,7 +14,7 @@ from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
-                converge=False, verbose=False, check_every=2):
+                verbose=False, check_every=2):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -35,9 +35,8 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     val_data (OrderedDict): dict of validation data (only if verbose = True)
     separate_trans (bool): using different transition matrices
     groups (list): list of groups included in modeling (only if verbose = True)
-    converge (bool): Train model until the log-likelihoods converge
     verbose (bool): Compute model summary.
-    check_every (int): iteration frequency to check whether the model log-likelihoods have converged
+    check_every (int): iteration frequency to record model-iteration training/validation log-likelihoods
 
     Returns
     -------
@@ -78,64 +77,17 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
             'iter_holls': iter_holls
         }
 
-        # Test convergence every 5 iterations
-        if (converge or verbose) and ((itr+1) % check_every == 0):
-            # Compute iteration training and validation log-likelihoods
-            iter_lls, iter_holls = get_model_summary(**summ_stats)
-
-            # Get current loglikelihood
-            curr_ll = model.log_likelihood()
-
-            # Check if loglikelihood increase is less than convergence tolerance
-            if converge:
-                if check_convergence(iter_lls):
-                    return model, curr_ll, get_labels_from_model(model), iter_lls, iter_holls, groups
-        elif converge:
-            # Compute iteration training and validation log-likelihoods
+        if verbose and ((itr+1) % check_every == 0):
+            # Compute and save iteration training and validation log-likelihoods
             iter_lls, iter_holls = get_model_summary(**summ_stats)
 
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
-            training_checkpoint(model, itr, checkpoint_file, checkpoint_freq)
+            training_checkpoint(model, itr, checkpoint_file)
 
     return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
-# TODO: remove convergence from this version, we'll add it in the next moseq version
-def check_convergence(iter_lls):
-    '''
-    Checks whether the model log-likelihood increase is below the given tolerance threshold, signalling that the
-     modeling has converged.
-
-    Reference for Maximum Likelihood Estimation:
-    https://medium.com/@rrfd/what-is-maximum-likelihood-estimation-examples-in-python-791153818030
-
-    Parameters
-    ----------
-    iter_lls (list): List of computed log-likelihoods from previous iterations
-
-    Returns
-    -------
-    converged (bool): Boolean to decide whether to stop model training if log-likelihoods have converged
-    '''
-
-
-    if len(iter_lls) > 4:
-        # mean
-        theta_mu = np.mean(iter_lls)
-        # sigma
-        theta_sigma = np.sum([(x-theta_mu)**2 for x in iter_lls])/len(iter_lls)
-
-        # sampled log-likelihood differences
-        ll0 = np.log(abs(norm.pdf(iter_lls[-2], theta_mu, theta_sigma)))
-        ll = np.log(abs(norm.pdf(iter_lls[-1], theta_mu, theta_sigma)))
-        print('normalized LL difference', ll0-ll)
-        converged = math.isclose(ll0-ll, 0, abs_tol=0.25) and (ll0-ll) >= 0
-    else:
-        converged = False
-
-    return converged
-
-def training_checkpoint(model, itr, checkpoint_file, checkpoint_freq):
+def training_checkpoint(model, itr, checkpoint_file):
     '''
     Formats the model checkpoint filename and saves the model checkpoint
 
@@ -144,7 +96,6 @@ def training_checkpoint(model, itr, checkpoint_file, checkpoint_freq):
     model (ARHMM): Model being trained.
     itr (itr): Current modeling iteration.
     checkpoint_file (str): Model checkpoint file name.
-    checkpoint_freq (int): Model checkpointing iteration frequency
 
     Returns
     -------

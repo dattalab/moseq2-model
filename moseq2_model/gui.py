@@ -10,7 +10,7 @@ from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_mo
 def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
                         max_states=100, npcs=10, scan_scale='log', kappa=None, min_kappa=None, max_kappa=None, n_models=5,
                         alpha=5.7, gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1, use_checkpoint=False,
-                        converge=False, check_every=5, select_groups=False, percent_split=20, output_dir=None,
+                        check_every=5, select_groups=False, percent_split=20, output_dir=None,
                         out_script='train_out.sh', cluster_type='local', get_cmd=True, run_cmd=False, prefix='',
                         memory='16GB', wall_time='3:00:00', partition='short', verbose=False):
     '''
@@ -37,7 +37,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     alpha (float): probability prior distribution for syllable transition rate.
     gamma (float): probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.
     select_groups (bool): indicates to display all sessions and choose subset of groups to model alone.
-    check_every (int): number of iterations between each training convergence check.
+    check_every (int): number of iterations between each training iteration log-likelihood check.
     select_groups (bool): indicates whether to interactively select data to model by group name.
     get_cmd (bool): indicates to print all the kappa scan learn-model command outputs.
     run_cmd (bool): indicates to run all the kappa scan learn-model commands.
@@ -76,7 +76,6 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_data['separate_trans'] = separate_trans
     config_data['robust'] = robust
     config_data['checkpoint_freq'] = checkpoint_freq
-    config_data['converge'] = converge
     config_data['hold_out'] = hold_out
     config_data['nfolds'] = nfolds
     config_data['num_iter'] = num_iter

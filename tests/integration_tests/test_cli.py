@@ -33,6 +33,8 @@ class TestCLI(TestCase):
         train_params = [input_file, dest_file, "-i", index, '-n', num_iter, '--checkpoint-freq', freq,
                         '-m', max_states, '--npcs', npcs, '--e-step', '-k', kappa, '--robust', '--use-checkpoint', '--verbose']
 
+        print(' '.join([str(s) for s in train_params]))
+
         runner = CliRunner()
 
         result = runner.invoke(learn_model,
@@ -58,8 +60,8 @@ class TestCLI(TestCase):
         npcs = 7
 
         kappa_scan_params = [input_file, dest_dir, '-i', index, '-n', num_iter,
-                        '-m', max_states, '--npcs', npcs, '--robust', '--converge',
-                        '--min-kappa', 4, '--max-kappa', 8, '--out-script', 'train_out.sh']
+                        '-m', max_states, '--npcs', npcs, '--robust',
+                        '--min-kappa', 1e4, '--max-kappa', 1e8, '--out-script', 'train_out.sh']
 
         runner = CliRunner()
 

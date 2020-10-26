@@ -120,7 +120,7 @@ class TestGUI(TestCase):
         max_states = 100
         npcs = 10
         kappa = 'scan'
-        min_kappa = 3
+        min_kappa = 1e3
         separate_trans = True
         robust = True
         percent_split = 20

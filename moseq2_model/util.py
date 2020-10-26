@@ -589,9 +589,6 @@ def get_parameter_strings(config_data):
     if config_data['max_states']:
         parameters += f'-m {config_data["max_states"]} '
 
-    if config_data['converge']:
-        parameters += '--converge '
-
     # Handle possible Slurm batch functionality
     prefix = ''
     if config_data['cluster_type'] == 'slurm':
@@ -638,6 +635,27 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     command_string = '\n'.join(commands)
     return command_string
 
+def get_factor(value):
+    '''
+    Returns the factor of the inputted value to set log-scale kappa scanning limits.
+
+    Parameters
+    ----------
+    value (int or string)
+
+    Returns
+    -------
+    factor (float): factor limit for log kappa scaling
+    '''
+
+    if 'e' not in str(value):
+        factor = float(len(str(int(value))))-1
+    else:
+        factor = float(value.split('e')[1])
+
+    return factor
+
+
 def get_scan_range_kappas(data_dict, config_data):
     '''
     Helper function that returns the kappa values to train models on based on the user's selected scanning scale range.
@@ -675,14 +693,17 @@ def get_scan_range_kappas(data_dict, config_data):
         if config_data['min_kappa'] == None:
             min_factor = factor - 2 # Set default value
         else:
-            min_factor = config_data['min_kappa']
+            min_factor = get_factor(config_data['min_kappa'])
+
         if config_data['max_kappa'] == None:
             max_factor = factor + 2 # Set default value
         else:
-            max_factor = config_data['max_kappa']
+            max_factor = get_factor(config_data['max_kappa'])
+            print(max_factor)
 
         config_data['use_range'] = (min_factor, max_factor, config_data['n_models'],)
         kappas = np.logspace(*config_data['use_range']).astype(int).tolist()
+        print(config_data['use_range'], max(kappas))
 
     elif config_data['scan_scale'] == 'linear':
         # Get linear scan range

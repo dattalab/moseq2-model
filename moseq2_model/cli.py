@@ -62,9 +62,8 @@ def modeling_parameters(function):
     function = click.option("--nlags", type=int, default=3, help="Number of lags to use")(function)
     function = click.option("--separate-trans", is_flag=True, help="Use separate transition matrix per group")(function)
     function = click.option("--robust", is_flag=True, help="Use tAR model")(function)
-    function = click.option("--converge", is_flag=True, help="Train model until loglikelihood converges.")(function)
     function = click.option("--check-every", type=int, default=5,
-                            help="Increment to check whether the model training has converged.")(function)
+                            help="Increment to record training and validation log-likelihoods.")(function)
 
     return function
 
@@ -93,8 +92,8 @@ def learn_model(input_file, dest_file, **config_data):
 @click.option('--prefix', type=str, default='', help='Batch command string to prefix model training command.')
 @click.option('--cluster-type', type=click.Choice(['local', 'slurm']), default='local', help='Platform to train models on')
 @click.option('--scan-scale', type=click.Choice(['log', 'linear']), default='log', help='Scale to scan kappa values at.')
-@click.option('--min-kappa', type=float, default=None, help='Minimum kappa exponent to train model on.')
-@click.option('--max-kappa', type=float, default=None, help='Maximum kappa exponent to train model on.')
+@click.option('--min-kappa', type=float, default=None, help='Minimum kappa value to begin scan from.')
+@click.option('--max-kappa', type=float, default=None, help='Maximum kappa to train model in scan range.')
 @click.option('--ncpus', '-n', type=int, default=4, help="Number of CPUs")
 @click.option('--memory', '-m', type=str, default="5GB", help="RAM string")
 @click.option('--wall-time', '-w', type=str, default='3:00:00', help="Wall time")

@@ -9,7 +9,7 @@ from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
 from moseq2_model.util import (load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5,
                     append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, count_frames,
-                    get_parameter_strings, create_command_strings, get_scan_range_kappas)
+                    get_parameter_strings, create_command_strings, get_scan_range_kappas, get_factor)
 
 class TestUtils(TestCase):
 
@@ -44,7 +44,7 @@ class TestUtils(TestCase):
         }
 
         parameters, prefix = get_parameter_strings(config_data)
-        truth_str = f' --npcs 10 -n 100 -i {index} --separate-trans --robust --e-step -h 2 -m 100 --converge '
+        truth_str = f' --npcs 10 -n 100 -i {index} --separate-trans --robust --e-step -h 2 -m 100 '
         truth_prefix = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "'
 
         assert parameters == truth_str
@@ -78,9 +78,16 @@ class TestUtils(TestCase):
         command_string = create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p')
 
         truth_output = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "moseq2-model learn-model data/test_scores.h5' \
-                       ' data/models/model-10-0.p --npcs 10 -n 100 -i data/test_index.yaml --separate-trans --robust --e-step -h 2 -m 100 --converge -k 10"'
+                       ' data/models/model-10-0.p --npcs 10 -n 100 -i data/test_index.yaml --separate-trans --robust --e-step -h 2 -m 100 -k 10"'
 
         assert command_string == truth_output
+
+    def test_get_factor(self):
+        factor = get_factor('1e9')
+        assert factor == 9.0
+
+        factor = get_factor(1000)
+        assert factor == 3.0
 
     def test_get_scan_range_kappas(self):
 
@@ -98,11 +105,11 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 100
-        assert max(test_kappas) == 1000000
+        assert max(test_kappas) == 1e6
 
         config_data = {
             'min_kappa': None,
-            'max_kappa': 6,
+            'max_kappa': 1e6,
             'n_models': 10
         }
 
@@ -121,12 +128,12 @@ class TestUtils(TestCase):
         test_kappas = get_scan_range_kappas(data_dict, config_data)
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 10.0
+        assert min(test_kappas) == 1
         assert max(test_kappas) == 1e6
 
         config_data = {
-            'min_kappa': 3,
-            'max_kappa': 5,
+            'min_kappa': 1e3,
+            'max_kappa': 1e5,
             'n_models': 10
         }
 

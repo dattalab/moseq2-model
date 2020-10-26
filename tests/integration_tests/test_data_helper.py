@@ -176,8 +176,8 @@ class TestDataHelpers(TestCase):
         dest_file = 'data/test_model.p'
         config_file = 'data/config.yaml'
 
-        iter_lls = [[12], [15], [19]]
-        iter_holls = [[2], [5], [9]]
+        iter_lls = [12, 15, 19]
+        iter_holls = [2, 5, 9]
         group_idx = ['default', 'default', 'default']
 
         with open(config_file, 'r') as f:
