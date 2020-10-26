@@ -86,6 +86,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_data['select_groups'] = select_groups
     config_data['use_checkpoint'] = use_checkpoint
     config_data['check_every'] = check_every
+    config_data['index'] = index
 
     if output_dir == None:
         print('Output directory not specified, saving models to base directory.')
@@ -94,7 +95,6 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_data['out_script'] = join(output_dir, out_script)
 
     if kappa == 'scan':
-        config_data['index'] = index
         config_data['scan_scale'] = scan_scale
         config_data['min_kappa'] = min_kappa
         config_data['max_kappa'] = max_kappa
@@ -111,4 +111,4 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
         command = kappa_scan_fit_models_wrapper(input_file, config_data, output_dir)
         return command
     else:
-        learn_model_wrapper(input_file, dest_file, config_data, index)
+        learn_model_wrapper(input_file, dest_file, config_data)

@@ -8,7 +8,7 @@ from tests.unit_tests.test_train_utils import get_model
 from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
 from moseq2_model.util import (load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5,
-                    append_resample, h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, count_frames,
+                    h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, count_frames,
                     get_parameter_strings, create_command_strings, get_scan_range_kappas, get_factor)
 
 class TestUtils(TestCase):
@@ -253,14 +253,6 @@ class TestUtils(TestCase):
 
         assert os.path.exists(outfile)
         os.remove(outfile)
-
-    def test_append_resample(self):
-        outfile = 'data/test_model.p'
-
-        input_data = 'data/test_scores.h5'
-        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
-
-        append_resample(outfile, data_dict)
 
     def test_h5_to_dict(self):
         input_data = 'data/test_scores.h5'

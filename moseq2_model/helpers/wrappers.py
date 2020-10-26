@@ -18,7 +18,7 @@ from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, c
 from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
-def learn_model_wrapper(input_file, dest_file, config_data, index=None):
+def learn_model_wrapper(input_file, dest_file, config_data):
     '''
     Wrapper function to train ARHMM, shared between CLI and GUI.
 
@@ -48,9 +48,8 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
 
     if checkpoint_freq < 0:
         checkpoint_freq = None
-    else:
-        if not exists(checkpoint_path):
-            os.makedirs(checkpoint_path)
+    elif not exists(checkpoint_path):
+        os.makedirs(checkpoint_path)
 
     click.echo("Entering modeling training")
 
@@ -63,22 +62,20 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
                                         load_groups=config_data['load_groups'])
 
     # Parse index file and update metadata information; namely groups
-    index_data, data_metadata = process_indexfile(index, config_data, data_metadata)
+    index_data, data_metadata = process_indexfile(config_data.get('index', None), config_data, data_metadata, config_data['default_group'])
 
     # Get all training session uuids
-    all_keys = list(data_dict.keys())
+    all_keys = list(data_dict)
     groups = list(data_metadata['groups'])
 
     # Get keys to include in training set
     select_groups = config_data.get('select_groups', False)
-    if (index_data != None):
+    if index_data != None:
         all_keys, groups = select_data_to_model(index_data, select_groups)
         data_metadata['groups'] = groups
         data_metadata['uuids'] = all_keys
 
-    # Create OrderedDict of training data
-    data_dict = OrderedDict((i, data_dict[i]) for i in all_keys)
-    nkeys = len(all_keys)
+    nkeys = len(data_dict)
 
     # Get train/held out data split uuids
     config_data, data_dict, model_parameters, train_list, hold_out_list = \
@@ -152,7 +149,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         click.echo('Running E step...')
         expected_states = run_e_step(arhmm)
 
-    # TODO:  just compute cross-likes at the end and potentially dump the model (what else
+    # TODO: just compute cross-likes at the end and potentially dump the model (what else
     # would we want the model for hm?), though hard drive space is cheap, recomputing models is not...
 
     # Pack model data

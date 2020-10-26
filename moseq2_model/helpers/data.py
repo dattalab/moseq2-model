@@ -65,16 +65,18 @@ def get_session_metadata(index):
 
     return index_data, metadata
 
-def process_indexfile(index, config_data, data_metadata):
+def process_indexfile(index, data_metadata, default_group='n/a', select_groups=False):
     '''
     Reads index file (if it exists) and returns dictionaries containing metadata in the index file.
     The data_metadata will also be updated with the information read from the index file
 
     Parameters
     ----------
-    index (str): path to index file.
+    index (str or None): path to index file.
     config_data (dict): dictionary containing all modeling parameters.
     data_metadata (dict): loaded metadata containing uuid and group information.
+    default_group (str): default group name to supply to data without assigned group labels
+    select_groups (bool): when True, print metadata describing group selection
 
     Returns
     -------
@@ -82,31 +84,23 @@ def process_indexfile(index, config_data, data_metadata):
     data_metadata (dict): updated metadata dictionary.
     '''
 
-    if index == None:
-        index = config_data.get('index', '')
-
     # if we have an index file, strip out the groups, match to the scores uuids
-    if exists(str(index)):
+    if index is not None and exists(index):
         with open(index, "r") as f:
             # reading in array of files
             yml_metadata = yaml.safe_load(f)["files"]
 
-            # reading corresponding groups and uuids
-            yml_groups, yml_uuids = zip(*pluck(['group', 'uuid'], yml_metadata))
+        # reading corresponding groups and uuids
+        uuid_map = dict(pluck(['uuid', 'group'], yml_metadata))
 
         # Setting model metadata group array
-        data_metadata["groups"] = []
-        for uuid in data_metadata["uuids"]:
-            if uuid in yml_uuids:
-                data_metadata["groups"].append(yml_groups[yml_uuids.index(uuid)])
-            else:
-                data_metadata["groups"].append(config_data['default_group'])
+        data_metadata["groups"] = [uuid_map.get(uuid, default_group) for uuid in data_metadata['uuids']]
 
         # Reading in index file in dict format, and returning metadata for interactive group selection prior to modeling
         index_data, selection_metadata = get_session_metadata(index)
 
         # Optionally display metadata to select groups to model
-        if config_data.get('select_groups', False):
+        if select_groups:
             for i in range(len(selection_metadata['subjectNames'])):
                 print(f'[{i + 1}]', 'Session Name:', selection_metadata['sessionNames'][i],
                       '; Subject Name:', selection_metadata['subjectNames'][i], '; group:',
@@ -223,7 +217,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_key
         # Setting number of allocated cpus equal to number of training sessions
         ncpus = len(train_list)
         config_data['ncpus'] = ncpus
-        warnings.warn(f'Setting ncpus to {nkeys}, ncpus must be <= nkeys in dataset, {len(train_list)}')
+        warnings.warn(f'Setting ncpus to {ncpus}, ncpus must be <= nkeys in dataset')
 
     # Pack all the modeling parameters into a single dict
     model_parameters = {

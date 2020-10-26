@@ -1,12 +1,13 @@
 '''
 Utility functions for handling loading and saving models and their respective metadata.
 '''
-
+import re
 import h5py
 import click
 import joblib
 import pickle
 import scipy.io
+import warnings
 import numpy as np
 from copy import deepcopy
 from cytoolz import first
@@ -15,7 +16,7 @@ from moseq2_model.train.models import ARHMM
 from autoregressive.util import AR_striding
 from os.path import basename, getctime, join, exists
 
-def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
+def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
     '''
     Load the Principal Component Scores for modeling.
 
@@ -25,7 +26,6 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
     var_name (str): key where the pc scores are stored within ``filename``
     load_groups (bool): Load metadata group variable
     npcs (int): Number of PCs to load
-    h5_key_is_uuid (bool): use h5 key as uuid.
 
     Returns
     -------
@@ -53,6 +53,9 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
+        if not isinstance(data_dict, OrderedDict):
+            data_dict = OrderedDict(data_dict)
+
         # Reading in PCs and associated groups
         if isinstance(first(data_dict.values()), tuple):
             print('Detected tuple')
@@ -63,7 +66,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
             for k, v in data_dict.items():
                 data_dict[k] = v[:, :npcs]
 
-        metadata['uuids'] = list(data_dict.keys())
+        metadata['uuids'] = list(data_dict)
 
     elif filename.endswith('.h5'):
         # Reading PCs from h5 file
@@ -79,24 +82,34 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
                 elif isinstance(tmp, h5py.Group):
                     # Reading in PCs
                     data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
-                    # Optionally loading groups
+                    # Optionally loading groups if they 
                     if load_groups:
-                        metadata['groups'] = list(range(len(tmp)))
-                    elif 'groups' in f:
-                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
+                        if 'groups' in f:
+                            metadata['groups'] = [f[f'groups/{key}'][()] for key in data_dict]
+                        else:
+                            warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
+                            metadata['groups'] = list(range(len(data_dict)))
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
                 raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
-            if h5_key_is_uuid:
-                metadata['uuids'] = list(data_dict.keys())
+            # if all the h5 data keys are uuids, use them to store uuid information
+            if all(map(is_uuid, data_dict)):
+                metadata['uuids'] = list(data_dict)
             elif 'metadata' in f:
-                metadata['uuids'] = list(f['metadata'].keys())
+                metadata['uuids'] = list(f['metadata'])
     else:
         raise ValueError('Did not understand filetype')
 
     return data_dict, metadata
+
+
+def is_uuid(string):
+    regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
+    match = regex.match(string)
+    return bool(match)
+
 
 def get_current_model(use_checkpoint, all_checkpoints, train_data, model_parameters):
     '''
@@ -316,27 +329,6 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
     joblib.dump(arhmm, filename, compress=('zlib', 5))
 
 
-def append_resample(filename, label_dict: dict):
-    '''
-    Adds the labels from a resampling iteration to a pickle file.
-
-    Parameters
-    ----------
-    filename (str): file (containing modeling results) to append new label dict to.
-    label_dict (dict): a dictionary with a single key/value pair, where the
-            key is the sampling iteration and the value contains a dict of:
-            (labels, a log likelihood val, and expected states if the flag is set)
-            from each mouse.
-
-    Returns
-    -------
-    None
-    '''
-
-    with open(filename, 'ab+') as f:
-        pickle.dump(label_dict, f)
-
-
 def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     '''
     A convenience function to load the contents of an h5 file
@@ -410,7 +402,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 
     with h5py.File(filename, 'r') as f:
         # Loading PCs scores into training data dict
-        if var_name in f.keys():
+        if var_name in f:
             score_tmp = f[var_name]
             for i in range(len(score_tmp)):
                 tmp = f[score_tmp[i][0]]
