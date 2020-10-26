@@ -118,24 +118,23 @@ def get_current_model(use_checkpoint, all_checkpoints, train_data, model_paramet
 
     # Check for available previous modeling checkpoints
     itr = 0
-    if use_checkpoint:
-        if len(all_checkpoints) > 0:
-            # Get latest checkpoint (with respect to save date)
-            latest_checkpoint = max(all_checkpoints, key=getctime)
-            click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
-            try:
-                checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
-                # Get model object
-                arhmm = checkpoint.pop('model')
-                itr = checkpoint.pop('iter')
-                click.echo(f'On iteration {itr}')
-            except (FileNotFoundError, ValueError):
-                click.echo('Loading original checkpoint failed, creating new ARHMM')
-                arhmm = ARHMM(data_dict=train_data, **model_parameters)
-        else:
-            click.echo('No matching checkpoints found, creating new ARHMM')
+    if use_checkpoint and len(all_checkpoints) > 0:
+        # Get latest checkpoint (with respect to save date)
+        latest_checkpoint = max(all_checkpoints, key=getctime)
+        click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
+        try:
+            checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
+            # Get model object
+            arhmm = checkpoint.pop('model')
+            itr = checkpoint.pop('iter')
+            click.echo(f'On iteration {itr}')
+        except (FileNotFoundError, ValueError):
+            click.echo('Loading original checkpoint failed, creating new ARHMM')
             arhmm = ARHMM(data_dict=train_data, **model_parameters)
     else:
+        if use_checkpoint:
+            print('No checkpoints found.', end=' ')
+        click.echo('Creating new ARHMM')
         arhmm = ARHMM(data_dict=train_data, **model_parameters)
 
     return arhmm, itr

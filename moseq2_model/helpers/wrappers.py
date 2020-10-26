@@ -93,11 +93,11 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         train_data, test_data, nt_frames = get_training_data_splits(config_data, data_dict)
 
     # Get all saved checkpoints
-    checkpoint_file = join(checkpoint_path, basename(dest_file).replace('.p', '') + '-checkpoint.arhmm')
-    all_checkpoints = [f for f in glob.glob(f'{checkpoint_path}*.arhmm') if basename(dest_file).replace('.p', '') in f]
+    checkpoint_file = basename(dest_file).replace('.p', '')
+    all_checkpoints = glob.glob(join(checkpoint_path, f'{checkpoint_file}*.arhmm'))
 
     # Instantiate model; either anew or from previously saved checkpoint
-    arhmm, itr = get_current_model(config_data.get('use_checkpoint', False), all_checkpoints, train_data, model_parameters)
+    arhmm, itr = get_current_model(config_data['use_checkpoint'], all_checkpoints, train_data, model_parameters)
 
     # Pack progress bar keyword arguments
     progressbar_kwargs = {
@@ -112,8 +112,6 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         config_data['num_iter'] = 1000
 
     # Get data groupings for verbose train vs. test log-likelihood estimation and graphing
-    groupings = list(groups)
-
     if hold_out_list != None and groups != None:
         groupings = get_session_groupings(data_metadata, all_keys, hold_out_list)
 
@@ -123,7 +121,7 @@ def learn_model_wrapper(input_file, dest_file, config_data, index=None):
         num_iter=config_data['num_iter'],
         ncpus=config_data['ncpus'],
         checkpoint_freq=checkpoint_freq,
-        checkpoint_file=checkpoint_file,
+        checkpoint_file=join(checkpoint_path, checkpoint_file),
         start=itr,
         progress_kwargs=progressbar_kwargs,
         num_frames=nt_frames,
@@ -217,13 +215,15 @@ def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
     # Write command string to file
     with open(config_data['out_script'], 'w') as f:
         f.write(command_string)
+    print('Commands saved to:', config_data['out_script'])
 
-    # Optionally the CLI command(s)
     if config_data['get_cmd']:
         # Display the command string
-        print('Listing scan commands...\n')
+        print('Listing kappa scan commands...\n')
         print(command_string)
     elif config_data['run_cmd']:
+        # Or run the kappa scan
+        print('Running kappa scan commands')
         os.system(command_string)
 
     return command_string

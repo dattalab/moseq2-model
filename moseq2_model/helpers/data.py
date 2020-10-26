@@ -323,38 +323,6 @@ def get_training_data_splits(config_data, data_dict):
 
     return training_data, validation_data, nt_frames
 
-def graph_helper(groups, lls, legend, iterations, ll_type='train'):
-    '''
-    Helper function to plot the training and validation log-likelihoods
-     over the each model training iteration.
-
-    Parameters
-    ----------
-    groups (list): list of group names that the model was trained on.
-    lls (list): list of log-likelihoods over each iteration.
-    legend (list): list of legend labels for each group's log-likelihoods curve.
-    iterations (list): range() generated list indicated x-axis length.
-    ll_type (str): string to indicate (in the legend) whether plotting training or validation curves.
-    sep_trans (bool): indicates whether there is more than one set on log-likelihoods.
-
-    Returns
-    -------
-    None
-    '''
-
-    if isinstance(groups[0], list):
-        groups = list(itertools.chain.from_iterable(groups))
-
-    for i, g in enumerate(list(set(groups))):
-        # Set dynamic line widths and formats
-        lw = 10 - 8 * i / len(lls)
-        ls = ['-', '--', '-.', ':'][i % 4]
-        try:
-            plt.plot(iterations, np.asarray(lls)[:, i], linestyle=ls, linewidth=lw)
-        except:
-            plt.plot(iterations, np.asarray(lls), linestyle=ls, linewidth=lw)
-        legend.append(f'{ll_type}: {g} LL')
-
 def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file):
     '''
     Graphs model training performance progress throughout modeling.
@@ -377,14 +345,16 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
     if config_data['hold_out']:
         ll_type = 'held_out'
 
-    # Graphing loglikelihood summary if verbose==True
-    iterations = [i for i in range(len(iter_lls))]
-    legend = []
-    graph_helper(group_idx, iter_lls, legend, iterations)
-    graph_helper(group_idx, iter_holls, legend, iterations, ll_type=ll_type)
+    iterations = list(range(len(iter_lls)))
+    widths = np.linspace(1, 10, len(group_idx))
+    styles = itertools.cycle(['-', '--', '-.', ':'])
 
-    plt.legend(legend)
+    for group, ll, lw, ls in zip(group_idx, iter_lls, widths, styles):
+        plt.plot(iterations, ll, linewidth=lw, linestyle=ls, legend=f'train: {group}')
+    for group, ll, lw, ls in zip(group_idx, iter_holls, widths, styles):
+        plt.plot(iterations, ll, linewidth=lw, linestyle=ls, legend=f'{ll_type}: {group}')
 
+    plt.legend()
     plt.ylabel('Average Syllable Log-Likelihood')
     plt.xlabel('Iterations')
 
@@ -392,10 +362,10 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, 
     if config_data['hold_out']:
         img_path = join(dirname(dest_file), 'train_heldout_summary.png')
         plt.title('ARHMM Training Summary With ' + str(config_data['nfolds']) + ' Folds')
-        plt.savefig(img_path)
+        plt.savefig(img_path, dpi=300)
     else:
         img_path = join(dirname(dest_file), f'train_val{config_data["percent_split"]}_summary.png')
         plt.title('ARHMM Training Summary With ' + str(config_data["percent_split"]) + '% Train-Val Split')
-        plt.savefig(img_path)
+        plt.savefig(img_path, dpi=300)
 
     return img_path
