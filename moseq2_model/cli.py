@@ -67,8 +67,6 @@ def modeling_parameters(function):
 
     return function
 
-# this is the entry point for learning models over Kubernetes, expose all
-# parameters we could/would possibly scan over
 @cli.command(name="learn-model", help="Trains ARHMM on PCA Scores with given training parameters")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))
