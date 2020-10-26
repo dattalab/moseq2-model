@@ -662,18 +662,18 @@ def get_scan_range_kappas(data_dict, config_data):
     Different default range values will be selected if min/max_kappa are None. Otherwise, min_kappa and max_kappa
     represent exponent ranges to get kappa values within.
 
-    For example, scan_scale = 'log'; nframes = 1800; min_kappa = 3; max_kappa = 5; n_models = 10;
+    For example, scan_scale = 'log'; nframes = 1800; min_kappa = 10e3; max_kappa = 10e5; n_models = 10;
     min(kappas) == 1e3; max(kappas) == 1e5; kappas = [1000, 1668, 2782, 4641, 7742, 12915, 21544, 35938, 59948, 100000]
 
     Another Exmaple:
     nframes = 1800
     'scan_scale': 'linear',
-    'min_kappa': 2,
-    'max_kappa': 4,
+    'min_kappa': None,
+    'max_kappa': None,
     'n_models': 10
     min(kappas) == 18
     max(kappas) == 18000000
-    kappas == [18, 2000016, 4000014, 6000012, 8000010, 10000008, 12000006, 14000004, 16000002, 18000000]
+    kappas == [18, 20016, 40014, 60012, 80010, 100008, 120006, 140004, 160002, 180000]
 
     Parameters
     ----------
@@ -699,11 +699,9 @@ def get_scan_range_kappas(data_dict, config_data):
             max_factor = factor + 2 # Set default value
         else:
             max_factor = get_factor(config_data['max_kappa'])
-            print(max_factor)
 
         config_data['use_range'] = (min_factor, max_factor, config_data['n_models'],)
         kappas = np.logspace(*config_data['use_range']).astype(int).tolist()
-        print(config_data['use_range'], max(kappas))
 
     elif config_data['scan_scale'] == 'linear':
         # Get linear scan range
@@ -713,12 +711,12 @@ def get_scan_range_kappas(data_dict, config_data):
             # less than the counted number of frames
             config_data['min_kappa'] = min(nframes, nframes / 1e2)  # default initial kappa value
         else:
-            config_data['min_kappa'] = nframes/(10**config_data['min_kappa'])
+            config_data['min_kappa'] = config_data['min_kappa']
         if config_data['max_kappa'] == None:
             # If no max is specified, kappa values will be incremented by factors of 10.
             config_data['max_kappa'] = max(nframes, nframes * 1e2)  # default initial kappa values
         else:
-            config_data['max_kappa'] = nframes * (10**config_data['max_kappa'])
+            config_data['max_kappa'] = config_data['max_kappa']
 
         config_data['use_range'] = (config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'],)
 

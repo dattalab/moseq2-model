@@ -168,13 +168,13 @@ class TestUtils(TestCase):
 
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 1
+        assert min(test_kappas) == 3
         assert max(test_kappas) == 180000
 
         config_data = {
             'scan_scale': 'linear',
             'min_kappa': None,
-            'max_kappa': 6,
+            'max_kappa': 60000,
             'n_models': 10
         }
 
@@ -183,7 +183,7 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 18
-        assert max(test_kappas) == 1800000000
+        assert max(test_kappas) == 60000
 
         config_data = {
             'scan_scale': 'linear',
@@ -196,8 +196,8 @@ class TestUtils(TestCase):
 
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 18
-        assert max(test_kappas) == 18000000
+        assert min(test_kappas) == 2
+        assert max(test_kappas) == 4
 
     def test_load_pcs(self):
 
