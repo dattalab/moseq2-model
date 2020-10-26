@@ -190,8 +190,8 @@ class TestDataHelpers(TestCase):
         assert os.path.exists(img_path), "Something went wrong; graph was not created."
         os.remove(img_path)
 
-        iter_lls = [[12, 12.5], [15, 16], [19, 20]]
-        iter_holls = [[2, 3], [5, 5], [9, 10]]
+        iter_lls = [[12, 15, 19], [15, 16, 18]]
+        iter_holls = [[2, 3, 8], [5, 5, 9]]
         group_idx = [['default', 'test1']]
 
         with open(config_file, 'r') as f:
