@@ -7,14 +7,13 @@ import random
 import warnings
 import itertools
 import numpy as np
-from cytoolz import pluck, curried
 import ruamel.yaml as yaml
 import matplotlib.pyplot as plt
+from cytoolz import pluck, curried
 from collections import OrderedDict
 from os.path import join, exists, dirname
 from moseq2_model.util import count_frames
 from moseq2_model.train.models import flush_print
-from sklearn.model_selection import train_test_split
 from moseq2_model.train.util import whiten_all, whiten_each
 
 
@@ -236,7 +235,7 @@ def get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list):
 
 def get_training_data_splits(config_data, data_dict):
     '''
-    Split data using sklearn train_test_split along all keys.
+    Split data into a training and test dataset.
 
     Parameters
     ----------
@@ -256,9 +255,11 @@ def get_training_data_splits(config_data, data_dict):
     nt_frames = []
     nv_frames = []
 
+    split_frac = config_data['percent_split'] / 100
+
     for k, v in data_dict.items():
         # Splitting data by test set
-        training_X, testing_X = train_test_split(v, test_size=config_data['percent_split'] / 100, shuffle=False, random_state=0)
+        training_X, testing_X = v[:int(len(v) * split_frac)], v[-int(len(v) * split_frac):]
 
         # Setting training data key-value pair
         training_data[k] = training_X
