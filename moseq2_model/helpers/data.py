@@ -7,7 +7,7 @@ import random
 import warnings
 import itertools
 import numpy as np
-from cytoolz import pluck
+from cytoolz import pluck, curried
 import ruamel.yaml as yaml
 import matplotlib.pyplot as plt
 from collections import OrderedDict
@@ -17,53 +17,6 @@ from moseq2_model.train.models import flush_print
 from sklearn.model_selection import train_test_split
 from moseq2_model.train.util import whiten_all, whiten_each
 
-
-def get_session_metadata(index):
-    '''
-    Reads index file verbose session metadata to display in case user prompts for
-    interactive group selection.
-
-    Parameters
-    ----------
-    index (str): path to index file
-
-    Returns
-    -------
-    index_data (dict): dict object of loaded index file
-    metadata (dict): dict of lists corresponding to session metadata to display
-    '''
-
-    # Read index file
-    with open(index, 'r') as f:
-        index_data = yaml.safe_load(f)
-
-    # Packing data into single dict
-    metadata = {
-        'i_groups': [],
-        'uuids': [],
-        'subjectNames': [],
-        'sessionNames': []
-    }
-
-    for f in index_data['files']:
-        if f['uuid'] not in metadata['uuids']:
-
-            # Get uuids and groups
-            metadata['uuids'].append(f['uuid'])
-            metadata['i_groups'].append(f['group'])
-
-            # Get sessionNames and subjectNames
-            try:
-                metadata['subjectNames'].append(f['metadata']['SubjectName'])
-                metadata['sessionNames'].append(f['metadata']['SessionName'])
-            except:
-                f['metadata'] = {}
-                f['metadata']['SubjectName'] = 'default'
-                f['metadata']['SessionName'] = 'default'
-                metadata['subjectNames'].append(f['metadata']['SubjectName'])
-                metadata['sessionNames'].append(f['metadata']['SessionName'])
-
-    return index_data, metadata
 
 def process_indexfile(index, data_metadata, default_group='n/a', select_groups=False):
     '''
@@ -88,7 +41,8 @@ def process_indexfile(index, data_metadata, default_group='n/a', select_groups=F
     if index is not None and exists(index):
         with open(index, "r") as f:
             # reading in array of files
-            yml_metadata = yaml.safe_load(f)["files"]
+            index_data = yaml.safe_load(f)
+            yml_metadata = index_data["files"]
 
         # reading corresponding groups and uuids
         uuid_map = dict(pluck(['uuid', 'group'], yml_metadata))
@@ -96,15 +50,14 @@ def process_indexfile(index, data_metadata, default_group='n/a', select_groups=F
         # Setting model metadata group array
         data_metadata["groups"] = [uuid_map.get(uuid, default_group) for uuid in data_metadata['uuids']]
 
-        # Reading in index file in dict format, and returning metadata for interactive group selection prior to modeling
-        index_data, selection_metadata = get_session_metadata(index)
-
         # Optionally display metadata to select groups to model
         if select_groups:
-            for i in range(len(selection_metadata['subjectNames'])):
-                print(f'[{i + 1}]', 'Session Name:', selection_metadata['sessionNames'][i],
-                      '; Subject Name:', selection_metadata['subjectNames'][i], '; group:',
-                      selection_metadata['i_groups'][i], '; Key:', selection_metadata['uuids'][i])
+            get_subject_name = curried.get_in(['metadata', 'SubjectName'], default='default')
+            get_session_name = curried.get_in(['metadata', 'SessionName'], default='default')
+            for i, data in enumerate(index_data['files'], start=1):
+                print(f'[{i}]', 'Session Name:', get_session_name(data), '; Subject Name:',
+                      get_subject_name(data), '; Group:', data['group'], '; Key:',
+                      data['uuid'])
     else:
         index_data = None
 
