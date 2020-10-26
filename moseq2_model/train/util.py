@@ -100,6 +100,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
     return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, groups
 
+# TODO: remove convergence from this version, we'll add it in the next moseq version
 def check_convergence(iter_lls):
     '''
     Checks whether the model log-likelihood increase is below the given tolerance threshold, signalling that the
@@ -158,8 +159,7 @@ def training_checkpoint(model, itr, checkpoint_file, checkpoint_freq):
     }
 
     # Format checkpoint filename
-    new_checkpoint_filename = checkpoint_file.replace(f'_{itr - checkpoint_freq}', '').rsplit('.', 1) + [itr]
-    checkpoint_file = f"{new_checkpoint_filename[0]}_{new_checkpoint_filename[2]}.{new_checkpoint_filename[1]}"
+    checkpoint_file = f'{checkpoint_file}-checkpoint_{itr}.arhmm'
 
     # Save checkpoint
     save_arhmm_checkpoint(checkpoint_file, save_data)
