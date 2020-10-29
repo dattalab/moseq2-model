@@ -66,29 +66,28 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     index_data, data_metadata = process_indexfile(config_data.get('index', None), data_metadata,
                                                   config_data['default_group'], select_groups)
 
-    # Get all training session uuids
-    all_keys = list(data_dict)
-    groups = list(data_metadata['groups'])
-
     # Get keys to include in training set
     if index_data is not None:
-        all_keys, groups = select_data_to_model(index_data, select_groups)
-        data_metadata['groups'] = groups
-        data_metadata['uuids'] = all_keys
+        data_dict, data_metadata = select_data_to_model(index_data, data_dict,
+                                                        data_metadata, select_groups)
 
-    nkeys = len(data_dict)
+    all_keys = list(data_dict)
+    groups = list(data_metadata['groups'].values())
 
     # Get train/held out data split uuids
-    config_data, data_dict, model_parameters, train_list, hold_out_list = \
-        prepare_model_metadata(data_dict, data_metadata, config_data, nkeys, all_keys)
+    data_dict, model_parameters, train_list, hold_out_list = \
+        prepare_model_metadata(data_dict, data_metadata, config_data)
 
     # Pack data dicts corresponding to uuids in train_list and hold_out_list
     if config_data['hold_out']:
-        train_data, hold_out_list, test_data, nt_frames = \
-            get_heldout_data_splits(all_keys, data_dict, train_list, hold_out_list)
-    else:
+        train_data, test_data = get_heldout_data_splits(data_dict, train_list, hold_out_list)
+    elif config_data['percent_split'] > 0:
         # If not holding out sessions, split the data into a validation set with the percent_split option
-        train_data, test_data, nt_frames = get_training_data_splits(config_data, data_dict)
+        train_data, test_data = get_training_data_splits(config_data, data_dict)
+    else:
+        # use all the data if percent split is 0 or lower
+        train_data = data_dict
+        test_data = None
 
     # Get all saved checkpoints
     checkpoint_file = basename(dest_file).replace('.p', '')
@@ -107,13 +106,13 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     }
 
     # Get data groupings for verbose train vs. test log-likelihood estimation and graphing
-    if hold_out_list != None and groups != None:
-        groupings = get_session_groupings(data_metadata, all_keys, hold_out_list)
+    if hold_out_list is not None and groups is not None:
+        groupings = get_session_groupings(data_metadata, train_list, hold_out_list)
     else:
         groupings = None
 
     # Train ARHMM
-    arhmm, loglikes_sample, labels_sample, iter_lls, iter_holls, group_idx = train_model(
+    arhmm, loglikes, labels, iter_lls, iter_holls = train_model(
         model=arhmm,
         num_iter=config_data['num_iter'],
         ncpus=config_data['ncpus'],
@@ -121,7 +120,6 @@ def learn_model_wrapper(input_file, dest_file, config_data):
         checkpoint_file=join(checkpoint_path, checkpoint_file),
         start=itr,
         progress_kwargs=progressbar_kwargs,
-        num_frames=nt_frames,
         train_data=train_data,
         val_data=test_data,
         separate_trans=config_data['separate_trans'],
@@ -132,20 +130,16 @@ def learn_model_wrapper(input_file, dest_file, config_data):
 
     click.echo('Computing likelihoods on each training dataset...')
     # Get training log-likelihoods
-    train_ll = get_loglikelihoods(arhmm, train_data, list(data_metadata['groups']), config_data['separate_trans'])
+    train_ll = get_loglikelihoods(arhmm, train_data, groupings[0], config_data['separate_trans'])
 
     heldout_ll = []
     # Get held out log-likelihoods
     if config_data['hold_out']:
         click.echo('Computing held out likelihoods with separate transition matrix...')
-        heldout_ll = get_loglikelihoods(arhmm, test_data, list(data_metadata['groups']), config_data['separate_trans'])
+        heldout_ll = get_loglikelihoods(arhmm, test_data, groupings[1], config_data['separate_trans'])
 
-    loglikes = [loglikes_sample]
-    labels = [labels_sample]
-    save_parameters = [get_parameters_from_model(arhmm)]
+    save_parameters = get_parameters_from_model(arhmm)
 
-    # if we save the model, don't use copy_model which strips out the data and potentially
-    # leaves certain functions useless. We'll want to use in the future (e.g. cross-likes)
     if config_data['e_step']:
         click.echo('Running E step...')
         expected_states = run_e_step(arhmm)
@@ -170,10 +164,10 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     }
 
     # Save model
-    save_dict(filename=str(dest_file), obj_to_save=export_dict)
+    save_dict(filename=dest_file, obj_to_save=export_dict)
 
     if config_data['verbose'] and len(iter_lls) > 0:
-        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
+        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, dirname(dest_file))
         return img_path
 
 

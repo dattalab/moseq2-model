@@ -35,7 +35,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
     metadata = {
         'uuids': None,
-        'groups': [],
+        'groups': {},
     }
 
     if filename.endswith('.mat'):
@@ -45,7 +45,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
         # convert the uuid list to something that will export easily...
         metadata['uuids'] = load_cell_string_from_matlab(filename, "uuids")
         if load_groups:
-            metadata['groups'] = load_cell_string_from_matlab(filename, "groups")
+            metadata['groups'] = dict(zip(metadata['uuids'], load_cell_string_from_matlab(filename, "groups")))
         else:
             metadata['groups'] = None
 
@@ -61,7 +61,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
             print('Detected tuple')
             for k, v in data_dict.items():
                 data_dict[k] = v[0][:, :npcs]
-                metadata['groups'].append(v[1])
+                metadata['groups'][k] = v[1]
         else:
             for k, v in data_dict.items():
                 data_dict[k] = v[:, :npcs]
@@ -85,10 +85,10 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
                     # Optionally loading groups if they 
                     if load_groups:
                         if 'groups' in f:
-                            metadata['groups'] = [f[f'groups/{key}'][()] for key in data_dict]
+                            metadata['groups'] = {key: f[f'groups/{key}'][()] for key in data_dict}
                         else:
                             warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
-                            metadata['groups'] = list(range(len(data_dict)))
+                            metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -152,7 +152,7 @@ def get_current_model(use_checkpoint, all_checkpoints, train_data, model_paramet
 
     return arhmm, itr
 
-def get_loglikelihoods(arhmm, data, groups, separate_trans):
+def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=False):
     '''
     Computes the log-likelihoods of the trained ARHMM states.
 
@@ -163,7 +163,8 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans):
     groups (list): list of assigned groups for all corresponding session uuids. (Only used if
         separate_trans == True.
     separate_trans (bool): boolean that determines whether to compute separate log-likelihoods
-    for each modeled group.
+        for each modeled group.
+    normalize (bool): if set to True this function will normalize by frame counts in each session
 
     Returns
     -------
@@ -174,10 +175,12 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans):
         ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(groups, data.values())]
     else:
         ll = [arhmm.log_likelihood(v) for v in data.values()]
+    if normalize:
+        ll = [l / len(v) for l, v in zip(ll, data.values())]
 
     return ll
 
-def get_session_groupings(data_metadata, all_keys, hold_out_list):
+def get_session_groupings(data_metadata, train_list, hold_out_list):
     '''
     Creates a list or tuple of assigned groups for training and (optionally)
     held out data.
@@ -196,16 +199,13 @@ def get_session_groupings(data_metadata, all_keys, hold_out_list):
     '''
 
     # Get held out groups
-    hold_g = [data_metadata['groups'][i] for i, k in enumerate(all_keys) if k in hold_out_list]
-    train_g = [data_metadata['groups'][i] for i, k in enumerate(all_keys) if k not in hold_out_list]
+    hold_g = [data_metadata['groups'][k] for k in hold_out_list]
+    train_g = [data_metadata['groups'][k] for k in train_list]
 
     # Ensure training groups were found before setting grouping
     if len(train_g) != 0:
-        groupings = (train_g, hold_g)
-    else:
-        groupings = None
-
-    return groupings
+        return train_g, hold_g
+    return None
 
 
 def save_dict(filename, obj_to_save=None):

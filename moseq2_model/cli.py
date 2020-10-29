@@ -52,7 +52,7 @@ def modeling_parameters(function):
     function = click.option("--npcs", type=int, default=10, help="Number of PCs to use")(function)
     function = click.option("--whiten", "-w", type=str, default='all', help="Whiten (e)each (a)ll or (n)o whitening")(function)
     function = click.option("--progressbar", "-p", type=bool, default=True, help="Show model progress")(function)
-    function = click.option("--percent-split", type=int, default=20, help="Training-validation split percentage")(function)
+    function = click.option("--percent-split", type=int, default=0, help="Training-validation split percentage used when not holding out data and when this parameter > 0.")(function)
     function = click.option("--load-groups", "-h", type=bool, default=True, help="Dictates in PC Scores should be loaded with their associated group.")(function)
     function = click.option("--gamma", "-g", type=float, default=1e3,
                             help="Gamma; probability prior distribution for PCs explaining syllable states. Smaller gamma = steeper PC_Scree plot.")(function)
@@ -85,7 +85,7 @@ def learn_model(input_file, dest_file, **config_data):
 @click.argument('input_file', type=click.Path(exists=True))
 @click.argument('output_dir', type=click.Path(exists=False))
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
-@click.option("--out-script", type=click.Path(), default=join(os.getcwd(), 'train_out.sh'), help="Path to output bash script file containing all model training commands.")
+@click.option("--out-script", type=click.Path(), default='train_out.sh', help="Name of bash script file to save model training commands.")
 @click.option('--n-models', type=int, default=10, help='Minimum kappa value to train model on.')
 @click.option('--prefix', type=str, default='', help='Batch command string to prefix model training command.')
 @click.option('--cluster-type', type=click.Choice(['local', 'slurm']), default='local', help='Platform to train models on')

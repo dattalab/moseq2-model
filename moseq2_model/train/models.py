@@ -142,16 +142,16 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
-    for index, (data_name, data) in enumerate(data_dict.items()):
+    for data_name, data in data_dict.items():
         # Add data to model
         if not silent:
             flush_print(f'Adding data from key {data_name}')
         if separate_trans:
             # Optionally add data with corresponding group for separate transition graphs
-            if groups[index] != 'n/a':
+            if groups[data_name] != 'n/a':
                 if not silent:
-                    flush_print(f'Group ID: {groups[index]}')
-                    model.add_data(data, group_id=groups[index])
+                    flush_print(f'Group ID: {groups[data_name]}')
+                model.add_data(data, group_id=groups[data_name])
         else:
             # Load data without group, yielding single transition graph
             model.add_data(data)
@@ -160,8 +160,8 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
     if sticky_init:
         for i in range(0, len(model.stateseqs)):
             seqlen = len(model.stateseqs[i])
-            z_init = np.random.randint(max_states, size=seqlen//10).repeat(10)
-            z_init = np.append(z_init, np.random.randint(max_states, size=seqlen-len(z_init)))
+            z_init = np.random.randint(max_states, size=seqlen // 10).repeat(10)
+            z_init = np.append(z_init, np.random.randint(max_states, size=seqlen - len(z_init)))
             model.stateseqs[i] = z_init.copy().astype('int32')
 
     return model
