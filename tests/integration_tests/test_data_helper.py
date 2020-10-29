@@ -198,3 +198,17 @@ class TestDataHelpers(TestCase):
 
         assert os.path.exists(img_path), "Something went wrong; graph was not created."
         os.remove(img_path)
+
+        iter_lls = [[12, 15, 19], [15, 16, 18]]
+        iter_holls = [[2, 3, 8], [5, 5, 9]]
+        group_idx = [['default', 'test1']]
+
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+            config_data['hold_out'] = True
+            config_data['verbose'] = True
+
+        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
+
+        assert os.path.exists(img_path), "Something went wrong; graph was not created."
+        os.remove(img_path)
