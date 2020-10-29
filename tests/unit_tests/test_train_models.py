@@ -60,9 +60,8 @@ class TestTrainModels(TestCase):
         nkeys = 5
         all_keys = ['key1', 'key2', 'key3', 'key4', 'key5']
 
-        config_data, data_dict, model_parameters, train_list, hold_out_list = \
-            prepare_model_metadata(data_dict, data_metadata, config_data, \
-                                    nkeys, all_keys)
+        data_dict, model_parameters, train_list, hold_out_list = \
+            prepare_model_metadata(data_dict, data_metadata, config_data)
 
         model_parameters['separate_trans'] = False
         model_parameters['robust'] = False
@@ -76,7 +75,7 @@ class TestTrainModels(TestCase):
 
         model_parameters['separate_trans'] = True
         model_parameters['robust'] = False
-        model_parameters['groups'] = ['1', '2']
+        model_parameters['groups'] = {k: f'group{i}' for i, k in enumerate(data_dict)}
         arhmm = ARHMM(data_dict=data_dict, **model_parameters)
         assert isinstance(arhmm, FastARWeakLimitStickyHDPHMMSeparateTrans)
 
@@ -87,5 +86,6 @@ class TestTrainModels(TestCase):
 
         model_parameters['separate_trans'] = True
         model_parameters['robust'] = True
+        model_parameters['groups'] = {k: f'group{i}' for i, k in enumerate(data_dict)}
         arhmm = ARHMM(data_dict=data_dict, **model_parameters)
         assert isinstance(arhmm, ARWeakLimitStickyHDPHMMSeparateTrans)

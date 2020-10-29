@@ -5,12 +5,14 @@ ARHMM model initialization utilities.
 import warnings
 import numpy as np
 from cytoolz import merge
-from moseq2_model.util import flush_print
+from functools import partial
 from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
 from autoregressive.models import ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans, \
     FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 
+
+flush_print = partial(print, flush=True)
 
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):
@@ -128,28 +130,28 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and robust:
-        # Loading C-accelerated t-distributed ARHMM
+        # Loading t-distributed ARHMM
         if not silent:
             flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMM')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
     elif separate_trans and robust:
-        # Loading C-accelerated t-distributed ARHMM with separate transition graphs
+        # Loading t-distributed ARHMM with separate transition graphs
         if not silent:
             flush_print('Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans')
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
-    for index, (data_name, data) in enumerate(data_dict.items()):
+    for data_name, data in data_dict.items():
         # Add data to model
         if not silent:
             flush_print(f'Adding data from key {data_name}')
         if separate_trans:
             # Optionally add data with corresponding group for separate transition graphs
-            if groups[index] != 'n/a':
+            if groups[data_name] != 'n/a':
                 if not silent:
-                    flush_print(f'Group ID: {groups[index]}')
-                    model.add_data(data, group_id=groups[index])
+                    flush_print(f'Group ID: {groups[data_name]}')
+                model.add_data(data, group_id=groups[data_name])
         else:
             # Load data without group, yielding single transition graph
             model.add_data(data)
@@ -158,8 +160,8 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
     if sticky_init:
         for i in range(0, len(model.stateseqs)):
             seqlen = len(model.stateseqs[i])
-            z_init = np.random.randint(max_states, size=seqlen//10).repeat(10)
-            z_init = np.append(z_init, np.random.randint(max_states, size=seqlen-len(z_init)))
+            z_init = np.random.randint(max_states, size=seqlen // 10).repeat(10)
+            z_init = np.append(z_init, np.random.randint(max_states, size=seqlen - len(z_init)))
             model.stateseqs[i] = z_init.copy().astype('int32')
 
     return model

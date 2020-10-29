@@ -2,16 +2,19 @@
 ARHMM utility functions
 '''
 
+import math
 import numpy as np
 from cytoolz import valmap
 from tqdm.auto import tqdm
+from scipy.stats import norm
 from functools import partial
 from collections import OrderedDict, defaultdict
-from moseq2_model.util import save_arhmm_checkpoint
+from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
-                checkpoint_file=None, start=0, progress_kwargs={}, num_frames=[1],
-                train_data=None, val_data=None, separate_trans=False, groups=None, verbose=False):
+                checkpoint_file=None, start=0, progress_kwargs={},
+                train_data=None, val_data=None, separate_trans=False, groups=None, 
+                verbose=False, check_every=2):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -27,12 +30,12 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     start (int): starting iteration index (used to resume modeling, default is 0)
     save_file (str): path to file to save model checkpoint (only if is not None)
     progress_kwargs (dict): keyword arguments for progress bar
-    num_frames (int): total number of frames included in modeling
     train_data (OrderedDict): dict of validation data (only if verbose = True)
     val_data (OrderedDict): dict of validation data (only if verbose = True)
     separate_trans (bool): using different transition matrices
     groups (list): list of groups included in modeling (only if verbose = True)
     verbose (bool): Compute model summary.
+    check_every (int): iteration frequency to record model-iteration training/validation log-likelihoods
 
     Returns
     -------
@@ -41,15 +44,13 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     get_labels_from_model(model) (list): list of labels predicted post-modeling.
     iter_lls (list): list of log-likelihoods at an iteration level.
     iter_holls (list): list of held-out log-likelihoods at an iteration level.
-    group_idx (list): list of group names per modeled session.
     '''
 
     # Checkpointing boolean
     checkpoint = checkpoint_freq is not None
 
-    iter_lls = []
-    iter_holls = []
-    group_idx = ['default']
+    iter_lls, iter_holls = [], []
+
     for itr in tqdm(range(start, num_iter), **progress_kwargs):
         # Resample states, and gracefully return in case of a keyboard interrupt
         try:
@@ -57,45 +58,58 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
         except KeyboardInterrupt:
             print('Training manually interrupted.')
             print('Returning and saving current iteration of model. ')
-            return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
+            return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
 
-        if verbose:
-            # Optionally get iteration log-likelihood values
-            summ_stats = {
-                'model': model,
-                'groups': groups,
-                'train_data': train_data,
-                'val_data': val_data,
-                'separate_trans': separate_trans,
-                'num_frames': num_frames,
-                'iter_lls': iter_lls,
-                'iter_holls': iter_holls
-            }
-            iter_lls, iter_holls = get_model_summary(**summ_stats)
+        summ_stats = {
+            'model': model,
+            'groups': groups,
+            'train_data': train_data,
+            'val_data': val_data,
+            'separate_trans': separate_trans
+        }
+
+        if verbose and ((itr + 1) % check_every == 0):
+            # Compute and save iteration training and validation log-likelihoods
+            train_ll, ho_ll = get_model_summary(**summ_stats)
+            iter_lls.append(train_ll)
+            if ho_ll is not None:
+                iter_holls.append(ho_ll)
 
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
-            # Pack the data to save in checkpoint
-            save_data = {
-                'iter': itr + 1,
-                'model': model,
-                'log_likelihoods': model.log_likelihood(),
-                'labels': get_labels_from_model(model)
-            }
-            # Format checkpoint filename
-            checkpoint_file = "{0}_{2}.{1}".format(
-                *checkpoint_file.replace(f'_{itr-checkpoint_freq}', '').rsplit('.', 1) + [itr]
-            )
-            save_arhmm_checkpoint(checkpoint_file, save_data)
+            training_checkpoint(model, itr, checkpoint_file)
 
-    # Get group list to return
-    if groups != None:
-        group_idx = groups
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
 
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, group_idx
+def training_checkpoint(model, itr, checkpoint_file):
+    '''
+    Formats the model checkpoint filename and saves the model checkpoint
 
+    Parameters
+    ----------
+    model (ARHMM): Model being trained.
+    itr (itr): Current modeling iteration.
+    checkpoint_file (str): Model checkpoint file name.
 
-def get_model_summary(model, groups, train_data, val_data, separate_trans, num_frames, iter_lls, iter_holls):
+    Returns
+    -------
+    '''
+
+    # Pack the data to save in checkpoint
+    save_data = {
+        'iter': itr + 1,
+        'model': model,
+        'log_likelihoods': model.log_likelihood(),
+        'labels': get_labels_from_model(model)
+    }
+
+    # Format checkpoint filename
+    checkpoint_file = f'{checkpoint_file}-checkpoint_{itr}.arhmm'
+
+    # Save checkpoint
+    save_arhmm_checkpoint(checkpoint_file, save_data)
+
+def get_model_summary(model, groups, train_data, val_data, separate_trans):
     '''
     Computes a summary of model performance after resampling steps. Is only run if verbose = True.
 
@@ -106,71 +120,33 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans, num_f
     train_data (OrderedDict): Ordered dict of training data
     val_data: (OrderedDict): Ordered dict of validation/held-out data
     separate_trans (bool) indicates whether to separate lls for each group.
-    num_frames (int): total number of frames included in modeling.
-    iter_lls (list): list of log-likelihoods at an iteration level.
-    iter_holls (list): list of held-out log-likelihoods at an iteration level.
 
     Returns
     -------
-    iter_lls (list): updated list of log-likelihoods at an iteration level.
-    iter_holls (list): updated list of held-out log-likelihoods at an iteration level.
+    train_ll (float): normalized training log-likelihood at the current iteration level.
+    val_ll (float): normalized held-out log-likelihood at the current iteration level.
     '''
-
-    if not separate_trans:
-        # Get training log-likelihood
-        train_ll = model.log_likelihood() / sum(num_frames)
-        iter_lls.append(train_ll)
+    # Get train and validation groups
+    if groups is not None:
+        train_groups, val_groups = groups
     else:
-        # Get training log-likelihood values for each group
-        group_lls = []
-        group_idx = []
-        if type(groups) == tuple:
-            for g in list(set(groups[0])):
-                if g != 'n/a':
-                    train_ll = [model.log_likelihood(v, group_id=g) for v in train_data.values()]
-                    lens = [len(v) for v in train_data.values()]
-                    group_lls.append(sum(train_ll) / sum(lens))
-                    group_idx.append(g)
-        else:
-            for g in list(set(groups)):
-                if g != 'n/a':
-                    train_ll = [model.log_likelihood(v, group_id=g) for v in train_data.values()]
-                    lens = [len(v) for v in train_data.values()]
-                    group_lls.append(sum(train_ll) / sum(lens))
-                    group_idx.append(g)
+        # if there are no groups, separate trans cannot be True
+        separate_trans = False
+        train_groups, val_groups = None, None
 
-        iter_lls.append(group_lls)
+    # Compute normalized log-likelihoods for each session
+    train_ll = get_loglikelihoods(model, train_data, train_groups,
+                                  separate_trans, normalize=True)
+
+    # return early if there is no validation data
+    if val_data is None:
+        return np.mean(train_ll), None
 
     # Get iteration heldout/validation log-likelihood values
-    if not separate_trans:
-        val_ll = [model.log_likelihood(v) for v in val_data.values()]
-        lens = [len(v) for v in val_data.values()]
-        if len(val_ll) > 1:
-            val_ll = sum(val_ll) / sum(lens)
-        else:
-            if isinstance(val_ll[0], list):
-                val_ll = sum(val_ll) / len(val_ll[0])
-            else:
-                val_ll = sum(val_ll) / len(val_ll)
-        iter_holls.append(val_ll)
-    else:
-        # Get LLs for each modeling group
-        group_lls = []
-        if type(groups) == tuple:
-            for g in list(set(groups[1])):
-                if g != 'n/a':
-                    val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
-                    lens = [len(v) for v in val_data.values()]
-                    group_lls.append(sum(val_ll) / sum(lens))
-        else:
-            for g in list(set(groups)):
-                if g != 'n/a':
-                    val_ll = [model.log_likelihood(v, group_id=g) for v in val_data.values()]
-                    lens = [len(v) for v in val_data.values()]
-                    group_lls.append(sum(val_ll) / sum(lens))
-        iter_holls.append(group_lls)
+    val_ll = get_loglikelihoods(model, val_data, val_groups,
+                                separate_trans, normalize=True)
 
-    return iter_lls, iter_holls
+    return np.mean(train_ll), np.mean(val_ll)
 
 def get_labels_from_model(model):
     '''
@@ -182,11 +158,11 @@ def get_labels_from_model(model):
 
     Returns
     -------
-    cat_labels (list): Predicted syllable labels for all frames concatenated into a single list.
+    labels (list): An array of predicted syllable labels for each modeled session
     '''
 
-    cat_labels = [np.append(np.repeat(-5, model.nlags), s.stateseq) for s in model.states_list]
-    return cat_labels
+    labels = [np.append(np.repeat(-5, model.nlags), s.stateseq) for s in model.states_list]
+    return labels
 
 
 # taken from moseq by @mattjj and @alexbw

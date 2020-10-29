@@ -2,6 +2,7 @@ import os
 import sys
 import shutil
 import joblib
+import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.gui import learn_model_command
 
@@ -16,6 +17,7 @@ class TestGUI(TestCase):
         checkpoint_path = 'data/checkpoints/'
 
         hold_out = True
+        hold_out_seed = 1000
         nfolds = 2
         num_iter = 10
         max_states = 100
@@ -34,7 +36,22 @@ class TestGUI(TestCase):
 
         sys.stdin = open(stdin)
 
-        learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
+        progress_paths = {
+            'scores_path': input_file,
+            'model_path': dest_file,
+            'config_file': config_file,
+            'index_file': index
+        }
+
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+
+        config_data['hold_out_seed'] = -1
+
+        with open(config_file, 'w') as f:
+            yaml.safe_dump(config_data, f)
+
+        learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
                             checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
@@ -58,7 +75,17 @@ class TestGUI(TestCase):
 
         sys.stdin = open(stdin)
 
-        learn_model_command(input_file, dest_file, config_file, index, hold_out=hold_out, nfolds=nfolds,
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
+
+        config_data['hold_out_seed'] = hold_out_seed
+        config_data['ncpus'] = 100
+
+        with open(config_file, 'w') as f:
+            yaml.safe_dump(config_data, f)
+
+
+        learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter, use_checkpoint=True,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
                             checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
@@ -78,3 +105,47 @@ class TestGUI(TestCase):
         os.remove('data/original_model.p')
         os.remove(dest_file)
         os.remove(stdin)
+
+    def test_kappa_scan(self):
+        input_file = 'data/test_scores.h5'
+        dest_file = 'data/models/model.p'
+        config_file = 'data/config.yaml'
+        index = 'data/test_index.yaml'
+        output_dir = 'data/'
+
+        hold_out = True
+        nfolds = 2
+        n_models = 1
+        num_iter = 10
+        max_states = 100
+        npcs = 10
+        kappa = 'scan'
+        min_kappa = 1e3
+        separate_trans = True
+        robust = True
+        percent_split = 20
+        verbose = True
+
+        # test space-separated input
+        stdin = 'data/stdin.txt'
+        with open(stdin, 'w') as f:
+            f.write('default Group1')
+
+        sys.stdin = open(stdin)
+
+        progress_paths = {
+            'scores_path': input_file,
+            'model_path': dest_file,
+            'config_file': config_file,
+            'index_file': index
+        }
+
+        command = learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds, separate_trans=separate_trans,
+                            num_iter=num_iter, max_states=max_states, npcs=npcs, kappa=kappa, min_kappa=min_kappa,
+                            robust=robust, percent_split=percent_split, verbose=verbose, n_models=n_models,
+                            output_dir=output_dir, get_cmd=True)
+
+        print(command)
+
+        assert command == 'moseq2-model learn-model data/test_scores.h5 data/model-1000-0.p --npcs 10 -n 10' \
+                          ' -i data/test_index.yaml --separate-trans --robust -h 2 -m 100 -k 1000'

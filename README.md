@@ -15,11 +15,12 @@ They are accessible via CLI or Jupyter Notebook in [moseq2-app](https://github.c
 Usage: moseq2-model [OPTIONS] COMMAND [ARGS]...
 
 Options:
-  --help              Show this message and exit.  [default: False]
-  --version           Print version number
+  --version  Show the version and exit.  [default: False]
+  --help     Show this message and exit.  [default: False]
 
 Commands:
   count-frames  Counts number of frames in given h5 file (pca_scores)
+  kappa-scan    Batch fit multiple models scanning over different syllable...
   learn-model   Trains ARHMM on PCA Scores with given training parameters
 ```
 
