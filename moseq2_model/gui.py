@@ -10,7 +10,7 @@ from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_mo
 def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
                         max_states=100, npcs=10, scan_scale='log', kappa=None, min_kappa=None, max_kappa=None, n_models=5,
                         alpha=5.7, gamma=1e3, separate_trans=True, robust=True, checkpoint_freq=-1, use_checkpoint=False,
-                        check_every=5, select_groups=False, percent_split=20, output_dir=None,
+                        check_every=5, select_groups=False, percent_split=0, output_dir=None,
                         out_script='train_out.sh', cluster_type='local', get_cmd=True, run_cmd=False, prefix='',
                         memory='16GB', wall_time='3:00:00', partition='short', verbose=False):
     '''

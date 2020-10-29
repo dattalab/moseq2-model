@@ -207,10 +207,10 @@ class TestUtils(TestCase):
         assert(len(pcs) == 1)
         assert(len(metadata['groups']) == 1)
         assert(np.all(pcs[0] == 1))
-        assert(metadata['groups'][0] == 'test')
+        assert(list(metadata['groups'].values())[0] == 'test')
 
         input_data = 'data/test_scores.h5'
-        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True, h5_key_is_uuid=False)
+        data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         assert list(data_dict.keys()) == data_metadata['uuids']
 
@@ -312,12 +312,10 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
-                                                                          num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data,
-                                                                          num_frames=[900, 900])
+        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data)
 
         cp = copy_model(model)
         assert sys.getsizeof(model) == sys.getsizeof(cp)
@@ -340,20 +338,16 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        training_data, validation_data, nt_frames = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
-                                                                          num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data,
-                                                                          num_frames=[900, 900], separate_trans=True)
+        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data, separate_trans=True)
 
         params = get_parameters_from_model(model)
         check_params(model, params)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
-                                                                          num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data,
-                                                                          num_frames=[900, 900], separate_trans=False)
+        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data, separate_trans=False)
 
         params = get_parameters_from_model(model)
         check_params(model, params)
