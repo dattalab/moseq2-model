@@ -9,7 +9,7 @@ from moseq2_model.train.util import whiten_all, train_model
 from moseq2_model.helpers.data import get_training_data_splits
 from moseq2_model.util import (load_data_from_matlab, load_cell_string_from_matlab, load_pcs, save_dict, dict_to_h5,
                     h5_to_dict, _load_h5_to_dict, copy_model, get_parameters_from_model, count_frames,
-                    get_parameter_strings, create_command_strings, get_scan_range_kappas, get_factor)
+                    get_parameter_strings, create_command_strings, get_scan_range_kappas)
 
 class TestUtils(TestCase):
 
@@ -82,13 +82,6 @@ class TestUtils(TestCase):
 
         assert command_string == truth_output
 
-    def test_get_factor(self):
-        factor = get_factor('1e9')
-        assert factor == 9.0
-
-        factor = get_factor(1000)
-        assert factor == 3.0
-
     def test_get_scan_range_kappas(self):
 
         input_data = 'data/test_scores.h5'
@@ -104,8 +97,8 @@ class TestUtils(TestCase):
         
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 100
-        assert max(test_kappas) == 1e6
+        assert min(test_kappas) == 10
+        assert max(test_kappas) == 1e5
 
         config_data = {
             'min_kappa': None,
@@ -116,7 +109,7 @@ class TestUtils(TestCase):
         test_kappas = get_scan_range_kappas(data_dict, config_data)
         # For nframes == 1800
         assert len(test_kappas) == 10
-        assert min(test_kappas) == 100
+        assert min(test_kappas) == 10
         assert max(test_kappas) == 1e6
 
         config_data = {
@@ -129,7 +122,7 @@ class TestUtils(TestCase):
         # For nframes == 1800
         assert len(test_kappas) == 10
         assert min(test_kappas) == 1
-        assert max(test_kappas) == 1e6
+        assert max(test_kappas) == 1e5
 
         config_data = {
             'min_kappa': 1e3,

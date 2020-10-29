@@ -85,7 +85,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
                     # Optionally loading groups if they 
                     if load_groups:
                         if 'groups' in f:
-                            metadata['groups'] = {key: f[f'groups/{key}'][()] for key in data_dict}
+                            metadata['groups'] = {key: list(f['groups'])[i] for i, key in enumerate(data_dict) if key in f['metadata']}
                         else:
                             warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
                             metadata['groups'] = {key: i for i, key in enumerate(data_dict)}

@@ -24,7 +24,7 @@ class TestDataHelpers(TestCase):
             config_data = yaml.safe_load(f)
 
         index_data, data_metadata = process_indexfile(index_path, config_data, data_metadata)
-        assert (len(index_data['files']) == len(data_metadata['uuids'])),\
+        assert (len(index_data['files']) == len(data_metadata['groups'])),\
             "Number of input files != number of uuids in the index file"
 
     def test_select_data_to_model(self):
@@ -50,30 +50,30 @@ class TestDataHelpers(TestCase):
             f.write('default')
 
         sys.stdin = open(stdin)
-        data_dict, data_metadata = select_data_to_model(index_data, data_dict,
-                                                data_metadata, select_groups=True)
+        t_data_dict, data_metadata = select_data_to_model(index_data, data_dict,
+                                                        data_metadata, select_groups=True)
 
-        assert len(data_dict) == len(data_metadata['groups']) == 1, "index data was incorrectly parsed"
+        assert len(t_data_dict) == len(data_metadata['groups']) == 1, "index data was incorrectly parsed"
         assert list(data_metadata['groups'].values())[0] == 'default', "groups were returned incorrectly"
 
         # test space-separated input
         with open(stdin, 'w') as f:
-            f.write('default Group1')
+            f.write('default, Group1')
 
         sys.stdin = open(stdin)
         data_dict, data_metadata = select_data_to_model(index_data, data_dict,
-                                                data_metadata, select_groups=True)
+                                                        data_metadata, select_groups=True)
 
         assert len(data_dict) == len(data_metadata['groups']) == 2, "index data was incorrectly parsed"
         self.assertCountEqual(set(data_metadata['groups'].values()), ['default', 'Group1'], "groups were returned incorrectly")
 
         # test comma-separated input
         with open(stdin, 'w') as f:
-            f.write('default, Group1')
+            f.write('default Group1')
 
         sys.stdin = open(stdin)
         data_dict, data_metadata = select_data_to_model(index_data, data_dict,
-                                                data_metadata, select_groups=True)
+                                                        data_metadata, select_groups=True)
 
         assert len(data_dict) == len(data_metadata['groups']) == 2, "index data was incorrectly parsed"
         self.assertCountEqual(set(data_metadata['groups'].values()), ['default', 'Group1'], "groups were returned incorrectly")
@@ -104,7 +104,7 @@ class TestDataHelpers(TestCase):
 
         assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
         assert train_list == list(data_dict1), "Loaded uuids do not match total number of uuids"
-        assert hold_out_list == None, "Some of the data is unintentionally held out"
+        assert hold_out_list == [], "Some of the data is unintentionally held out"
 
         config_data['whiten'] = 'each'
         config_data['noise_level'] = 1
@@ -113,7 +113,7 @@ class TestDataHelpers(TestCase):
 
         assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
         assert train_list == list(data_dict1), "Loaded uuids do not match total number of uuids"
-        assert hold_out_list == None, "Some of the data is unintentionally held out"
+        assert hold_out_list == [], "Some of the data is unintentionally held out"
 
         config_data['whiten'] = 'none'
         data_dict1, model_parameters, train_list, hold_out_list = \
@@ -121,7 +121,7 @@ class TestDataHelpers(TestCase):
 
         assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
         assert train_list == list(data_dict1), "Loaded uuids do not match total number of uuids"
-        assert hold_out_list == None, "Some of the data is unintentionally held out"
+        assert hold_out_list == [], "Some of the data is unintentionally held out"
 
     def test_get_heldout_data_splits(self):
         input_file = 'data/test_scores.h5'
@@ -168,10 +168,12 @@ class TestDataHelpers(TestCase):
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
             config_data['hold_out'] = False
+            config_data['percent_split'] = 50
 
         training_data, validation_data = get_training_data_splits(config_data, data_dict)
+        for k in training_data:
+            assert len(list(training_data[k])) == len(list(validation_data[k])), "Data split is incorrect"
 
-        assert len(list(training_data.values())[0]) > len(list(validation_data.values())[0]), "Data split is incorrect"
         assert len(list(training_data.keys())) == len(list(validation_data.keys())), \
             "Training data and Val data do not contain same keys"
 
@@ -201,14 +203,13 @@ class TestDataHelpers(TestCase):
 
         iter_lls = [[12, 15, 19], [15, 16, 18]]
         iter_holls = [[2, 3, 8], [5, 5, 9]]
-        group_idx = [['default', 'test1']]
 
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
             config_data['hold_out'] = True
             config_data['verbose'] = True
 
-        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, group_idx, dest_file)
+        img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, dirname(dest_file))
 
         assert os.path.exists(img_path), "Something went wrong; graph was not created."
         os.remove(img_path)

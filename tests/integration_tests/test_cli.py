@@ -46,7 +46,7 @@ class TestCLI(TestCase):
         assert os.path.exists(checkpoint_path)
         assert len(os.listdir(checkpoint_path)) == 5 # iters: 1, 3, 5, 7, 9
 
-        assert os.path.exists('data/test/train_val20_summary.png'), 'Training logLikes summary was not created.'
+        assert os.path.exists('data/test/train_val0_summary.png'), 'Training logLikes summary was not created.'
 
         shutil.rmtree('data/test/')
 
