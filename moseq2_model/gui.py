@@ -26,8 +26,8 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     max_states (int): maximum number of model states.
     npcs (int): number of PCs to include in analysis.
     kappa (float): probability prior distribution for syllable duration. Larger kappa = longer syllable durations.
-    min_kappa (int): Minimum kappa exponent to train model on. if min_kappa = 3; min(kappas) == 1e3
-    max_kappa (int): Maximum kappa exponent to train model on. if min_kappa = 5; min(kappas) == 1e5
+    min_kappa (float): Minimum kappa to train model on. 
+    max_kappa (float): Maximum kappa to train model on.
     n_models (int): Number of models to spawn to scan kappa values
     scan_scale (str): Scale factor to generate scanning kappa values. ['log', 'linear']
     separate_trans (bool): indicate whether to compute separate syllable transition matrices for each group.
@@ -95,6 +95,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_data['out_script'] = join(output_dir, out_script)
 
     if kappa == 'scan':
+        assert any(scan_scale == x for x in ('log', 'linear')), 'scan scale must be "log" or "linear"'
         config_data['scan_scale'] = scan_scale
         config_data['min_kappa'] = min_kappa
         config_data['max_kappa'] = max_kappa

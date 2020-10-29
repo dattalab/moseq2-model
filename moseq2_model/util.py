@@ -627,26 +627,6 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     command_string = '\n'.join(commands)
     return command_string
 
-def get_factor(value):
-    '''
-    Returns the factor of the inputted value to set log-scale kappa scanning limits.
-
-    Parameters
-    ----------
-    value (int or string)
-
-    Returns
-    -------
-    factor (float): factor limit for log kappa scaling
-    '''
-
-    if 'e' not in str(value):
-        factor = float(len(str(int(value))))-1
-    else:
-        factor = float(value.split('e')[1])
-
-    return factor
-
 
 def get_scan_range_kappas(data_dict, config_data):
     '''
@@ -681,19 +661,20 @@ def get_scan_range_kappas(data_dict, config_data):
 
     if config_data.get('scan_scale', 'log') == 'log':
         # Get log scan range
-        factor = float(len(str(nframes)))
+        factor = int(np.log10(nframes))
         if config_data['min_kappa'] == None:
             min_factor = factor - 2 # Set default value
         else:
-            min_factor = get_factor(config_data['min_kappa'])
+            min_factor = np.log10(config_data['min_kappa'])
 
         if config_data['max_kappa'] == None:
             max_factor = factor + 2 # Set default value
         else:
-            max_factor = get_factor(config_data['max_kappa'])
+            max_factor = np.log10(config_data['max_kappa'])
 
-        config_data['use_range'] = (min_factor, max_factor, config_data['n_models'],)
-        kappas = np.logspace(*config_data['use_range']).astype(int).tolist()
+        kappas = np.logspace(min_factor, max_factor, config_data['n_models']).astype('int')
+        config_data['min_kappa'] = kappas[0]
+        config_data['max_kappa'] = kappas[-1]
 
     elif config_data['scan_scale'] == 'linear':
         # Get linear scan range
@@ -702,16 +683,10 @@ def get_scan_range_kappas(data_dict, config_data):
             # Choosing a minimum kappa value (AKA value to begin the scan from)
             # less than the counted number of frames
             config_data['min_kappa'] = min(nframes, nframes / 1e2)  # default initial kappa value
-        else:
-            config_data['min_kappa'] = config_data['min_kappa']
         if config_data['max_kappa'] == None:
-            # If no max is specified, kappa values will be incremented by factors of 10.
+            # If no max is specified, max kappa will be 100x the number of frames.
             config_data['max_kappa'] = max(nframes, nframes * 1e2)  # default initial kappa values
-        else:
-            config_data['max_kappa'] = config_data['max_kappa']
 
-        config_data['use_range'] = (config_data['min_kappa'], config_data['max_kappa'], config_data['n_models'],)
-
-        kappas = np.linspace(*config_data['use_range']).astype(int).tolist()
+        kappas = np.linspace(config_data['min_kappa'], config_data['max_kappa'], config_data['n_models']).astype('int')
 
     return kappas
