@@ -142,6 +142,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
         model = ARWeakLimitStickyHDPHMMSeparateTrans(obs_distns=obs_distns, **model_hypparams)
 
+    print(f'Total number of included sessions: {len(data_dict)}')
     for data_name, data in data_dict.items():
         # Add data to model
         if not silent:
