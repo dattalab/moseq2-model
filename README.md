@@ -24,6 +24,18 @@ Commands:
   learn-model   Trains ARHMM on PCA Scores with given training parameters
 ```
 
+### CLI Exclusive Functions
+```bash
+  count-frames  Counts number of frames in given h5 file (pca_scores)
+  kappa-scan    Batch fit multiple models scanning over different syllable...
+```
+
+### GUI Functionality Note
+The `kappa-scan` functionality is merged into the `learn_model()` function. 
+ To use it, simple set `kappa='scan'`, and for additional control, adjust the `scan_scale`, 
+ `min_kappa`, `max_kappa`, and `out_script` input parameters. 
+ Options can be found in the documentation or the [jupyter notebook]()
+
 Run any command with the `--help` flag to display all available options and their descriptions.
 
 ## Documentation

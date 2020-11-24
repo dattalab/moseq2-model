@@ -4,7 +4,7 @@ GUI front-end function for training ARHMM.
 
 import ruamel.yaml as yaml
 from .cli import learn_model
-from os.path import dirname, join
+from os.path import dirname, join, exists
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
 def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
@@ -61,6 +61,10 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     dest_file = progress_paths['model_path']
     config_file = progress_paths['config_file']
     index = progress_paths['index_file']
+
+    assert exists(input_file), "PCA Scores not found; set the correct path in progress_paths['scores_path']"
+    assert exists(config_file), "Config file not found; set the correct path in progress_paths['config_file']"
+    assert exists(index), "Index file not found; set the correct path in progress_paths['index_file']"
 
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
