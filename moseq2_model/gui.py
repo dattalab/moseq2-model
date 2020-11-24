@@ -88,7 +88,7 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     config_data['check_every'] = check_every
     config_data['index'] = index
 
-    if output_dir == None:
+    if output_dir is None:
         print('Output directory not specified, saving models to base directory.')
         output_dir = dirname(index)
 

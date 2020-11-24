@@ -524,7 +524,7 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
     Parameters
     ----------
     data_dict (OrderedDict): Loaded PCA scores OrderedDict object.
-    input_file (str): Path to PCA Scores file to load data_dict if not already data_dict == None
+    input_file (str): Path to PCA Scores file to load data_dict if not already data_dict is None
     var_name (str): Path within PCA h5 file to load scores from.
 
     Returns
@@ -532,7 +532,7 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
     total_frames (int): total number of counted frames.
     '''
 
-    if data_dict == None and input_file != None:
+    if data_dict is None and input_file is not None:
         data_dict, _ = load_pcs(filename=input_file, var_name=var_name, load_groups=True)
 
     total_frames = 0
@@ -662,12 +662,12 @@ def get_scan_range_kappas(data_dict, config_data):
     if config_data.get('scan_scale', 'log') == 'log':
         # Get log scan range
         factor = int(np.log10(nframes))
-        if config_data['min_kappa'] == None:
+        if config_data['min_kappa'] is None:
             min_factor = factor - 2 # Set default value
         else:
             min_factor = np.log10(config_data['min_kappa'])
 
-        if config_data['max_kappa'] == None:
+        if config_data['max_kappa'] is None:
             max_factor = factor + 2 # Set default value
         else:
             max_factor = np.log10(config_data['max_kappa'])
@@ -679,11 +679,11 @@ def get_scan_range_kappas(data_dict, config_data):
     elif config_data['scan_scale'] == 'linear':
         # Get linear scan range
         # Handle either of the missing parameters
-        if config_data['min_kappa'] == None:
+        if config_data['min_kappa'] is None:
             # Choosing a minimum kappa value (AKA value to begin the scan from)
             # less than the counted number of frames
             config_data['min_kappa'] = min(nframes, nframes / 1e2)  # default initial kappa value
-        if config_data['max_kappa'] == None:
+        if config_data['max_kappa'] is None:
             # If no max is specified, max kappa will be 100x the number of frames.
             config_data['max_kappa'] = max(nframes, nframes * 1e2)  # default initial kappa values
 

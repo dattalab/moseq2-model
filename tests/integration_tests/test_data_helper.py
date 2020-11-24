@@ -152,7 +152,7 @@ class TestDataHelpers(TestCase):
 
         train_data, test_data = get_heldout_data_splits(data_dict, train_list, hold_out_list)
 
-        assert(train_data != None and test_data != None), "There are missing datasets"
+        assert(train_data is not None and test_data is not None), "There are missing datasets"
 
 
     def test_get_training_data_splits(self):
