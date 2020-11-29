@@ -170,7 +170,7 @@ class TestDataHelpers(TestCase):
             config_data['hold_out'] = False
             config_data['percent_split'] = 50
 
-        training_data, validation_data = get_training_data_splits(config_data, data_dict)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, data_dict)
         for k in training_data:
             assert len(list(training_data[k])) == len(list(validation_data[k])), "Data split is incorrect"
 

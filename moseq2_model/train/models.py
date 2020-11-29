@@ -23,11 +23,11 @@ def _get_empirical_ar_params(train_datas, params):
     Parameters
     ----------
     train_datas (list): list of np.ndarrays representing each session's PC scores
-    params (dict): dict object of modeling parameters
+    params (dict): dict containing modeling parameters used for initialization
 
     Returns
     -------
-    obs_params (dict): dict of observational parameters to use in modeling.
+    obs_params (dict): dict of observed parameters to use in modeling.
     '''
 
     assert isinstance(train_datas, list) and len(train_datas) > 0
@@ -51,36 +51,37 @@ def _get_empirical_ar_params(train_datas, params):
 
     return obs_params
 
+
 def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
           separate_trans=False, groups=None, robust=False, silent=False):
     '''
-    Initializes ARHMM and adds data and groups to model.
+    Initializes ARHMM and adds data and group labels to the ARHMM model.
 
     Parameters
     ----------
-    data_dict (OrderedDict): dictionary of data to add to model
-    kappa (float): probability prior distribution for syllable duration
-    gamma (float): probability prior distribution for PCs explaining syllable states
+    data_dict (OrderedDict): training data to add to model
+    kappa (float): hyperparameter for setting syllable duration. Larger kappa = longer syllable durations
+    gamma (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone)
     nlags (int): number of lag frames to add to sessions
-    alpha (float): probability prior distribution for syllable transition rate
+    alpha (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone)
     K_0_scale (float): Standard deviation of lagged data
-    S_0_scale (float): Standard deviation of data
+    S_0_scale (float): scale standard deviation initialization (don't touch this parameter unless necessary)
     max_states (int): Maximum number of model states
-    empirical_bayes (bool): Use empirical bayes AR parameters
-    affine (bool): Use affine transformation
-    model_hypparams (dict): dictionary of model parameters
-    obs_hypparams (dict): dictionary of observational parameters
-    sticky_init (bool): Initialize the states with random projections.
-    separate_trans (bool): use separate transition graphs for each unique group
+    empirical_bayes (bool): Use empirical bayes to initialize sigma
+    affine (bool): Use affine transformation in the AR processes
+    model_hypparams (dict): other model parameters (don't touch this parameter unless necessary)
+    obs_hypparams (dict): observed parameters nu_0, S_0, M_0, and K_0 (don't touch this parameter unless necessary)
+    sticky_init (bool): Initialize the model with random states
+    separate_trans (bool): use separate transition matrices for each group
     groups (list): list of groups to model
-    robust (bool): use t-Distribution model
-    silent (bool): print out model information.
+    robust (bool): use student's t-distributed AR model
+    silent (bool): flag to print out model information.
 
     Returns
     -------
-    model (ARHMM): model object with data loaded, prepared for modeling.
+    model (ARHMM): initialized model object
     '''
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
@@ -90,13 +91,13 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
 
     # Set observational hyper-parameters
     default_obs_hypparams = {
-        'nu_0': data_dim+2,
-        'S_0': S_0_scale*np.eye(data_dim),
+        'nu_0': data_dim + 2,
+        'S_0': S_0_scale * np.eye(data_dim),
         'M_0': np.hstack((np.eye(data_dim),
-                          np.zeros((data_dim, data_dim * (nlags-1))),
+                          np.zeros((data_dim, data_dim * (nlags - 1))),
                           np.zeros((data_dim, int(affine))))),
         'affine': affine,
-        'K_0': K_0_scale*np.eye(data_dim*nlags+affine)
+        'K_0': K_0_scale * np.eye(data_dim * nlags + affine)
         }
 
     # Set modeling hyper-parameters
@@ -111,11 +112,9 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
     obs_hypparams = merge(default_obs_hypparams, obs_hypparams)
     model_hypparams = merge(default_model_hypparams, model_hypparams)
 
-    # Use AR-Bayesian distributed hyper-parameters
+    # Use empirical_bayes to set initial sigma values
     if empirical_bayes:
         obs_hypparams = _get_empirical_ar_params(list(data_dict.values()), obs_hypparams)
-
-    # TODO: return initialization parameters for saving downstream
 
     if separate_trans and not robust:
         # Loading C-accelerated model with separate transition graphs

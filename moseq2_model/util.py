@@ -106,6 +106,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
 
 def is_uuid(string):
+    '''checks to see if string is a uuid. Returns True if it is.'''
     regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
     match = regex.match(string)
     return bool(match)
@@ -152,23 +153,23 @@ def get_current_model(use_checkpoint, all_checkpoints, train_data, model_paramet
 
     return arhmm, itr
 
-def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=False):
+
+def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
     '''
-    Computes the log-likelihoods of the trained ARHMM states.
+    Computes the log-likelihoods of the training sessions.
 
     Parameters
     ----------
-    arhmm (ARHMM): Trained ARHMM model.
-    data (dict): dict object containing training data keyed by their corresponding UUIDs
-    groups (list): list of assigned groups for all corresponding session uuids. (Only used if
+    arhmm (ARHMM): ARHMM model.
+    data (dict): dict object with UUID keys containing the PCS used for training.
+    groups (list): list of assigned groups for all corresponding session uuids. Only used if
         separate_trans == True.
-    separate_trans (bool): boolean that determines whether to compute separate log-likelihoods
-        for each modeled group.
+    separate_trans (bool): flag to compute separate log-likelihoods for each modeled group.
     normalize (bool): if set to True this function will normalize by frame counts in each session
 
     Returns
     -------
-    ll (list): list of log-likelihoods for the trained model, len(ll) > 1 if separate_trans==True
+    ll (list): list of log-likelihoods for the trained model
     '''
 
     if separate_trans:
@@ -179,6 +180,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=False):
         ll = [l / len(v) for l, v in zip(ll, data.values())]
 
     return ll
+
 
 def get_session_groupings(data_metadata, train_list, hold_out_list):
     '''
@@ -194,7 +196,7 @@ def get_session_groupings(data_metadata, train_list, hold_out_list):
 
     Returns
     -------
-    groupings (list or tuple): 1/2-tuple containing lists of train groups
+    groupings (tuple): 2-tuple containing lists of train groups
     and held-out groups (if held_out_list exists)
     '''
 
@@ -336,7 +338,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
 
     Parameters
     ----------
-    filename (str): path to h5 file.
+    filename (h5py.File): opened h5 file.
     path (str): path within the h5 file to load data from.
 
     Returns
@@ -419,7 +421,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
     Parameters
     ----------
     filename (str): path to .mat file
-    var_name (str): cell name to read
+    var_name (str): variable name to read
 
     Returns
     -------
@@ -444,7 +446,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 # per Scott's suggestion
 def copy_model(model_obj):
     '''
-    Return a new copy of a model using deepcopy().
+    Return a new shallow copy of the ARHMM that doesn't contain the training data.
 
     Parameters
     ----------
@@ -517,6 +519,7 @@ def get_parameters_from_model(model):
 
     return parameters
 
+
 def count_frames(data_dict=None, input_file=None, var_name='scores'):
     '''
     Counts the total number of frames loaded from the PCA scores file.
@@ -545,9 +548,9 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
 
 def get_parameter_strings(config_data):
     '''
-    Creates the CLI learn-model parameters string using the given config_data dict contents.
-     Function checks for the following paramters: [npcs, num_iter, separate_trans, robust, e_step,
-      hold_out, max_states, converge, tolerance].
+    Creates the CLI learn-model command using the given config_data dict contents, which can be used
+    to run the modeling step. Function checks for the following paramters: [npcs, num_iter,
+    separate_trans, robust, e_step, hold_out, max_states, converge, tolerance].
 
     Parameters
     ----------
@@ -556,11 +559,11 @@ def get_parameter_strings(config_data):
 
     Returns
     -------
-    parameters (str): String containing all the requested CLI command parameter flags.
-    prefix (str): Prefix string for the learn-model command, used for Slurm functionality.
+    parameters (str): String containing CLI command parameter flags.
+    prefix (str): Prefix string for the learn-model command (Slurm only).
     '''
 
-    parameters = f' --npcs {config_data["npcs"]} -n {config_data["num_iter"]} '
+    parameters = f' --npcs {config_data["npcs"]} --num-iter {config_data["num_iter"]} '
 
     if isinstance(config_data['index'], str):
         if exists(config_data['index']):
@@ -576,24 +579,26 @@ def get_parameter_strings(config_data):
         parameters += '--e-step '
 
     if config_data['hold_out']:
-        parameters += f'-h {config_data["nfolds"]} '
+        parameters += f'--hold-out --nfolds {config_data["nfolds"]} '
 
     if config_data['max_states']:
-        parameters += f'-m {config_data["max_states"]} '
+        parameters += f'--max-states {config_data["max_states"]} '
+    if config_data['ncpus'] > 0:
+        parameters += f'--ncpus {config_data["ncpus"]} '
 
     # Handle possible Slurm batch functionality
     prefix = ''
     if config_data['cluster_type'] == 'slurm':
         prefix = f'sbatch -c {config_data["ncpus"]} --mem={config_data["memory"]} '
-        prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "'
+        prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "{config_data["prefix"]}'
 
     return parameters, prefix
 
 
-def create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p'):
+def create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{:03d}-{}.p'):
     '''
-    Creates the CLI learn-model N command strings with parameter flags based on the contents of the configuration
-     dict. Each model will a different kappa value within a given range (for N models to train).
+    Creates the CLI learn-model command strings with parameter flags based on the contents of the configuration
+    dict. Each model will a use different kappa value within the specified range.
 
     Parameters
     ----------
@@ -601,7 +606,7 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     index_file (str): Path to index file
     output_dir (str): Path to directory to save models in.
     config_data (dict): Configuration parameters dict.
-    kappas (list): List of kappa values to assign to model training commands.
+    kappas (list): List of kappa values for model training commands.
     model_name_format (str): Filename string format string.
 
     Returns
@@ -616,7 +621,7 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     commands = []
     for i, k in enumerate(kappas):
         # Create CLI command
-        cmd = base_command + join(output_dir, model_name_format.format(str(k), str(i))) + parameters + f'-k {k}'
+        cmd = base_command + join(output_dir, model_name_format.format(i, k)) + parameters + f'--kappa {k}'
 
         # Add possible batch fitting prefix string
         if config_data['cluster_type'] == 'slurm':
@@ -625,17 +630,17 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
 
     # Create and return the command string
     command_string = '\n'.join(commands)
+    command_string = 'set -e\n' + command_string
     return command_string
 
 
 def get_scan_range_kappas(data_dict, config_data):
     '''
     Helper function that returns the kappa values to train models on based on the user's selected scanning scale range.
-    Different default range values will be selected if min/max_kappa are None. Otherwise, min_kappa and max_kappa
-    represent exponent ranges to get kappa values within.
+    Default values will be selected if min/max_kappa are None. 
 
-    For example, scan_scale = 'log'; nframes = 1800; min_kappa = 10e3; max_kappa = 10e5; n_models = 10;
-    min(kappas) == 1e3; max(kappas) == 1e5; kappas = [1000, 1668, 2782, 4641, 7742, 12915, 21544, 35938, 59948, 100000]
+    An example: scan_scale = 'log'; nframes = 1800; min_kappa = 10e3; max_kappa = 10e5; n_models = 10;
+    >>> kappas = [1000, 1668, 2782, 4641, 7742, 12915, 21544, 35938, 59948, 100000]
 
     Another Exmaple:
     nframes = 1800
@@ -645,7 +650,7 @@ def get_scan_range_kappas(data_dict, config_data):
     'n_models': 10
     min(kappas) == 18
     max(kappas) == 18000000
-    kappas == [18, 20016, 40014, 60012, 80010, 100008, 120006, 140004, 160002, 180000]
+    >>> kappas == [18, 20016, 40014, 60012, 80010, 100008, 120006, 140004, 160002, 180000]
 
     Parameters
     ----------
@@ -672,7 +677,7 @@ def get_scan_range_kappas(data_dict, config_data):
         else:
             max_factor = np.log10(config_data['max_kappa'])
 
-        kappas = np.logspace(min_factor, max_factor, config_data['n_models']).astype('int')
+        kappas = np.round(np.logspace(min_factor, max_factor, config_data['n_models'])).astype('int')
         config_data['min_kappa'] = kappas[0]
         config_data['max_kappa'] = kappas[-1]
 

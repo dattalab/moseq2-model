@@ -11,6 +11,7 @@ from functools import partial
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
+
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={},
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
@@ -23,27 +24,30 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     ----------
     model (ARHMM): model to train
     num_iter (int): total number of resampling iterations
-    save_every (int): iteration frequency where model predictions are saved to a file
-    ncpus (int): number of cpus to resample model
-    checkpoint_freq (int): frequency of new checkpoint saves in iterations
-    checkpoint_file (str): path to new checkpoint file
-    start (int): starting iteration index (used to resume modeling, default is 0)
-    save_file (str): path to file to save model checkpoint (only if is not None)
+    ncpus (int): number of cpus used to resample the model
+    checkpoint_freq (int): frequency (iterations) to save a checkpoint of the model
+    checkpoint_file (str): path to save new checkpoint file
+    start (int): starting iteration index used to resume modeling. Default is 0
     progress_kwargs (dict): keyword arguments for progress bar
-    train_data (OrderedDict): dict of validation data (only if verbose = True)
-    val_data (OrderedDict): dict of validation data (only if verbose = True)
-    separate_trans (bool): using different transition matrices
-    groups (list): list of groups included in modeling (only if verbose = True)
-    verbose (bool): Compute model summary.
-    check_every (int): iteration frequency to record model-iteration training/validation log-likelihoods
+    train_data (OrderedDict): dict of training data used for getting log-likelihods
+        if verbose is True
+    val_data (OrderedDict): dict of validation data used for getting validation
+        log-likelihoods if verbose is True.
+    separate_trans (bool): use separated transition matrices for each group
+    groups (list): list of groups included in modeling used for getting log-likelihoods
+        if verbose is True
+    verbose (bool): get log-likelihoods at `check_every` interval
+    check_every (int): frequency (iterations) to record model training/validation
+        log-likelihoods during training
 
     Returns
     -------
     model (ARHMM): trained model.
-    model.log_likelihood() (list): list of training Log-likelihoods per session after modeling.
-    get_labels_from_model(model) (list): list of labels predicted post-modeling.
-    iter_lls (list): list of log-likelihoods at an iteration level.
-    iter_holls (list): list of held-out log-likelihoods at an iteration level.
+    log_likelihood (list): list of training log-likelihoods per session after modeling.
+    labels (list): list of labels predicted per session after modeling.
+    iter_lls (list): list of training log-likelihoods for each `check_every` iteration.
+    iter_holls (list): list of held-out log-likelihoods for each `check_every` iteration.
+    interrupt (bool): flag to notify the caller of this function if a keyboard interrupt happened
     '''
 
     # Checkpointing boolean
@@ -58,7 +62,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
         except KeyboardInterrupt:
             print('Training manually interrupted.')
             print('Returning and saving current iteration of model. ')
-            return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
+            return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, True
 
         summ_stats = {
             'model': model,
@@ -79,7 +83,8 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
             training_checkpoint(model, itr, checkpoint_file)
 
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls
+    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, False
+
 
 def training_checkpoint(model, itr, checkpoint_file):
     '''
@@ -109,22 +114,23 @@ def training_checkpoint(model, itr, checkpoint_file):
     # Save checkpoint
     save_arhmm_checkpoint(checkpoint_file, save_data)
 
+
 def get_model_summary(model, groups, train_data, val_data, separate_trans):
     '''
-    Computes a summary of model performance after resampling steps. Is only run if verbose = True.
+    Computes log-likelihood of train_data and val_data (if not None). aIs only run if verbose = True.
 
     Parameters
     ----------
     model (ARHMM): model to compute lls.
     groups (list): list of session group names.
     train_data (OrderedDict): Ordered dict of training data
-    val_data: (OrderedDict): Ordered dict of validation/held-out data
+    val_data: (OrderedDict or None): Ordered dict of validation/held-out data
     separate_trans (bool) indicates whether to separate lls for each group.
 
     Returns
     -------
-    train_ll (float): normalized training log-likelihood at the current iteration level.
-    val_ll (float): normalized held-out log-likelihood at the current iteration level.
+    train_ll (float): normalized average training log-likelihood across all recording sessions.
+    val_ll (float): normalized average held-out log-likelihood across all recording sessions.
     '''
     # Get train and validation groups
     if groups is not None:
@@ -148,9 +154,10 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans):
 
     return np.mean(train_ll), np.mean(val_ll)
 
+
 def get_labels_from_model(model):
     '''
-    Grabs the model labels for each training dataset and places them in a list.
+    Grabs model labels for each training dataset and places them in a list.
 
     Parameters
     ----------
@@ -158,7 +165,7 @@ def get_labels_from_model(model):
 
     Returns
     -------
-    labels (list): An array of predicted syllable labels for each modeled session
+    labels (list): An array of predicted syllable labels for each training session
     '''
 
     labels = [np.append(np.repeat(-5, model.nlags), s.stateseq) for s in model.states_list]
@@ -168,12 +175,13 @@ def get_labels_from_model(model):
 # taken from moseq by @mattjj and @alexbw
 def whiten_all(data_dict, center=True):
     '''
-    Whitens all the PC Scores at once.
+    Whitens the PC Scores (with Cholesky decomposition) using all
+    the data to compute the covariance matrix.
 
     Parameters
     ----------
-    data_dict (OrderedDict): Training dictionary
-    center (bool): Indicates whether to center data.
+    data_dict (OrderedDict): Training dataset
+    center (bool): Indicates whether to center data by subtracting the mean PC score.
 
     Returns
     -------
@@ -196,12 +204,12 @@ def whiten_all(data_dict, center=True):
 # taken from moseq by @mattjj and @alexbw
 def whiten_each(data_dict, center=True):
     '''
-    Whiten each group of PC scores separately
+    Whiten the PC scores for each training dataset separately.
 
     Parameters
     ----------
-    data_dict (OrderedDict): Training dictionary
-    center (bool): Indicates whether to normalize data.
+    data_dict (OrderedDict): Training dataset
+    center (bool): Indicates whether to center data by subtracting the mean PC score.
 
     Returns
     -------
@@ -209,7 +217,7 @@ def whiten_each(data_dict, center=True):
     '''
 
     for k, v in data_dict.items():
-        tmp_dict = whiten_all(OrderedDict([(k, v)]), center=center)
+        tmp_dict = whiten_all({k: v}, center=center)
         data_dict[k] = tmp_dict[k]
 
     return data_dict
@@ -217,7 +225,8 @@ def whiten_each(data_dict, center=True):
 
 def run_e_step(arhmm):
     '''
-    Computes the expected states for each training dataset and places them in a list.
+    Computes the expectation for each state across all frames of the training dataset
+    and places them in a list.
 
     Parameters
     ----------
@@ -239,7 +248,7 @@ def zscore_each(data_dict, center=True):
     Parameters
     ----------
     data_dict (OrderedDict): Training dictionary
-    center (bool): Indicates whether to normalize data.
+    center (bool): Indicates whether to center data by subtracting the mean PC score.
 
     Returns
     -------
@@ -247,7 +256,7 @@ def zscore_each(data_dict, center=True):
     '''
 
     for k, v in data_dict.items():
-        tmp_dict = zscore_all(OrderedDict([(k, v)]), center=center)
+        tmp_dict = zscore_all({k: v}, center=center)
         data_dict[k] = tmp_dict[k]
 
     return data_dict
@@ -261,18 +270,18 @@ def zscore_all(data_dict, npcs=10, center=True):
     ----------
     data_dict (OrderedDict): Training dictionary
     npcs (int): number of pcs included
-    center (bool): Indicates whether to normalize data.
+    center (bool): Indicates whether to center data by subtracting the mean PC score.
 
     Returns
     -------
     data_dict (OrderedDict): z-scored training data dictionary
     '''
 
-    valid_scores = np.concatenate([x[~np.isnan(x).any(axis=1), :npcs] for x in data_dict.values()])
-    mu, sig = valid_scores.mean(axis=0), valid_scores.std(axis=0)
+    scores = np.concatenate(list(data_dict.values()))[:, :npcs]
+    mu, sig = np.nanmean(scores, axis=0), np.nanstd(scores, axis=0)
 
     for k, v in data_dict.items():
-        numerator = v - mu if center else v
+        numerator = v[:, :npcs] - mu if center else v[:, :npcs]
         data_dict[k] = numerator / sig
 
     return data_dict
@@ -281,12 +290,12 @@ def zscore_all(data_dict, npcs=10, center=True):
 # taken from syllables by @alexbw
 def get_crosslikes(arhmm, frame_by_frame=False):
     '''
-    Gets the cross-likelihoods, a measure of confidence in the model's
-    segmentation, for each syllable a model learns.
+    Gets the cross-likelihoods, a measure of confidence in label
+    segmentation, for each model label.
 
     Parameters
     ----------
-    arhmm: the ARHMM model object fit to your data
+    arhmm: the ARHMM model object
     frame_by_frame (bool): if True, the cross-likelihoods will be computed for each frame.
 
     Returns
@@ -326,15 +335,16 @@ def get_crosslikes(arhmm, frame_by_frame=False):
 
 def slices_from_indicators(indseq):
     '''
-    Given indices for seqences, return list sliced sublists.
+    Compute start and stop indices (slices) for each contiguous sequence of True values in
+    `indseq`.
 
     Parameters
     ----------
-    indseq (list): indices to create slices at.
+    indseq (list): Indicator array, containing True and False values
 
     Returns
     -------
-    (list): list of slices from given indices.
+    (list): list of slices from `indseq`.
     '''
 
     return [sl for sl in rleslices(indseq) if indseq[sl.start]]
@@ -342,7 +352,7 @@ def slices_from_indicators(indseq):
 
 def rleslices(seq):
     '''
-    Get changepoint index slices
+    Get changepoint slices
 
     Parameters
     ----------
@@ -350,7 +360,7 @@ def rleslices(seq):
 
     Returns
     -------
-    (map generator): slices given syllable changepoint indices
+    (map generator): slices of syllable changepoints
     '''
 
     pos, = np.where(np.diff(seq) != 0)

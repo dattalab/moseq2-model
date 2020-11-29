@@ -46,9 +46,9 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model()
 
         X = whiten_all(data_dict)
-        training_data, validation_data = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data)
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
@@ -57,7 +57,7 @@ class TestTrainUtils(TestCase):
         assert len(iter_lls) == 0
         assert len(iter_holls) == 0
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data, verbose=True)
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
@@ -69,9 +69,9 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model(separate_trans=True, groups=['default', 'Group1'])
 
         X = whiten_all(data_dict)
-        training_data, validation_data = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data, separate_trans=True,
                                                                groups=['default', 'Group1'], check_every=1,
                                                                verbose=True)
@@ -92,9 +92,9 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model()
 
         X = whiten_all(data_dict)
-        training_data, validation_data = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data)
 
         labels = get_labels_from_model(model)

@@ -305,9 +305,9 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        training_data, validation_data = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data)
 
         cp = copy_model(model)
@@ -331,15 +331,15 @@ class TestUtils(TestCase):
             config_data = yaml.safe_load(f)
 
         X = whiten_all(data_dict)
-        training_data, validation_data = get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data, separate_trans=True)
 
         params = get_parameters_from_model(model)
         check_params(model, params)
 
-        model, lls, labels, iter_lls, iter_holls = train_model(model, num_iter=5, train_data=training_data,
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
                                                                val_data=validation_data, separate_trans=False)
 
         params = get_parameters_from_model(model)
