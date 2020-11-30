@@ -138,12 +138,12 @@ class TestGUI(TestCase):
             'index_file': index
         }
 
-        command = learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds, separate_trans=separate_trans,
+        out_script = os.path.join(output_dir, 'train_out.sh')
+
+        _ = learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds, separate_trans=separate_trans,
                             num_iter=num_iter, max_states=max_states, npcs=npcs, kappa=kappa, min_kappa=min_kappa,
                             robust=robust, percent_split=percent_split, verbose=verbose, n_models=n_models,
                             output_dir=output_dir, get_cmd=True)
 
-        print(command)
-        assert command == 'set -e\nmoseq2-model learn-model data/_pca/pca_scores.h5 data/model-000-1000.p --npcs 10 ' \
-                          '--num-iter 10 -i data/test_index.yaml --separate-trans --robust --hold-out --nfolds 2 ' \
-                          '--max-states 100 --ncpus 100 --kappa 1000'
+        assert os.path.exists(out_script)
+        os.remove(out_script)
