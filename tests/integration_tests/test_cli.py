@@ -7,7 +7,7 @@ from moseq2_model.cli import learn_model, count_frames, kappa_scan_fit_models
 class TestCLI(TestCase):
     def test_count_frames(self):
 
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
 
         runner = CliRunner()
 
@@ -19,7 +19,7 @@ class TestCLI(TestCase):
 
     def test_learn_model(self):
 
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         dest_file = 'data/test/model.p'
         checkpoint_path = 'data/test/checkpoints/'
 
@@ -51,7 +51,7 @@ class TestCLI(TestCase):
         shutil.rmtree('data/test/')
 
     def test_kappa_scan(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         dest_dir = 'data/models/'
 
         index = 'data/test_index.yaml'

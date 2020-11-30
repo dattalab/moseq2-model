@@ -10,7 +10,7 @@ from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitSt
 class TestTrainModels(TestCase):
 
     def test_get_empirical_ar_params(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
 
         data_dict, data_metadata = load_pcs(filename=input_file,
                                             var_name='scores',
@@ -46,7 +46,7 @@ class TestTrainModels(TestCase):
         assert new_params['affine'] == params['affine']
 
     def test_ARHMM(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         config_file = 'data/config.yaml'
 
         with open(config_file, 'r') as f:

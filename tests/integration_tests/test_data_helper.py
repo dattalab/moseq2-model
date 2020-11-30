@@ -11,7 +11,7 @@ class TestDataHelpers(TestCase):
 
     def test_process_indexfile(self):
 
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         index_path = 'data/test_index.yaml'
         config_file = 'data/config.yaml'
 
@@ -28,7 +28,7 @@ class TestDataHelpers(TestCase):
             "Number of input files != number of uuids in the index file"
 
     def test_select_data_to_model(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         index_path = 'data/test_index.yaml'
 
         data_dict, data_metadata = load_pcs(filename=input_file,
@@ -53,35 +53,12 @@ class TestDataHelpers(TestCase):
         t_data_dict, data_metadata = select_data_to_model(index_data, data_dict,
                                                         data_metadata, select_groups=True)
 
-        assert len(t_data_dict) == len(data_metadata['groups']) == 1, "index data was incorrectly parsed"
+        assert len(t_data_dict) == len(data_metadata['groups']) == 2, "index data was incorrectly parsed"
         assert list(data_metadata['groups'].values())[0] == 'default', "groups were returned incorrectly"
-
-        # test space-separated input
-        with open(stdin, 'w') as f:
-            f.write('default, Group1')
-
-        sys.stdin = open(stdin)
-        data_dict, data_metadata = select_data_to_model(index_data, data_dict,
-                                                        data_metadata, select_groups=True)
-
-        assert len(data_dict) == len(data_metadata['groups']) == 2, "index data was incorrectly parsed"
-        self.assertCountEqual(set(data_metadata['groups'].values()), ['default', 'Group1'], "groups were returned incorrectly")
-
-        # test comma-separated input
-        with open(stdin, 'w') as f:
-            f.write('default Group1')
-
-        sys.stdin = open(stdin)
-        data_dict, data_metadata = select_data_to_model(index_data, data_dict,
-                                                        data_metadata, select_groups=True)
-
-        assert len(data_dict) == len(data_metadata['groups']) == 2, "index data was incorrectly parsed"
-        self.assertCountEqual(set(data_metadata['groups'].values()), ['default', 'Group1'], "groups were returned incorrectly")
-        os.remove(stdin)
 
     def test_prepare_model_metadata(self):
 
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         config_file = 'data/config.yaml'
 
         data_dict, data_metadata = load_pcs(filename=input_file,
@@ -124,7 +101,7 @@ class TestDataHelpers(TestCase):
         assert hold_out_list == [], "Some of the data is unintentionally held out"
 
     def test_get_heldout_data_splits(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         config_file = 'data/config.yaml'
 
         data_dict, data_metadata = load_pcs(filename=input_file,
@@ -157,7 +134,7 @@ class TestDataHelpers(TestCase):
 
     def test_get_training_data_splits(self):
 
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         config_file = 'data/config.yaml'
 
         data_dict, data_metadata = load_pcs(filename=input_file,
@@ -185,7 +162,7 @@ class TestDataHelpers(TestCase):
 
 
     def test_graph_modeling_loglikelihoods(self):
-        dest_file = 'data/test_model.p'
+        dest_file = 'data/_pca/pca_scores.h5'
         config_file = 'data/config.yaml'
 
         iter_lls = [12, 15, 19]

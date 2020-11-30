@@ -11,7 +11,7 @@ from moseq2_model.train.util import train_model, get_labels_from_model, whiten_a
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
 
 def get_model(separate_trans=False, robust=False, groups=[]):
-    input_file = 'data/test_scores.h5'
+    input_file = 'data/_pca/pca_scores.h5'
     config_file = 'data/config.yaml'
 
     with open(config_file, 'r') as f:
@@ -53,7 +53,7 @@ class TestTrainUtils(TestCase):
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
         assert len(labels) == 2
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
         assert len(iter_lls) == 0
         assert len(iter_holls) == 0
 
@@ -62,7 +62,7 @@ class TestTrainUtils(TestCase):
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
         assert len(labels) == 2
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
         assert len(iter_lls) == 2
         assert len(iter_holls) == 2
 
@@ -78,7 +78,7 @@ class TestTrainUtils(TestCase):
         assert isinstance(model, FastARWeakLimitStickyHDPHMMSeparateTrans)
         assert isinstance(lls, float)
         assert len(labels) == 2
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
         assert len(iter_lls) == 5
         assert len(iter_holls) == 5
 
@@ -99,7 +99,7 @@ class TestTrainUtils(TestCase):
 
         labels = get_labels_from_model(model)
         print(labels)
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
 
     def test_whiten_all(self):
 
@@ -122,7 +122,7 @@ class TestTrainUtils(TestCase):
         model, _ = get_model()
         ex_states = run_e_step(model)
         assert len(ex_states) == 2
-        assert len(ex_states[0]) == 905 # 908 - 3 nlag frames
+        assert len(ex_states[0]) == 903 # 908 - 3 nlag frames
 
     def test_zscore_each(self):
 

@@ -14,7 +14,7 @@ from moseq2_model.util import (load_data_from_matlab, load_cell_string_from_matl
 class TestUtils(TestCase):
 
     def test_count_frames(self):
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         nframes = count_frames(data_dict)
@@ -40,18 +40,20 @@ class TestUtils(TestCase):
             'ncpus': 1,
             'memory': '10GB',
             'partition': 'short',
-            'wall_time': '01:00:00'
+            'wall_time': '01:00:00',
+            'prefix': '"'
         }
 
         parameters, prefix = get_parameter_strings(config_data)
-        truth_str = f' --npcs 10 -n 100 -i {index} --separate-trans --robust --e-step -h 2 -m 100 '
-        truth_prefix = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "'
+
+        truth_str = f' --npcs 10 --num-iter 100 -i data/test_index.yaml --separate-trans --robust --e-step --hold-out --nfolds 2 --max-states 100 --ncpus 1 '
+        truth_prefix = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap ""'
 
         assert parameters == truth_str
         assert prefix == truth_prefix
 
     def test_create_command_strings(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         index_file = 'data/test_index.yaml'
         output_dir = 'data/models/'
         kappas = [10]
@@ -72,19 +74,22 @@ class TestUtils(TestCase):
             'ncpus': 1,
             'memory': '10GB',
             'partition': 'short',
-            'wall_time': '01:00:00'
+            'wall_time': '01:00:00',
+            'prefix': ''
         }
 
         command_string = create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{}-{}.p')
+        print(command_string)
 
-        truth_output = 'sbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap "moseq2-model learn-model data/test_scores.h5' \
-                       ' data/models/model-10-0.p --npcs 10 -n 100 -i data/test_index.yaml --separate-trans --robust --e-step -h 2 -m 100 -k 10"'
-
+        truth_output = 'set -e\nsbatch -c 1 --mem=10GB -p short -t 01:00:00 --wrap ' \
+                       '"moseq2-model learn-model data/_pca/pca_scores.h5 data/models/model-0-10.p --npcs 10 ' \
+                       '--num-iter 100 -i data/test_index.yaml --separate-trans --robust --e-step --hold-out --nfolds 2 ' \
+                       '--max-states 100 --ncpus 1 --kappa 10"'
         assert command_string == truth_output
 
     def test_get_scan_range_kappas(self):
 
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         config_data = {
@@ -202,7 +207,7 @@ class TestUtils(TestCase):
         assert(np.all(pcs[0] == 1))
         assert(list(metadata['groups'].values())[0] == 'test')
 
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         assert list(data_dict.keys()) == data_metadata['uuids']
@@ -220,7 +225,7 @@ class TestUtils(TestCase):
         os.remove(outfile)
 
     def test_save_dict(self):
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
 
         outfile = 'data/saved_dict.pkl'
@@ -248,12 +253,12 @@ class TestUtils(TestCase):
         os.remove(outfile)
 
     def test_h5_to_dict(self):
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         outdict = h5_to_dict(input_data, 'scores')
         assert isinstance(outdict, dict)
 
     def test_dict_to_h5(self):
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         data_dict, data_metadata = load_pcs(input_data, var_name='scores', load_groups=True)
         assert isinstance(data_dict, dict)
 
@@ -292,7 +297,7 @@ class TestUtils(TestCase):
         self.assertRaises(ValueError, dict_to_h5, tmp_h5, test_dict)
 
     def test_load_h5_to_dict(self):
-        input_data = 'data/test_scores.h5'
+        input_data = 'data/_pca/pca_scores.h5'
         with h5py.File(input_data, 'r') as f:
             outdict = _load_h5_to_dict(f, '/')
         assert isinstance(outdict, dict)

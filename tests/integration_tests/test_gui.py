@@ -10,7 +10,7 @@ class TestGUI(TestCase):
 
     def test_learn_model(self):
 
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         dest_file = 'data/model.p'
         config_file = 'data/config.yaml'
         index = 'data/test_index.yaml'
@@ -84,7 +84,6 @@ class TestGUI(TestCase):
         with open(config_file, 'w') as f:
             yaml.safe_dump(config_data, f)
 
-
         learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
                             num_iter=num_iter, use_checkpoint=True,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
@@ -107,7 +106,7 @@ class TestGUI(TestCase):
         os.remove(stdin)
 
     def test_kappa_scan(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         dest_file = 'data/models/model.p'
         config_file = 'data/config.yaml'
         index = 'data/test_index.yaml'
@@ -145,7 +144,6 @@ class TestGUI(TestCase):
                             robust=robust, percent_split=percent_split, verbose=verbose, n_models=n_models,
                             output_dir=output_dir, get_cmd=True)
 
-        print(command)
-
-        assert command == 'moseq2-model learn-model data/test_scores.h5 data/model-1000-0.p --npcs 10 -n 10' \
-                          ' -i data/test_index.yaml --separate-trans --robust -h 2 -m 100 -k 1000'
+        assert command == 'set -e\nmoseq2-model learn-model data/_pca/pca_scores.h5 data/model-000-1000.p --npcs 10 ' \
+                          '--num-iter 10 -i data/test_index.yaml --separate-trans --robust --hold-out --nfolds 2 ' \
+                          '--max-states 100 --ncpus 100 --kappa 1000'
