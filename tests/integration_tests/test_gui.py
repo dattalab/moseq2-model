@@ -26,7 +26,7 @@ class TestGUI(TestCase):
         separate_trans = True
         robust = True
         checkpoint_freq = 2
-        percent_split = 20
+        percent_split = 1
         verbose = True
 
         # test space-separated input
@@ -55,7 +55,7 @@ class TestGUI(TestCase):
                             num_iter=num_iter,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
                             checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
-                            select_groups=True)
+                            select_groups=False)
 
         assert (os.path.exists(dest_file)), "Trained model file was not created or is in the incorrect location"
         assert (os.path.exists(checkpoint_path)), "Checkpoints were not created"
@@ -63,8 +63,8 @@ class TestGUI(TestCase):
 
         assert os.path.exists('data/train_heldout_summary.png')
         os.remove('data/train_heldout_summary.png')
-
         os.rename(dest_file, 'data/original_model.p')
+        shutil.rmtree(checkpoint_path)
 
         num_iter = 15 # train for 5 more iterations
         checkpoint_freq = -1
@@ -85,13 +85,12 @@ class TestGUI(TestCase):
             yaml.safe_dump(config_data, f)
 
         learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
-                            num_iter=num_iter, use_checkpoint=True,
+                            num_iter=num_iter, use_checkpoint=False,
                             max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
                             checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
                             select_groups=True)
 
         assert (os.path.exists(dest_file)), "Updated model file was not created or is in the incorrect location"
-        shutil.rmtree(checkpoint_path)
 
         assert os.path.exists('data/train_heldout_summary.png')
         os.remove('data/train_heldout_summary.png')
@@ -142,8 +141,9 @@ class TestGUI(TestCase):
         command = learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds, separate_trans=separate_trans,
                             num_iter=num_iter, max_states=max_states, npcs=npcs, kappa=kappa, min_kappa=min_kappa,
                             robust=robust, percent_split=percent_split, verbose=verbose, n_models=n_models,
-                            output_dir=output_dir, get_cmd=False)
+                            output_dir=output_dir, get_cmd=True)
 
+        print(command)
         assert command == 'set -e\nmoseq2-model learn-model data/_pca/pca_scores.h5 data/model-000-1000.p --npcs 10 ' \
                           '--num-iter 10 -i data/test_index.yaml --separate-trans --robust --hold-out --nfolds 2 ' \
                           '--max-states 100 --ncpus 100 --kappa 1000'

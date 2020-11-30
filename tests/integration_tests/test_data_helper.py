@@ -53,7 +53,7 @@ class TestDataHelpers(TestCase):
         t_data_dict, data_metadata = select_data_to_model(index_data, data_dict,
                                                         data_metadata, select_groups=True)
 
-        assert len(t_data_dict) == len(data_metadata['groups']) == 2, "index data was incorrectly parsed"
+        assert len(t_data_dict) == len(data_metadata['groups']) == 1, "index data was incorrectly parsed"
         assert list(data_metadata['groups'].values())[0] == 'default', "groups were returned incorrectly"
 
     def test_prepare_model_metadata(self):
