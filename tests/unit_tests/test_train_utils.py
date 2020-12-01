@@ -5,18 +5,20 @@ import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.util import load_pcs
 from moseq2_model.train.models import ARHMM
+from moseq2_model.helpers.data import prepare_model_metadata, get_training_data_splits
 from moseq2_model.train.util import train_model, get_labels_from_model, whiten_all, whiten_each, \
                                     run_e_step, zscore_all, zscore_each, get_crosslikes
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans
-from moseq2_model.helpers.data import prepare_model_metadata, select_data_to_model, get_training_data_splits
 
 def get_model(separate_trans=False, robust=False, groups=[]):
-    input_file = 'data/test_scores.h5'
+    input_file = 'data/_pca/pca_scores.h5'
     config_file = 'data/config.yaml'
 
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
 
+    config_data['separate_trans'] = separate_trans
+    config_data['robust'] = robust
     nkeys = 5
     groups = ['key1', 'key2', 'key3', 'key4', 'key5']
 
@@ -24,14 +26,11 @@ def get_model(separate_trans=False, robust=False, groups=[]):
                                         var_name='scores',
                                         npcs=10,
                                         load_groups=True)
+    data_metadata['groups'] = {k: g for k, g in zip(data_dict, groups)}
 
-    config_data, data_dict, model_parameters, train_list, hold_out_list = \
-        prepare_model_metadata(data_dict, data_metadata, config_data, \
-                               nkeys, groups)
+    data_dict, model_parameters, _, _ = \
+        prepare_model_metadata(data_dict, data_metadata, config_data)
 
-    model_parameters['separate_trans'] = separate_trans
-    model_parameters['robust'] = robust
-    model_parameters['groups'] = groups
     arhmm = ARHMM(data_dict=data_dict, **model_parameters)
 
     return arhmm, data_dict
@@ -42,56 +41,46 @@ class TestTrainUtils(TestCase):
         config_file = 'data/config.yaml'
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
+            config_data['percent_split'] = 1
 
         model, data_dict = get_model()
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model, num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data, num_frames=[900, 900])
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data)
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
         assert len(labels) == 2
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
         assert len(iter_lls) == 0
         assert len(iter_holls) == 0
-        assert len(group_idx) == 1
-        assert group_idx == ['default']
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
-                                                                          num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data,
-                                                                          num_frames=[900, 900], verbose=True)
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data, verbose=True)
         assert isinstance(model, FastARWeakLimitStickyHDPHMM)
         assert isinstance(lls, float)
         assert len(labels) == 2
-        assert len(labels[0]) == 908
-        assert len(iter_lls) == 5
-        assert len(iter_holls) == 5
-        assert len(group_idx) == 1
-        assert group_idx == ['default']
+        assert len(labels[0]) == 906
+        assert len(iter_lls) == 2
+        assert len(iter_holls) == 2
 
         model, data_dict = get_model(separate_trans=True, groups=['default', 'Group1'])
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
-                                                                          num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data, separate_trans=True,
-                                                                          groups=['default', 'Group1'],
-                                                                          num_frames=[900, 900], verbose=True)
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data, separate_trans=True,
+                                                               groups=['default', 'Group1'], check_every=1,
+                                                               verbose=True)
         assert isinstance(model, FastARWeakLimitStickyHDPHMMSeparateTrans)
         assert isinstance(lls, float)
         assert len(labels) == 2
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
         assert len(iter_lls) == 5
         assert len(iter_holls) == 5
-        assert len(group_idx) == 2
-        assert group_idx == ['default', 'Group1']
 
     def test_get_labels_from_model(self):
 
@@ -103,17 +92,14 @@ class TestTrainUtils(TestCase):
         model, data_dict = get_model()
 
         X = whiten_all(data_dict)
-        train_data, training_data, validation_data, nt_frames = \
-            get_training_data_splits(config_data, X)
+        training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
-        model, lls, labels, iter_lls, iter_holls, group_idx = train_model(model,
-                                                                          num_iter=5, train_data=training_data,
-                                                                          val_data=validation_data,
-                                                                          num_frames=[900, 900])
+        model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
+                                                               val_data=validation_data)
 
         labels = get_labels_from_model(model)
         print(labels)
-        assert len(labels[0]) == 908
+        assert len(labels[0]) == 906
 
     def test_whiten_all(self):
 
@@ -136,7 +122,7 @@ class TestTrainUtils(TestCase):
         model, _ = get_model()
         ex_states = run_e_step(model)
         assert len(ex_states) == 2
-        assert len(ex_states[0]) == 905 # 908 - 3 nlag frames
+        assert len(ex_states[0]) == 903 # 908 - 3 nlag frames
 
     def test_zscore_each(self):
 

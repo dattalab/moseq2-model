@@ -4,8 +4,6 @@ import codecs
 import subprocess
 from setuptools import setup, find_packages
 
-os.system('export CC="$(which gcc-7)"')
-os.system('export CXX="$(which g++-7)"')
 
 def install(package):
     subprocess.call([sys.executable, "-m", "pip", "install", package])
@@ -55,10 +53,10 @@ setup(
     include_package_data=True,
     platforms='any',
     python_requires='>=3.6',
-    install_requires=['six==1.14.0', 'h5py==2.10.0',
-                      'scipy==1.4.1', 'numpy==1.18.3', 'click==7.0', 'cython==0.29.14',
-                      'pandas==0.25.3', 'future==0.18.2', 'joblib==0.15.1', 'scikit-learn==0.22', 'tqdm==4.40.0',
-                      'scikit-image==0.16.2', 'setuptools', 'cytoolz==0.10.1', 'ipywidgets==7.5.1',
+    install_requires=['six==1.15.0', 'h5py==2.10.0',
+                      'scipy==1.3.2', 'numpy==1.18.3', 'click==7.0', 'cython==0.29.14',
+                      'pandas==1.0.5', 'future==0.18.2', 'joblib==0.15.1',
+                      'scikit-image==0.16.2', 'setuptools', 'cytoolz==0.10.1', 'tqdm==4.40.0',
                       'matplotlib==3.1.2', 'statsmodels==0.10.2', 'ruamel.yaml==0.16.5', 'opencv-python==4.1.2.30',
                       'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',

@@ -2,15 +2,15 @@ import numpy as np
 import ruamel.yaml as yaml
 from unittest import TestCase
 from moseq2_model.util import load_pcs
+from moseq2_model.helpers.data import prepare_model_metadata
 from moseq2_model.train.models import ARHMM, _get_empirical_ar_params
-from moseq2_model.helpers.data import prepare_model_metadata, select_data_to_model
 from autoregressive.models import FastARWeakLimitStickyHDPHMM, FastARWeakLimitStickyHDPHMMSeparateTrans, \
                             ARWeakLimitStickyHDPHMM, ARWeakLimitStickyHDPHMMSeparateTrans
 
 class TestTrainModels(TestCase):
 
     def test_get_empirical_ar_params(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
 
         data_dict, data_metadata = load_pcs(filename=input_file,
                                             var_name='scores',
@@ -46,9 +46,8 @@ class TestTrainModels(TestCase):
         assert new_params['affine'] == params['affine']
 
     def test_ARHMM(self):
-        input_file = 'data/test_scores.h5'
+        input_file = 'data/_pca/pca_scores.h5'
         config_file = 'data/config.yaml'
-        index_path = 'data/test_index.yaml'
 
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
@@ -61,9 +60,8 @@ class TestTrainModels(TestCase):
         nkeys = 5
         all_keys = ['key1', 'key2', 'key3', 'key4', 'key5']
 
-        config_data, data_dict, model_parameters, train_list, hold_out_list = \
-            prepare_model_metadata(data_dict, data_metadata, config_data, \
-                                    nkeys, all_keys)
+        data_dict, model_parameters, train_list, hold_out_list = \
+            prepare_model_metadata(data_dict, data_metadata, config_data)
 
         model_parameters['separate_trans'] = False
         model_parameters['robust'] = False
@@ -77,7 +75,7 @@ class TestTrainModels(TestCase):
 
         model_parameters['separate_trans'] = True
         model_parameters['robust'] = False
-        model_parameters['groups'] = ['1', '2']
+        model_parameters['groups'] = {k: f'group{i}' for i, k in enumerate(data_dict)}
         arhmm = ARHMM(data_dict=data_dict, **model_parameters)
         assert isinstance(arhmm, FastARWeakLimitStickyHDPHMMSeparateTrans)
 
@@ -88,5 +86,6 @@ class TestTrainModels(TestCase):
 
         model_parameters['separate_trans'] = True
         model_parameters['robust'] = True
+        model_parameters['groups'] = {k: f'group{i}' for i, k in enumerate(data_dict)}
         arhmm = ARHMM(data_dict=data_dict, **model_parameters)
         assert isinstance(arhmm, ARWeakLimitStickyHDPHMMSeparateTrans)

@@ -1,18 +1,22 @@
+'''
+Utility functions for handling loading and saving models and their respective metadata.
+'''
+import re
 import h5py
+import click
 import joblib
 import pickle
 import scipy.io
+import warnings
 import numpy as np
 from copy import deepcopy
 from cytoolz import first
-from functools import partial
-from tqdm.auto import tqdm
 from collections import OrderedDict
+from moseq2_model.train.models import ARHMM
 from autoregressive.util import AR_striding
+from os.path import basename, getctime, join, exists
 
-flush_print = partial(print, flush=True)
-
-def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_is_uuid=True):
+def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
     '''
     Load the Principal Component Scores for modeling.
 
@@ -22,7 +26,6 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
     var_name (str): key where the pc scores are stored within ``filename``
     load_groups (bool): Load metadata group variable
     npcs (int): Number of PCs to load
-    h5_key_is_uuid (bool): use h5 key as uuid.
 
     Returns
     -------
@@ -32,60 +35,179 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10, h5_key_i
 
     metadata = {
         'uuids': None,
-        'groups': [],
+        'groups': {},
     }
 
     if filename.endswith('.mat'):
         print('Loading data from matlab file')
         data_dict = load_data_from_matlab(filename, var_name, npcs)
+
         # convert the uuid list to something that will export easily...
         metadata['uuids'] = load_cell_string_from_matlab(filename, "uuids")
         if load_groups:
-            metadata['groups'] = load_cell_string_from_matlab(filename, "groups")
+            metadata['groups'] = dict(zip(metadata['uuids'], load_cell_string_from_matlab(filename, "groups")))
         else:
             metadata['groups'] = None
+
     elif filename.endswith(('.z', '.pkl', '.p')):
         print('Loading data from pickle file')
         data_dict = joblib.load(filename)
 
+        if not isinstance(data_dict, OrderedDict):
+            data_dict = OrderedDict(data_dict)
+
+        # Reading in PCs and associated groups
         if isinstance(first(data_dict.values()), tuple):
             print('Detected tuple')
             for k, v in data_dict.items():
                 data_dict[k] = v[0][:, :npcs]
-                metadata['groups'].append(v[1])
+                metadata['groups'][k] = v[1]
         else:
             for k, v in data_dict.items():
                 data_dict[k] = v[:, :npcs]
 
+        metadata['uuids'] = list(data_dict)
+
     elif filename.endswith('.h5'):
+        # Reading PCs from h5 file
         with h5py.File(filename, 'r') as f:
             if var_name in f:
-                print('Found pcs in {}'.format(var_name))
+                print(f'Found pcs in {var_name}')
                 tmp = f[var_name]
+
+                # Reading in PCs into training dict
                 if isinstance(tmp, h5py.Dataset):
                     data_dict = OrderedDict([(1, tmp[:, :npcs])])
-                elif isinstance(tmp, h5py.Group):
-                    data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
-                    if load_groups:
-                        metadata['groups'] = list(range(len(tmp)))
-                    elif 'groups' in f:
-                        metadata['groups'] = [f[f'groups/{key}'][()] for key in tmp.keys()]
 
+                elif isinstance(tmp, h5py.Group):
+                    # Reading in PCs
+                    data_dict = OrderedDict([(k, v[:, :npcs]) for k, v in tmp.items()])
+                    # Optionally loading groups if they 
+                    if load_groups:
+                        if 'groups' in f:
+                            metadata['groups'] = {key: f['groups'][i] for i, key in enumerate(data_dict) if key in f['metadata']}
+                        else:
+                            warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
+                            metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
                 raise IOError(f'Could not find dataset name {var_name} in {filename}')
 
-            if 'uuids' in f:
-                # TODO: make sure uuids is in f, and not uuid
-                metadata['uuids'] = f['uuid'][()]
-            elif h5_key_is_uuid:
-                metadata['uuids'] = list(data_dict.keys())
-
+            # if all the h5 data keys are uuids, use them to store uuid information
+            if all(map(is_uuid, data_dict)):
+                metadata['uuids'] = list(data_dict)
+            elif 'metadata' in f:
+                metadata['uuids'] = list(f['metadata'])
     else:
         raise ValueError('Did not understand filetype')
 
     return data_dict, metadata
+
+
+def is_uuid(string):
+    '''checks to see if string is a uuid. Returns True if it is.'''
+    regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
+    match = regex.match(string)
+    return bool(match)
+
+
+def get_current_model(use_checkpoint, all_checkpoints, train_data, model_parameters):
+    '''
+    Checks to see whether user is loading a checkpointed model, if so, loads the latest iteration.
+    Otherwise, will instantiate a new model.
+
+    Parameters
+    ----------
+    use_checkpoint (bool): CLI input parameter indicating user is loading a checkpointed model
+    all_checkpoints (list): list of all found checkpoint paths
+    train_data (OrderedDict): dictionary of uuid-PC score key-value pairs
+    model_parameters (dict): dictionary of required modeling hyperparameters.
+
+    Returns
+    -------
+    arhmm (ARHMM): instantiated model object including loaded data
+    itr (int): starting iteration number for the model to begin training from.
+    '''
+
+    # Check for available previous modeling checkpoints
+    itr = 0
+    if use_checkpoint and len(all_checkpoints) > 0:
+        # Get latest checkpoint (with respect to save date)
+        latest_checkpoint = max(all_checkpoints, key=getctime)
+        click.echo(f'Loading Checkpoint: {basename(latest_checkpoint)}')
+        try:
+            checkpoint = load_arhmm_checkpoint(latest_checkpoint, train_data)
+            # Get model object
+            arhmm = checkpoint.pop('model')
+            itr = checkpoint.pop('iter')
+            click.echo(f'On iteration {itr}')
+        except (FileNotFoundError, ValueError):
+            click.echo('Loading original checkpoint failed, creating new ARHMM')
+            arhmm = ARHMM(data_dict=train_data, **model_parameters)
+    else:
+        if use_checkpoint:
+            print('No checkpoints found.', end=' ')
+        click.echo('Creating new ARHMM')
+        arhmm = ARHMM(data_dict=train_data, **model_parameters)
+
+    return arhmm, itr
+
+
+def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
+    '''
+    Computes the log-likelihoods of the training sessions.
+
+    Parameters
+    ----------
+    arhmm (ARHMM): ARHMM model.
+    data (dict): dict object with UUID keys containing the PCS used for training.
+    groups (list): list of assigned groups for all corresponding session uuids. Only used if
+        separate_trans == True.
+    separate_trans (bool): flag to compute separate log-likelihoods for each modeled group.
+    normalize (bool): if set to True this function will normalize by frame counts in each session
+
+    Returns
+    -------
+    ll (list): list of log-likelihoods for the trained model
+    '''
+
+    if separate_trans:
+        ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(groups, data.values())]
+    else:
+        ll = [arhmm.log_likelihood(v) for v in data.values()]
+    if normalize:
+        ll = [l / len(v) for l, v in zip(ll, data.values())]
+
+    return ll
+
+
+def get_session_groupings(data_metadata, train_list, hold_out_list):
+    '''
+    Creates a list or tuple of assigned groups for training and (optionally)
+    held out data.
+
+    Parameters
+    ----------
+    data_metadata (dict): dict containing session group information
+    groups (list): list of all session groups
+    all_keys (list): list of all corresponding included session UUIDs
+    hold_out_list (list): list of held-out uuids
+
+    Returns
+    -------
+    groupings (tuple): 2-tuple containing lists of train groups
+    and held-out groups (if held_out_list exists)
+    '''
+
+    # Get held out groups
+    hold_g = [data_metadata['groups'][k] for k in hold_out_list]
+    train_g = [data_metadata['groups'][k] for k in train_list]
+
+    # Ensure training groups were found before setting grouping
+    if len(train_g) != 0:
+        return train_g, hold_g
+    return None
 
 
 def save_dict(filename, obj_to_save=None):
@@ -102,13 +224,14 @@ def save_dict(filename, obj_to_save=None):
     None
     '''
 
+    # Parsing given file extension and saving model accordingly
     if filename.endswith('.mat'):
         print('Saving MAT file', filename)
         scipy.io.savemat(filename, mdict=obj_to_save)
     elif filename.endswith('.z'):
         print('Saving compressed pickle', filename)
         joblib.dump(obj_to_save, filename, compress=('zlib', 4))
-    elif filename.endswith('.pkl') | filename.endswith('.p'):
+    elif filename.endswith(('.pkl', '.p')):
         print('Saving pickle', filename)
         joblib.dump(obj_to_save, filename, compress=0)
     elif filename.endswith('.h5'):
@@ -117,7 +240,6 @@ def save_dict(filename, obj_to_save=None):
             dict_to_h5(f, obj_to_save)
     else:
         raise ValueError('Did not understand filetype')
-
 
 
 def dict_to_h5(h5file, export_dict, path='/'):
@@ -137,14 +259,15 @@ def dict_to_h5(h5file, export_dict, path='/'):
     '''
 
     for key, item in export_dict.items():
+        # Parse key and value types, and load them accordingly
         if isinstance(key, (tuple, int)):
             key = str(key)
-
         if isinstance(item, str):
             item = item.encode('utf8')
 
+        # Write dict item to h5 based on its data-type
         if isinstance(item, np.ndarray) and item.dtype == np.object:
-            dt = h5py.special_dtype(vlen=item.flat[0].dtype)
+            dt = h5py.special_dtype(vlen=np.array(item.flat[0]).dtype)
             h5file.create_dataset(path+key, item.shape, dtype=dt, compression='gzip')
             for tup, _ in np.ndenumerate(item):
                 if item[tup] is not None:
@@ -173,13 +296,16 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     mdl_dict (dict): a dict containing the model with reloaded data, and associated training data
     '''
 
+    # Loading model and its respective number of lags
     mdl_dict = joblib.load(filename)
     nlags = mdl_dict['model'].nlags
 
     for s, t in zip(mdl_dict['model'].states_list, train_data.values()):
+        # Loading model AR-strided data
         s.data = AR_striding(t.astype('float32'), nlags)
 
     return mdl_dict
+
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
     '''
@@ -196,31 +322,13 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
     None
     '''
 
+    # Getting model object
     mdl = arhmm.pop('model')
     arhmm['model'] = copy_model(mdl)
+
+    # Save model
     print(f'Saving Checkpoint {filename}')
     joblib.dump(arhmm, filename, compress=('zlib', 5))
-
-
-def append_resample(filename, label_dict: dict):
-    '''
-    Adds the labels from a resampling iteration to a pickle file.
-
-    Parameters
-    ----------
-    filename (str): file (containing modeling results) to append new label dict to.
-    label_dict (dict): a dictionary with a single key/value pair, where the
-            key is the sampling iteration and the value contains a dict of:
-            (labels, a log likelihood val, and expected states if the flag is set)
-            from each mouse.
-
-    Returns
-    -------
-    None
-    '''
-
-    with open(filename, 'ab+') as f:
-        pickle.dump(label_dict, f)
 
 
 def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
@@ -230,7 +338,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
 
     Parameters
     ----------
-    filename (str): path to h5 file.
+    filename (h5py.File): opened h5 file.
     path (str): path within the h5 file to load data from.
 
     Returns
@@ -243,6 +351,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
         # only use the final path key to add to `ans`
         ans[path.split('/')[-1]] = file[path][()]
     else:
+        # Reading in h5 value into dict key-value pair
         for key, item in file[path].items():
             if isinstance(item, h5py.Dataset):
                 ans[key] = item[()]
@@ -265,6 +374,7 @@ def h5_to_dict(h5file, path: str = '/') -> dict:
     out (dict): a dict with h5 file contents with the same path structure
     '''
 
+    # Load h5 file according to whether it is separated by Groups
     if isinstance(h5file, str):
         with h5py.File(h5file, 'r') as f:
             out = _load_h5_to_dict(f, path)
@@ -293,7 +403,8 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
     data_dict = OrderedDict()
 
     with h5py.File(filename, 'r') as f:
-        if var_name in f.keys():
+        # Loading PCs scores into training data dict
+        if var_name in f:
             score_tmp = f[var_name]
             for i in range(len(score_tmp)):
                 tmp = f[score_tmp[i][0]]
@@ -310,26 +421,24 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
     Parameters
     ----------
     filename (str): path to .mat file
-    var_name (str): cell name to read
+    var_name (str): variable name to read
 
     Returns
     -------
     return_list (list): list of selected loaded variables
     '''
 
-    f = h5py.File(filename, 'r')
     return_list = []
+    with h5py.File(filename, 'r') as f:
 
-    if var_name in f.keys():
+        if var_name in f:
+            tmp = f[var_name]
 
-        tmp = f[var_name]
-
-        # change unichr to chr for python 3
-
-        for i in range(len(tmp)):
-            tmp2 = f[tmp[i][0]]
-            uni_list = [''.join(chr(c)) for c in tmp2]
-            return_list.append(''.join(uni_list))
+            # change unichr to chr for python 3
+            for i in range(len(tmp)):
+                tmp2 = f[tmp[i][0]]
+                uni_list = [''.join(chr(c)) for c in tmp2]
+                return_list.append(''.join(uni_list))
 
     return return_list
 
@@ -337,7 +446,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 # per Scott's suggestion
 def copy_model(model_obj):
     '''
-    Return a new copy of a model using deepcopy().
+    Return a new shallow copy of the ARHMM that doesn't contain the training data.
 
     Parameters
     ----------
@@ -380,6 +489,7 @@ def get_parameters_from_model(model):
 
     init_obs_dist = model.init_emission_distn.hypparams
 
+    # Loading transition graph(s)
     if hasattr(model, 'trans_distns'):
         trans_dist = model.trans_distns[0]
     else:
@@ -387,6 +497,7 @@ def get_parameters_from_model(model):
 
     ls_obj = dir(model.obs_distns[0])
 
+    # Packing object parameters into a single dict
     parameters = {
         'kappa': trans_dist.kappa,
         'gamma': trans_dist.gamma,
@@ -409,12 +520,178 @@ def get_parameters_from_model(model):
     return parameters
 
 
-def list_rank(chk_list):
-    rank = 0
-    flag = True
-    while flag is True:
-        flag = eval("type(chk_list"+'[0]'*rank+") is list")
-        if flag:
-            rank += 1
+def count_frames(data_dict=None, input_file=None, var_name='scores'):
+    '''
+    Counts the total number of frames loaded from the PCA scores file.
 
-    return rank
+    Parameters
+    ----------
+    data_dict (OrderedDict): Loaded PCA scores OrderedDict object.
+    input_file (str): Path to PCA Scores file to load data_dict if not already data_dict is None
+    var_name (str): Path within PCA h5 file to load scores from.
+
+    Returns
+    -------
+    total_frames (int): total number of counted frames.
+    '''
+
+    if data_dict is None and input_file is not None:
+        data_dict, _ = load_pcs(filename=input_file, var_name=var_name, load_groups=True)
+
+    total_frames = 0
+    for v in data_dict.values():
+        idx = (~np.isnan(v)).all(axis=1)
+        total_frames += np.sum(idx)
+
+    return total_frames
+
+
+def get_parameter_strings(config_data):
+    '''
+    Creates the CLI learn-model command using the given config_data dict contents, which can be used
+    to run the modeling step. Function checks for the following paramters: [npcs, num_iter,
+    separate_trans, robust, e_step, hold_out, max_states, converge, tolerance].
+
+    Parameters
+    ----------
+    index_file (str): Path to index file.
+    config_data (dict): Configuration parameters dict.
+
+    Returns
+    -------
+    parameters (str): String containing CLI command parameter flags.
+    prefix (str): Prefix string for the learn-model command (Slurm only).
+    '''
+
+    parameters = f' --npcs {config_data["npcs"]} --num-iter {config_data["num_iter"]} '
+
+    if isinstance(config_data['index'], str):
+        if exists(config_data['index']):
+            parameters += f'-i {config_data["index"]} '
+
+    if config_data['separate_trans']:
+        parameters += '--separate-trans '
+
+    if config_data['robust']:
+        parameters += '--robust '
+
+    if config_data['e_step']:
+        parameters += '--e-step '
+
+    if config_data['hold_out']:
+        parameters += f'--hold-out --nfolds {config_data["nfolds"]} '
+
+    if config_data['max_states']:
+        parameters += f'--max-states {config_data["max_states"]} '
+    if config_data['ncpus'] > 0:
+        parameters += f'--ncpus {config_data["ncpus"]} '
+
+    # Handle possible Slurm batch functionality
+    prefix = ''
+    if config_data['cluster_type'] == 'slurm':
+        prefix = f'sbatch -c {config_data["ncpus"]} --mem={config_data["memory"]} '
+        prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "{config_data["prefix"]}'
+
+    return parameters, prefix
+
+
+def create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{:03d}-{}.p'):
+    '''
+    Creates the CLI learn-model command strings with parameter flags based on the contents of the configuration
+    dict. Each model will a use different kappa value within the specified range.
+
+    Parameters
+    ----------
+    input_file (str): Path to PCA Scores
+    index_file (str): Path to index file
+    output_dir (str): Path to directory to save models in.
+    config_data (dict): Configuration parameters dict.
+    kappas (list): List of kappa values for model training commands.
+    model_name_format (str): Filename string format string.
+
+    Returns
+    -------
+    command_string (str): CLI learn-model command strings with the requested parameters separated by newline characters
+    '''
+
+    # Get base command and parameter flags
+    base_command = f'moseq2-model learn-model {input_file} '
+    parameters, prefix = get_parameter_strings(config_data)
+
+    commands = []
+    for i, k in enumerate(kappas):
+        # Create CLI command
+        cmd = base_command + join(output_dir, model_name_format.format(i, k)) + parameters + f'--kappa {k}'
+
+        # Add possible batch fitting prefix string
+        if config_data['cluster_type'] == 'slurm':
+            cmd = prefix + cmd + '"'
+        commands.append(cmd)
+
+    # Create and return the command string
+    command_string = '\n'.join(commands)
+    command_string = 'set -e\n' + command_string
+    return command_string
+
+
+def get_scan_range_kappas(data_dict, config_data):
+    '''
+    Helper function that returns the kappa values to train models on based on the user's selected scanning scale range.
+    Default values will be selected if min/max_kappa are None. 
+
+    An example: scan_scale = 'log'; nframes = 1800; min_kappa = 10e3; max_kappa = 10e5; n_models = 10;
+    >>> kappas = [1000, 1668, 2782, 4641, 7742, 12915, 21544, 35938, 59948, 100000]
+
+    Another Exmaple:
+    nframes = 1800
+    'scan_scale': 'linear',
+    'min_kappa': None,
+    'max_kappa': None,
+    'n_models': 10
+    min(kappas) == 18
+    max(kappas) == 18000000
+    >>> kappas == [18, 20016, 40014, 60012, 80010, 100008, 120006, 140004, 160002, 180000]
+
+    Parameters
+    ----------
+    data_dict (OrderedDict): Loaded PCA score dictionary.
+    config_data (dict): Configuration parameters dict.
+
+    Returns
+    -------
+    kappas (list): list of ints corresponding to the kappa value for each model.
+    '''
+
+    nframes = count_frames(data_dict)
+
+    if config_data.get('scan_scale', 'log') == 'log':
+        # Get log scan range
+        factor = int(np.log10(nframes))
+        if config_data['min_kappa'] is None:
+            min_factor = factor - 2 # Set default value
+        else:
+            min_factor = np.log10(config_data['min_kappa'])
+
+        if config_data['max_kappa'] is None:
+            max_factor = factor + 2 # Set default value
+        else:
+            max_factor = np.log10(config_data['max_kappa'])
+
+        kappas = np.round(np.logspace(min_factor, max_factor, config_data['n_models'])).astype('int')
+        config_data['min_kappa'] = kappas[0]
+        config_data['max_kappa'] = kappas[-1]
+
+    elif config_data['scan_scale'] == 'linear':
+        # Get linear scan range
+        # Handle either of the missing parameters
+        if config_data['min_kappa'] is None:
+            # Choosing a minimum kappa value (AKA value to begin the scan from)
+            # less than the counted number of frames
+            config_data['min_kappa'] = min(nframes, nframes / 1e2)  # default initial kappa value
+        if config_data['max_kappa'] is None:
+            # If no max is specified, max kappa will be 100x the number of frames.
+            config_data['max_kappa'] = max(nframes, nframes * 1e2)  # default initial kappa values
+
+        kappas = np.linspace(config_data['min_kappa'], config_data['max_kappa'], config_data['n_models']).astype('int')
+
+    return kappas

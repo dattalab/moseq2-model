@@ -5,7 +5,7 @@ data/dummy_matlab.mat:
 	aws s3 cp s3://moseq2-testdata/model data/ --request-payer=requester --recursive
 
 data/test_scores.h5:
-	aws s3 cp s3://moseq2-testdata/pca data/ --request-payer=requester --recursive
+	aws s3 cp s3://moseq2-testdata/pca/_pca/pca_scores.h5 data/ --request-payer=requester
 
 data/test_index.yaml:
 	aws s3 cp s3://moseq2-testdata/pca data/ --request-payer=requester --recursive
