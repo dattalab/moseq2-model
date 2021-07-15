@@ -1,6 +1,6 @@
 #specs for travis ci
 language: python
-dist: trusty
+dist: xenial
 os: linux
 
 stages:
