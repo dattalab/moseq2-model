@@ -264,8 +264,8 @@ class TestUtils(TestCase):
 
         outpath = 'data/out_scores.h5'
 
-        tmp_h5 = h5py.File(outpath, 'w')
-        dict_to_h5(tmp_h5, data_dict)
+        with h5py.File(outpath, 'w') as tmp_h5:
+            dict_to_h5(tmp_h5, data_dict)
 
         assert os.path.exists(outpath)
         os.remove(outpath)
@@ -283,8 +283,8 @@ class TestUtils(TestCase):
             (1, 2): 'tuple key test'
         }
 
-        tmp_h5 = h5py.File(outpath, 'w')
-        dict_to_h5(tmp_h5, test_dict)
+        with h5py.File(outpath, 'w') as tmp_h5:
+            dict_to_h5(tmp_h5, test_dict)
 
         assert os.path.exists(outpath)
         os.remove(outpath)
