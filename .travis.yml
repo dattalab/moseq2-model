@@ -15,13 +15,12 @@ jobs:
       stage: latest-installs
       before_install:
         - pip install -U pip
-        - pip install awscli
         - pip install pytest==5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
       before_script:
-        - make
+        - ./scripts/download_test_dataset.sh
       script:
         - pytest --cov-report xml --cov-report term
       after_success:
@@ -33,13 +32,12 @@ jobs:
       stage: latest-pythons
       before_install:
         - pip install -U pip
-        - pip install awscli
         - pip install pytest==5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
         - pip install -e .
       before_script:
-        - make
+        - ./scripts/download_test_dataset.sh
       script:
         - pytest --cov-report xml --cov-report term
       after_success:
