@@ -25,25 +25,25 @@ def learn_model_command(progress_paths, hold_out=False, nfolds=2, num_iter=100,
     num_iter (int): number of training iterations.
     max_states (int): maximum number of model states.
     npcs (int): number of PCs to include in training.
+    scan_scale (str): Scale factor to generate scanning kappa values. ['log', 'linear']
     kappa (float): hyperparameter for setting syllable duration. Larger kappa = longer syllable durations.
-    min_kappa (float): Minimum kappa to train model on (used in kappa scan). 
+    min_kappa (float): Minimum kappa to train model on (used in kappa scan).
     max_kappa (float): Maximum kappa to train model on (used in kappa scan).
     n_models (int): Number of models to spawn for kappan scan
-    scan_scale (str): Scale factor to generate scanning kappa values. ['log', 'linear']
+    alpha (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone).
+    gamma (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone).
     separate_trans (bool): indicate whether to compute separate syllable transition matrices for each experimental group.
     robust (bool): indicate whether to use a t-distributed robust ARHMM distribution. More tolerant to noise.
     checkpoint_freq (int): frequency at which to save model checkpoints.
     use_checkpoint (bool): flag to load a previously saved training checkpoint.
-    alpha (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone).
-    gamma (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone).
-    select_groups (bool): flag to interactively display all sessions and choose subset of groups to model alone.
     check_every (int): perform log-likelihood check every check_every iterations.
-    get_cmd (bool): flag to return the kappa scan learn-model commands.
-    run_cmd (bool): flag to run the kappa scan learn-model commands.
+    select_groups (bool): flag to interactively display all sessions and choose subset of groups to model alone.
     percent_split (int): train-validation data split ratio percentage.
     output_dir (str): directory to store multiple trained models via kappa-scan
     out_script (str): name of the script containing all the kappa scanning commands.
     cluster_type (str): name of cluster to run model training on; either ['local', 'slurm']
+    get_cmd (bool): flag to return the kappa scan learn-model commands.
+    run_cmd (bool): flag to run the kappa scan learn-model commands.
     prefix (str): slurm command prefix with job specification parameters (slurm only).
     memory (str): amount of memory in GB to allocate to each training job (slurm only).
     wall_time (str): maximum time for a slurm job to run (slurm only).

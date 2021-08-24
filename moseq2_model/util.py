@@ -106,7 +106,18 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
 
 def is_uuid(string):
-    '''checks to see if string is a uuid. Returns True if it is.'''
+    '''
+
+    Checks to see if string is a uuid. Returns True if it is.
+
+    Parameters
+    ----------
+    string (str): string containing a session uuid given by the index file, and originally generated when session is extracted.
+
+    Returns
+    -------
+    (bool): boolean to indicate if a string is a uuid.
+    '''
     regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
     match = regex.match(string)
     return bool(match)
@@ -190,7 +201,6 @@ def get_session_groupings(data_metadata, train_list, hold_out_list):
     Parameters
     ----------
     data_metadata (dict): dict containing session group information
-    groups (list): list of all session groups
     all_keys (list): list of all corresponding included session UUIDs
     hold_out_list (list): list of held-out uuids
 
@@ -255,7 +265,6 @@ def dict_to_h5(h5file, export_dict, path='/'):
 
     Returns
     -------
-    None
     '''
 
     for key, item in export_dict.items():
@@ -319,7 +328,6 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 
     Returns
     -------
-    None
     '''
 
     # Getting model object
@@ -554,7 +562,6 @@ def get_parameter_strings(config_data):
 
     Parameters
     ----------
-    index_file (str): Path to index file.
     config_data (dict): Configuration parameters dict.
 
     Returns
@@ -603,7 +610,6 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     Parameters
     ----------
     input_file (str): Path to PCA Scores
-    index_file (str): Path to index file
     output_dir (str): Path to directory to save models in.
     config_data (dict): Configuration parameters dict.
     kappas (list): List of kappa values for model training commands.
