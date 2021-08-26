@@ -301,7 +301,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
     Returns
     -------
     All_CLs (list): a dictionary containing cross-likelihoods for each syllable pair.
-    if ``frame_by_frame=True``, it will contain a value for each frame
+     if ``frame_by_frame=True``, it will contain a value for each frame
     CL (np.ndarray): the average cross-likelihood for each syllable pair
     '''
 
