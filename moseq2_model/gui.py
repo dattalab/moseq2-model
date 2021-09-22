@@ -7,7 +7,7 @@ from moseq2_model.cli import learn_model
 from os.path import dirname, join, exists
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
-def learn_model_command(progress_paths, output_dir = None, get_cmd=True, verbose=False):
+def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     '''
     Trains ARHMM from within a Jupyter notebook. Note that the configuration file will be overriden with the
     function parameters.
