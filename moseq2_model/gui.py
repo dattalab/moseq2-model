@@ -49,11 +49,9 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
         print('Output directory not specified, saving models to base directory.')
         output_dir = dirname(index)
 
-    config_data['out_script'] = join(output_dir, config_data['out_script'])
-
     if config_data['kappa'] == 'scan':
         assert any(config_data['scan_scale'] == x for x in ('log', 'linear')), 'scan scale must be "log" or "linear"'
-        config_data['memory'] = config_data['memory']
+        config_data['out_script'] = join(output_dir, config_data['out_script'])
         config_data['get_cmd'] = get_cmd
 
         command = kappa_scan_fit_models_wrapper(input_file, config_data, output_dir)
