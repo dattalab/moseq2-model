@@ -3,7 +3,7 @@ GUI front-end function for training ARHMM.
 '''
 
 import ruamel.yaml as yaml
-from moseq2_model.cli import learn_model
+from moseq2_model.cli import learn_model, kappa_scan_fit_models
 from os.path import dirname, join, exists
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
@@ -51,6 +51,12 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
 
     if config_data['kappa'] == 'scan':
         assert any(config_data['scan_scale'] == x for x in ('log', 'linear')), 'scan scale must be "log" or "linear"'
+        
+        # Get default CLI params
+        params = {tmp.name: tmp.default for tmp in kappa_scan_fit_models.params if not tmp.required}
+        # merge default params and config data, preferring values in config data
+        config_data = {**params, **config_data}
+
         config_data['out_script'] = join(output_dir, config_data['out_script'])
         config_data['get_cmd'] = get_cmd
 
