@@ -50,7 +50,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
         output_dir = dirname(index)
 
     if config_data['kappa'] == 'scan':
-        assert assert config_data['scan_scale'] in ('log', 'linear'), 'scan scale must be "log" or "linear"'
+        assert config_data['scan_scale'] in ('log', 'linear'), 'scan scale must be "log" or "linear"'
         
         # Get default CLI params
         params = {tmp.name: tmp.default for tmp in kappa_scan_fit_models.params if not tmp.required}
