@@ -11,23 +11,12 @@ class TestGUI(TestCase):
     def test_learn_model(self):
 
         input_file = 'data/_pca/pca_scores.h5'
-        dest_file = 'data/model.p'
-        config_file = 'data/config.yaml'
-        index = 'data/test_index.yaml'
-        checkpoint_path = 'data/checkpoints/'
 
-        hold_out = True
-        hold_out_seed = 1000
-        nfolds = 2
-        num_iter = 10
-        max_states = 100
-        npcs = 10
-        kappa = None
-        separate_trans = True
-        robust = True
-        checkpoint_freq = 2
-        percent_split = 1
-        verbose = True
+        model_path = 'data/test_model/model.p'
+        model_session_path = 'data/test_model/'
+        config_file = 'data/test_config.yaml'
+        index = 'data/test_index.yaml'
+        checkpoint_path = 'data/test_model/checkpoints/'
 
         # test space-separated input
         stdin = 'data/stdin.txt'
@@ -38,36 +27,45 @@ class TestGUI(TestCase):
 
         progress_paths = {
             'scores_path': input_file,
-            'model_path': dest_file,
+            'model_path': model_path,
+            'model_session_path': model_session_path,
             'config_file': config_file,
             'index_file': index
         }
 
+        # create test config file to update
+        shutil.copyfile('data/config.yaml', config_file)
+
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
 
+        # adding required run parameters to config file
+        config_data['hold_out'] = True
         config_data['hold_out_seed'] = -1
+        config_data['nfolds'] = 2
+        config_data['num_iter'] = 10
+        config_data['max_states'] = 100
+        config_data['npcs'] = 10
+        config_data['kappa'] = None
+        config_data['separate_trans'] = True
+        config_data['robust'] = True
+        config_data['checkpoint_freq'] = 2
+        config_data['percent_split'] = 1
+        config_data['out_script'] = 'train_out.sh'
 
         with open(config_file, 'w') as f:
             yaml.safe_dump(config_data, f)
 
-        learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
-                            num_iter=num_iter,
-                            max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
-                            checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
-                            select_groups=False)
+        _ = learn_model_command(progress_paths, verbose=True, get_cmd=True)
 
-        assert (os.path.exists(dest_file)), "Trained model file was not created or is in the incorrect location"
+        assert (os.path.exists(model_path)), "Trained model file was not created or is in the incorrect location"
         assert (os.path.exists(checkpoint_path)), "Checkpoints were not created"
         assert len(os.listdir(checkpoint_path)) == 5  # iters: 1, 3, 5, 7, 9
 
-        assert os.path.exists('data/train_heldout_summary.png')
-        os.remove('data/train_heldout_summary.png')
-        os.rename(dest_file, 'data/original_model.p')
+        assert os.path.exists('data/test_model/train_heldout_summary.png')
+        os.remove('data/test_model/train_heldout_summary.png')
+        os.rename(model_path, 'data/original_model.p')
         shutil.rmtree(checkpoint_path)
-
-        num_iter = 15 # train for 5 more iterations
-        checkpoint_freq = -1
 
         # test space-separated input
         with open(stdin, 'w') as f:
@@ -78,51 +76,37 @@ class TestGUI(TestCase):
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
 
-        config_data['hold_out_seed'] = hold_out_seed
+        config_data['hold_out_seed'] = 1000
         config_data['ncpus'] = 100
 
         with open(config_file, 'w') as f:
             yaml.safe_dump(config_data, f)
 
-        learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds,
-                            num_iter=num_iter, use_checkpoint=False,
-                            max_states=max_states, npcs=npcs, kappa=kappa, separate_trans=separate_trans, robust=robust,
-                            checkpoint_freq=checkpoint_freq, percent_split=percent_split, verbose=verbose,
-                            select_groups=True)
+        _ = learn_model_command(progress_paths, verbose=True, get_cmd=True)
 
-        assert (os.path.exists(dest_file)), "Updated model file was not created or is in the incorrect location"
+        assert (os.path.exists(model_path)), "Updated model file was not created or is in the incorrect location"
 
-        assert os.path.exists('data/train_heldout_summary.png')
-        os.remove('data/train_heldout_summary.png')
+        assert os.path.exists('data/test_model/train_heldout_summary.png')
+        os.remove('data/test_model/train_heldout_summary.png')
 
         model1 = joblib.load('data/original_model.p')
-        model2 = joblib.load(dest_file)
+        model2 = joblib.load(model_path)
 
         assert model1 != model2
 
         os.remove('data/original_model.p')
-        os.remove(dest_file)
+        os.remove(model_path)
         os.remove(stdin)
+        os.remove(config_file)
 
     def test_kappa_scan(self):
-        input_file = 'data/_pca/pca_scores.h5'
-        dest_file = 'data/models/model.p'
-        config_file = 'data/config.yaml'
-        index = 'data/test_index.yaml'
-        output_dir = 'data/'
 
-        hold_out = True
-        nfolds = 2
-        n_models = 1
-        num_iter = 10
-        max_states = 100
-        npcs = 10
-        kappa = 'scan'
-        min_kappa = 1e3
-        separate_trans = True
-        robust = True
-        percent_split = 20
-        verbose = True
+        input_file = 'data/_pca/pca_scores.h5'
+        model_path = 'data/models/model.p'
+        model_session_path = 'data/models/'
+        config_file = 'data/test_config.yaml'
+        index = 'data/test_index.yaml'
+        out_script = 'train_out.sh'
 
         # test space-separated input
         stdin = 'data/stdin.txt'
@@ -133,17 +117,41 @@ class TestGUI(TestCase):
 
         progress_paths = {
             'scores_path': input_file,
-            'model_path': dest_file,
+            'model_path': model_path,
+            'model_session_path': model_session_path,
             'config_file': config_file,
             'index_file': index
         }
 
-        out_script = os.path.join(output_dir, 'train_out.sh')
+        # create test config file to update
+        shutil.copyfile('data/config.yaml', config_file)
 
-        _ = learn_model_command(progress_paths, hold_out=hold_out, nfolds=nfolds, separate_trans=separate_trans,
-                            num_iter=num_iter, max_states=max_states, npcs=npcs, kappa=kappa, min_kappa=min_kappa,
-                            robust=robust, percent_split=percent_split, verbose=verbose, n_models=n_models,
-                            output_dir=output_dir, get_cmd=True)
+        with open(config_file, 'r') as f:
+            config_data = yaml.safe_load(f)
 
-        assert os.path.exists(out_script)
-        os.remove(out_script)
+        # adding required run parameters to config file
+        config_data['hold_out'] = True
+        config_data['nfolds'] = 2
+        config_data['num_iter'] = 10
+        config_data['max_states'] = 100
+        config_data['npcs'] = 10
+        config_data['separate_trans'] = True
+        config_data['robust'] = True
+        config_data['percent_split'] = 20
+
+        config_data['scan_scale'] = 'log'
+        config_data['min_kappa'] = 1e3
+        config_data['max_kappa'] = None
+        config_data['kappa'] = 'scan'
+        config_data['n_models'] = 1
+        config_data['out_script'] = out_script
+        config_data['run_cmd'] = False
+
+        with open(config_file, 'w') as f:
+            yaml.safe_dump(config_data, f)
+
+        _ = learn_model_command(progress_paths, verbose=True,  get_cmd=True)
+
+        assert os.path.exists(os.path.join(model_session_path, out_script))
+        os.remove(os.path.join(model_session_path, out_script))
+        os.remove(config_file)
