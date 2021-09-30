@@ -596,7 +596,7 @@ def get_parameter_strings(config_data):
     # Handle possible Slurm batch functionality
     prefix = ''
     if config_data['cluster_type'] == 'slurm':
-        prefix = f'sbatch -c {config_data["ncpus"]} --mem={config_data["memory"]} '
+        prefix = f'sbatch -c {config_data["ncpus"] if config_data["ncpus"] > 0 else 8} --mem={config_data["memory"]} '
         prefix += f'-p {config_data["partition"]} -t {config_data["wall_time"]} --wrap "{config_data["prefix"]}'
 
     return parameters, prefix
