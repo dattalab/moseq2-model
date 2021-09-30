@@ -52,7 +52,7 @@ setup(
     packages=find_packages(exclude='docs'),
     include_package_data=True,
     platforms='any',
-    python_requires='>=3.6',
+    python_requires='>=3.6,<3.8',
     install_requires=['six==1.15.0', 'h5py==2.10.0',
                       'scipy==1.3.2', 'numpy==1.18.3', 'click==7.0', 'cython==0.29.14',
                       'pandas==1.0.5', 'future==0.18.2', 'joblib==0.15.1',

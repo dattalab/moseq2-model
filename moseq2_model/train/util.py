@@ -55,7 +55,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
     iter_lls, iter_holls = [], []
 
-    for itr in tqdm(range(start, num_iter), **progress_kwargs):
+    for itr in tqdm(range(start, num_iter), **progress_kwargs, desc='Training ARHMM'):
         # Resample states, and gracefully return in case of a keyboard interrupt
         try:
             model.resample_model(num_procs=ncpus)
@@ -301,7 +301,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
     Returns
     -------
     All_CLs (list): a dictionary containing cross-likelihoods for each syllable pair.
-    if ``frame_by_frame=True``, it will contain a value for each frame
+     if ``frame_by_frame=True``, it will contain a value for each frame
     CL (np.ndarray): the average cross-likelihood for each syllable pair
     '''
 
