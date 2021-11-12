@@ -91,7 +91,7 @@ def learn_model(input_file, dest_file, **config_data):
 @cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
 @click.argument('input_file', type=click.Path(exists=True))
 @click.argument('output_dir', type=click.Path(exists=False))
-@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for session metadata and group information")
 @click.option("--out-script", type=click.Path(), default='train_out.sh', help="Name of bash script file to save model training commands.")
 @click.option('--n-models', type=int, default=10, help='Number of models to train in kappa scan.')
 @click.option('--prefix', type=str, default='', help='Batch command string to prefix model training command (slurm only).')
