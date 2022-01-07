@@ -13,7 +13,7 @@ class TestGUI(TestCase):
         input_file = 'data/_pca/pca_scores.h5'
 
         model_path = 'data/test_model/model.p'
-        model_session_path = 'data/test_model/'
+        base_model_path = 'data/test_model/'
         config_file = 'data/test_config.yaml'
         index = 'data/test_index.yaml'
         checkpoint_path = 'data/test_model/checkpoints/'
@@ -28,7 +28,7 @@ class TestGUI(TestCase):
         progress_paths = {
             'scores_path': input_file,
             'model_path': model_path,
-            'model_session_path': model_session_path,
+            'base_model_path': base_model_path,
             'config_file': config_file,
             'index_file': index
         }
@@ -103,7 +103,7 @@ class TestGUI(TestCase):
 
         input_file = 'data/_pca/pca_scores.h5'
         model_path = 'data/models/model.p'
-        model_session_path = 'data/models/'
+        base_model_path = 'data/models/'
         config_file = 'data/test_config.yaml'
         index = 'data/test_index.yaml'
         out_script = 'train_out.sh'
@@ -118,7 +118,7 @@ class TestGUI(TestCase):
         progress_paths = {
             'scores_path': input_file,
             'model_path': model_path,
-            'model_session_path': model_session_path,
+            'base_model_path': base_model_path,
             'config_file': config_file,
             'index_file': index
         }
@@ -152,6 +152,6 @@ class TestGUI(TestCase):
 
         _ = learn_model_command(progress_paths, verbose=True,  get_cmd=True)
 
-        assert os.path.exists(os.path.join(model_session_path, out_script))
-        os.remove(os.path.join(model_session_path, out_script))
+        assert os.path.exists(os.path.join(base_model_path, out_script))
+        os.remove(os.path.join(base_model_path, out_script))
         os.remove(config_file)

@@ -28,7 +28,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     dest_file = progress_paths['model_path']
     config_file = progress_paths['config_file']
     index = progress_paths['index_file']
-    output_dir = progress_paths['model_session_path']
+    output_dir = progress_paths['base_model_path']
 
     assert exists(input_file), "PCA Scores not found; set the correct path in progress_paths['scores_path']"
     assert exists(config_file), "Config file not found; set the correct path in progress_paths['config_file']"
