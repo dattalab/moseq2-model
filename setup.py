@@ -56,7 +56,7 @@ setup(
     install_requires=['six==1.15.0', 'h5py==2.10.0',
                       'scipy==1.3.2', 'numpy==1.18.3', 'click==7.0', 'cython==0.29.14',
                       'pandas==1.0.5', 'future==0.18.2', 'joblib==0.15.1',
-                      'scikit-image==0.16.2', 'setuptools', 'cytoolz==0.10.1', 'tqdm==4.40.0',
+                      'scikit-image==0.16.2', 'setuptools', 'cytoolz==0.10.1', 'tqdm>=4.48.0',
                       'matplotlib==3.1.2', 'statsmodels==0.10.2', 'ruamel.yaml==0.16.5', 'opencv-python==4.1.2.30',
                       'pyhsmm @ git+https://github.com/mattjj/pyhsmm.git@master',
                       'pybasicbayes @ git+https://github.com/mattjj/pybasicbayes.git@master',
