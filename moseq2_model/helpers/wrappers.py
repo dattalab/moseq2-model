@@ -122,6 +122,7 @@ def learn_model_wrapper(input_file, dest_file, config_data):
         separate_trans=config_data['separate_trans'],
         groups=groupings,
         check_every=config_data['check_every'],
+        save_every = config_data['save_every'],
         verbose=config_data['verbose']
     )
 

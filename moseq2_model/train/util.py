@@ -15,7 +15,7 @@ from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 checkpoint_file=None, start=0, progress_kwargs={},
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
-                verbose=False, check_every=2):
+                verbose=False, check_every=2, save_every = -1):
     '''
     ARHMM training: Resamples ARHMM for inputted number of iterations,
     and optionally computes loglikelihood scores for each iteration if verbose is True.
@@ -52,6 +52,7 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
     # Checkpointing boolean
     checkpoint = checkpoint_freq is not None
+    labels = []
 
     iter_lls, iter_holls = [], []
 
@@ -82,8 +83,17 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
         # checkpoint if needed
         if checkpoint and ((itr + 1) % checkpoint_freq == 0):
             training_checkpoint(model, itr, checkpoint_file)
+        
+        # saveevery in needed
+        if save_every > 0 and ((itr + 1) % save_every == 0):
+            print(type(get_labels_from_model(model)))
+            labels.append(get_labels_from_model(model))
+            print(len(labels))
+    
+    if save_every < 0:
+        labels = get_labels_from_model(model)
 
-    return model, model.log_likelihood(), get_labels_from_model(model), iter_lls, iter_holls, False
+    return model, model.log_likelihood(), labels, iter_lls, iter_holls, False
 
 
 def training_checkpoint(model, itr, checkpoint_file):
