@@ -87,13 +87,12 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
         
         # saveevery in needed
         if save_every > 0 and ((itr + 1) % save_every == 0):
-            print(type(get_labels_from_model(model)))
             labels.append(get_labels_from_model(model))
-            print(len(labels))
     
     if save_every < 0:
         labels = get_labels_from_model(model)
-
+    
+    print(len(labels))
     return model, model.log_likelihood(), labels, iter_lls, iter_holls, False
 
 
