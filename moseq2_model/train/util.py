@@ -55,7 +55,8 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
     labels = []
 
     iter_lls, iter_holls = [], []
-
+    if save_every>0:
+        print("save every", save_every)
     for itr in tqdm(range(start, num_iter), **progress_kwargs, desc='Training ARHMM'):
         # Resample states, and gracefully return in case of a keyboard interrupt
         try:
