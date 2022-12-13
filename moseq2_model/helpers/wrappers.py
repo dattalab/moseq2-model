@@ -12,7 +12,7 @@ import click
 from copy import deepcopy
 from collections import OrderedDict
 from moseq2_model.train.util import train_model, run_e_step
-from os.path import join, basename, realpath, dirname, exists
+from os.path import join, basename, realpath, dirname, exists, splitext
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, get_scan_range_kappas,
                                create_command_strings, get_current_model, get_loglikelihoods, get_session_groupings)
 from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
@@ -34,6 +34,8 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     '''
 
     dest_file = realpath(dest_file)
+    # make sure the extension for model is correct
+    assert splitext(basename(dest_file))[-1] in ['.mat', '.z', '.pkl', '.p', '.h5'], 'Incorrect model filetype'
     os.makedirs(dirname(dest_file), exist_ok=True)
 
     if not os.access(dirname(dest_file), os.W_OK):
