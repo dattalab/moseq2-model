@@ -1,6 +1,6 @@
-'''
+"""
 GUI front-end function for training ARHMM.
-'''
+"""
 
 import ruamel.yaml as yaml
 from moseq2_model.cli import learn_model, kappa_scan_fit_models
@@ -8,7 +8,7 @@ from os.path import dirname, join, exists
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
 def learn_model_command(progress_paths, get_cmd=True, verbose=False):
-    '''
+    """
     Trains ARHMM from within a Jupyter notebook. Note that the configuration file will be overriden with the
     function parameters.
 
@@ -21,7 +21,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     Returns
     -------
     None or kappa scan command
-    '''
+    """
 
     # Load proper input variables
     input_file = progress_paths['scores_path']

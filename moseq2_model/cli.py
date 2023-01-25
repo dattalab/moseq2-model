@@ -1,7 +1,6 @@
-'''
-CLI front-end operations. This module contains all the functionality and configurable parameters
-users can alter to most accurately process their data.
-'''
+"""
+CLI for modeling the data using AR-HMM.
+"""
 
 import os
 import click
@@ -30,10 +29,10 @@ def cli():
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
 def count_frames(input_file, var_name):
-    '''
+    """
     Count the number of frames in the INPUT_FILE.
     INPUT_FILE = path to h5 file
-    '''
+    """
     count_frames_wrapper(input_file=input_file, var_name=var_name)
 
 
@@ -81,11 +80,11 @@ def modeling_parameters(function):
 @click.option("--default-group", type=str, default="n/a", help="Default group name to use for separate-trans")
 @click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, **config_data):
-    '''
+    """
     Train the ARHMM using PC scores located in the INPUT_FILE, and saves the model to DEST_FILE
     INPUT_FILE = path to h5 file
     DEST_FILE = path for model output
-    '''
+    """
     learn_model_wrapper(input_file, dest_file, config_data)
 
 @cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
@@ -106,12 +105,12 @@ def learn_model(input_file, dest_file, **config_data):
 @click.option("--run-cmd", is_flag=True, help="Run scan command strings.")
 @modeling_parameters
 def kappa_scan_fit_models(input_file, output_dir, **config_data):
-    '''
+    """
     Scan through the kappa hyperparameter to find the kappa that best matches the changepoint duration
     distribution. Train each ARHMM using PC scores located in the INPUT_FILE, and saves the models to OUTPUT_DIR.
     INPUT_FILE = path to h5 file
     OUTPUT_DIR = path for saving the model outputs
-    '''
+    """
 
     config_data['out_script'] = join(output_dir, config_data['out_script'])
     kappa_scan_fit_models_wrapper(input_file, config_data, output_dir)

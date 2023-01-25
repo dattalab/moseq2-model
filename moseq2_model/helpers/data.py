@@ -1,6 +1,6 @@
-'''
+"""
 Helper functions for reading data from index files, and preparing metadata prior to training.
-'''
+"""
 
 import click
 import random
@@ -18,7 +18,7 @@ from moseq2_model.train.util import whiten_all, whiten_each
 
 
 def process_indexfile(index, data_metadata, default_group='n/a', select_groups=False):
-    '''
+    """
     Reads index file (if it exists) and returns dictionaries containing metadata in the index file.
     The data_metadata will also be updated with the information read from the index file
 
@@ -33,7 +33,7 @@ def process_indexfile(index, data_metadata, default_group='n/a', select_groups=F
     -------
     index_data (dict): loaded index file.
     data_metadata (dict): updated metadata dictionary.
-    '''
+    """
 
     # if we have an index file, strip out the groups, match to the scores uuids
     if index is not None and exists(index):
@@ -63,7 +63,7 @@ def process_indexfile(index, data_metadata, default_group='n/a', select_groups=F
 
 
 def select_data_to_model(index_data, data_dict, data_metadata, select_groups=False):
-    '''
+    """
     Prompts user to select data to model via the data uuids/groups and paths located
     in the index file if the select_groups flag is True. Otherwise, it will use all data
     to model behavior.
@@ -82,7 +82,7 @@ def select_data_to_model(index_data, data_dict, data_metadata, select_groups=Fal
         session uuids
     data_metadata (dict): updated metadata containing the selected uuids and
         groups
-    '''
+    """
 
     # If no input is given, load all the uuids and groups
     use_keys, use_groups = zip(*pluck(['uuid', 'group'], index_data['files']))
@@ -113,7 +113,7 @@ def select_data_to_model(index_data, data_dict, data_metadata, select_groups=Fal
 
 
 def prepare_model_metadata(data_dict, data_metadata, config_data):
-    '''
+    """
     Sets model training metadata parameters, whitens data,
     if hold_out is True, will split data and return list of heldout keys,
     and updates all dictionaries.
@@ -130,7 +130,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data):
     model_parameters (dict): model parameters used to initialize the ARHMM
     train_list (list): list of session uuids to include for training.
     hold_out_list (list): list of session uuids to hold out (if hold_out == True)
-    '''
+    """
 
     if config_data['kappa'] is None:
         # Count total number of frames, then set it as kappa
@@ -207,7 +207,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data):
 
 
 def get_heldout_data_splits(data_dict, train_list, hold_out_list):
-    '''
+    """
     Split data by session UUIDs into training and held out datasets.
 
     Parameters
@@ -220,7 +220,7 @@ def get_heldout_data_splits(data_dict, train_list, hold_out_list):
     -------
     train_data (OrderedDict): dictionary of uuid to PC score key-value pairs for uuids in train_list
     test_data (OrderedDict): dictionary of uuids to PC score key-value pairs for uuids in hold_out_list.
-    '''
+    """
 
     # Getting OrderedDicts of the training, and testing/held-out data
     train_data = OrderedDict((i, data_dict[i]) for i in train_list)
@@ -230,7 +230,7 @@ def get_heldout_data_splits(data_dict, train_list, hold_out_list):
 
 
 def get_training_data_splits(split_frac, data_dict):
-    '''
+    """
     Split the data into a training and held out dataset by splitting each session by some
     fraction `percent_split`.
 
@@ -244,7 +244,7 @@ def get_training_data_splits(split_frac, data_dict):
     -------
     training_data (OrderedDict): the split percentage of the training data.
     validation_data (OrderedDict): the split percentage of the validation data
-    '''
+    """
 
     training_data = OrderedDict()
     validation_data = OrderedDict()
@@ -263,7 +263,7 @@ def get_training_data_splits(split_frac, data_dict):
 
 
 def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, model_dir):
-    '''
+    """
     Graphs model training performance progress throughout modeling.
     Will only run if verbose == True
 
@@ -277,7 +277,7 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, model_dir):
     Returns
     -------
     img_path (str): path to saved graph.
-    '''
+    """
 
     ll_type = 'validation'
     if config_data['hold_out']:

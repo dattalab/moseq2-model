@@ -1,6 +1,6 @@
-'''
+"""
 Utility functions for handling loading and saving models and their respective metadata.
-'''
+"""
 import re
 import h5py
 import click
@@ -17,7 +17,7 @@ from autoregressive.util import AR_striding
 from os.path import basename, getctime, join, exists
 
 def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
-    '''
+    """
     Load the Principal Component Scores for modeling.
 
     Parameters
@@ -31,7 +31,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
     -------
     data_dict (OrderedDict): key-value pairs for keys being uuids and values being PC scores.
     metadata (OrderedDict): dictionary containing lists of index-aligned uuids and groups.
-    '''
+    """
 
     metadata = {
         'uuids': None,
@@ -106,7 +106,7 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
 
 
 def is_uuid(string):
-    '''
+    """
 
     Checks to see if string is a uuid. Returns True if it is.
 
@@ -117,14 +117,14 @@ def is_uuid(string):
     Returns
     -------
     (bool): boolean to indicate if a string is a uuid.
-    '''
+    """
     regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
     match = regex.match(string)
     return bool(match)
 
 
 def get_current_model(use_checkpoint, all_checkpoints, train_data, model_parameters):
-    '''
+    """
     Checks to see whether user is loading a checkpointed model, if so, loads the latest iteration.
     Otherwise, will instantiate a new model.
 
@@ -139,7 +139,7 @@ def get_current_model(use_checkpoint, all_checkpoints, train_data, model_paramet
     -------
     arhmm (ARHMM): instantiated model object including loaded data
     itr (int): starting iteration number for the model to begin training from.
-    '''
+    """
 
     # Check for available previous modeling checkpoints
     itr = 0
@@ -166,7 +166,7 @@ def get_current_model(use_checkpoint, all_checkpoints, train_data, model_paramet
 
 
 def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
-    '''
+    """
     Computes the log-likelihoods of the training sessions.
 
     Parameters
@@ -181,7 +181,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
     Returns
     -------
     ll (list): list of log-likelihoods for the trained model
-    '''
+    """
 
     if separate_trans:
         ll = [arhmm.log_likelihood(v, group_id=g) for g, v in zip(groups, data.values())]
@@ -194,7 +194,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
 
 
 def get_session_groupings(data_metadata, train_list, hold_out_list):
-    '''
+    """
     Creates a list or tuple of assigned groups for training and (optionally)
     held out data.
 
@@ -208,7 +208,7 @@ def get_session_groupings(data_metadata, train_list, hold_out_list):
     -------
     groupings (tuple): 2-tuple containing lists of train groups
     and held-out groups (if held_out_list exists)
-    '''
+    """
 
     # Get held out groups
     hold_g = [data_metadata['groups'][k] for k in hold_out_list]
@@ -221,7 +221,7 @@ def get_session_groupings(data_metadata, train_list, hold_out_list):
 
 
 def save_dict(filename, obj_to_save=None):
-    '''
+    """
     Save dictionary to file.
 
     Parameters
@@ -232,7 +232,7 @@ def save_dict(filename, obj_to_save=None):
     Returns
     -------
     None
-    '''
+    """
 
     # Parsing given file extension and saving model accordingly
     if filename.endswith('.mat'):
@@ -253,7 +253,7 @@ def save_dict(filename, obj_to_save=None):
 
 
 def dict_to_h5(h5file, export_dict, path='/'):
-    '''
+    """
     Recursively save dicts to h5 file groups.
     # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
 
@@ -265,7 +265,7 @@ def dict_to_h5(h5file, export_dict, path='/'):
 
     Returns
     -------
-    '''
+    """
 
     for key, item in export_dict.items():
         # Parse key and value types, and load them accordingly
@@ -292,7 +292,7 @@ def dict_to_h5(h5file, export_dict, path='/'):
 
 
 def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
-    '''
+    """
     Load an arhmm checkpoint and re-add data into the arhmm model checkpoint.
 
     Parameters
@@ -303,7 +303,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     Returns
     -------
     mdl_dict (dict): a dict containing the model with reloaded data, and associated training data
-    '''
+    """
 
     # Loading model and its respective number of lags
     mdl_dict = joblib.load(filename)
@@ -317,7 +317,7 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
 
 
 def save_arhmm_checkpoint(filename: str, arhmm: dict):
-    '''
+    """
     Save an arhmm checkpoint and strip out data used to train the model.
 
     Parameters
@@ -328,7 +328,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 
     Returns
     -------
-    '''
+    """
 
     # Getting model object
     mdl = arhmm.pop('model')
@@ -340,7 +340,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 
 
 def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
-    '''
+    """
     A convenience function to load the contents of an h5 file
     at a user-specified path into a dictionary.
 
@@ -352,7 +352,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     Returns
     -------
     (dict): dict containing all of the h5 file contents.
-    '''
+    """
 
     ans = {}
     if isinstance(file[path], h5py._hl.dataset.Dataset):
@@ -369,7 +369,7 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
 
 
 def h5_to_dict(h5file, path: str = '/') -> dict:
-    '''
+    """
     Load h5 data to dictionary from a user specified path.
 
     Parameters
@@ -380,7 +380,7 @@ def h5_to_dict(h5file, path: str = '/') -> dict:
     Returns
     -------
     out (dict): a dict with h5 file contents with the same path structure
-    '''
+    """
 
     # Load h5 file according to whether it is separated by Groups
     if isinstance(h5file, str):
@@ -394,7 +394,7 @@ def h5_to_dict(h5file, path: str = '/') -> dict:
 
 
 def load_data_from_matlab(filename, var_name="features", npcs=10):
-    '''
+    """
     Load PC Scores from a specified variable column in a MATLAB file.
 
     Parameters
@@ -406,7 +406,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
     Returns
     -------
     data_dict (OrderedDict): loaded dictionary of uuid and PC-score pairings.
-    '''
+    """
 
     data_dict = OrderedDict()
 
@@ -423,7 +423,7 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
 
 
 def load_cell_string_from_matlab(filename, var_name="uuids"):
-    '''
+    """
     Load cell strings from MATLAB file.
 
     Parameters
@@ -434,7 +434,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
     Returns
     -------
     return_list (list): list of selected loaded variables
-    '''
+    """
 
     return_list = []
     with h5py.File(filename, 'r') as f:
@@ -453,7 +453,7 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
 
 # per Scott's suggestion
 def copy_model(model_obj):
-    '''
+    """
     Return a new shallow copy of the ARHMM that doesn't contain the training data.
 
     Parameters
@@ -463,7 +463,7 @@ def copy_model(model_obj):
     Returns
     -------
     cp (ARHMM): copy of the model
-    '''
+    """
 
     tmp = []
 
@@ -483,7 +483,7 @@ def copy_model(model_obj):
 
 
 def get_parameters_from_model(model):
-    '''
+    """
     Get parameter dictionary from model.
 
     Parameters
@@ -493,7 +493,7 @@ def get_parameters_from_model(model):
     Returns
     -------
     parameters (dict): dictionary containing all modeling parameters
-    '''
+    """
 
     init_obs_dist = model.init_emission_distn.hypparams
 
@@ -529,7 +529,7 @@ def get_parameters_from_model(model):
 
 
 def count_frames(data_dict=None, input_file=None, var_name='scores'):
-    '''
+    """
     Counts the total number of frames loaded from the PCA scores file.
 
     Parameters
@@ -541,7 +541,7 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
     Returns
     -------
     total_frames (int): total number of counted frames.
-    '''
+    """
 
     if data_dict is None and input_file is not None:
         data_dict, _ = load_pcs(filename=input_file, var_name=var_name, load_groups=True)
@@ -555,7 +555,7 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
 
 
 def get_parameter_strings(config_data):
-    '''
+    """
     Creates the CLI learn-model command using the given config_data dict contents, which can be used
     to run the modeling step. Function checks for the following paramters: [npcs, num_iter,
     separate_trans, robust, e_step, hold_out, max_states, converge, tolerance].
@@ -568,7 +568,7 @@ def get_parameter_strings(config_data):
     -------
     parameters (str): String containing CLI command parameter flags.
     prefix (str): Prefix string for the learn-model command (Slurm only).
-    '''
+    """
 
     parameters = f' --npcs {config_data["npcs"]} --num-iter {config_data["num_iter"]} '
 
@@ -603,7 +603,7 @@ def get_parameter_strings(config_data):
 
 
 def create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{:03d}-{}.p'):
-    '''
+    """
     Creates the CLI learn-model command strings with parameter flags based on the contents of the configuration
     dict. Each model will a use different kappa value within the specified range.
 
@@ -618,7 +618,7 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     Returns
     -------
     command_string (str): CLI learn-model command strings with the requested parameters separated by newline characters
-    '''
+    """
 
     # Get base command and parameter flags
     base_command = f'moseq2-model learn-model {input_file} '
@@ -641,7 +641,7 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
 
 
 def get_scan_range_kappas(data_dict, config_data):
-    '''
+    """
     Helper function that returns the kappa values to train models on based on the user's selected scanning scale range.
     Default values will be selected if min/max_kappa are None. 
 
@@ -666,7 +666,7 @@ def get_scan_range_kappas(data_dict, config_data):
     Returns
     -------
     kappas (list): list of ints corresponding to the kappa value for each model.
-    '''
+    """
 
     nframes = count_frames(data_dict)
 

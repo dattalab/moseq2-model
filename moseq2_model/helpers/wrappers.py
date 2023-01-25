@@ -1,9 +1,9 @@
-'''
+"""
 Wrapper functions for all functionality included in MoSeq2-Model that is accessible via CLI or GUI.
 
 Each wrapper function executes the functionality from end-to-end given it's dependency parameters are inputted.
 (See CLI Click parameters)
-'''
+"""
 
 import os
 import sys
@@ -19,7 +19,7 @@ from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, 
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
 def learn_model_wrapper(input_file, dest_file, config_data):
-    '''
+    """
     Function used to train ARHMM on PCA data.
 
     Parameters
@@ -31,7 +31,7 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     Returns
     -------
     None
-    '''
+    """
 
     dest_file = realpath(dest_file)
     # make sure the extension for model is correct
@@ -174,7 +174,7 @@ def learn_model_wrapper(input_file, dest_file, config_data):
 
 
 def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
-    '''
+    """
     Wrapper function that spools multiple model training commands for a range of kappa values.
 
     Parameters
@@ -186,7 +186,7 @@ def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
     Returns
     -------
     command_string (str): CLI command string for model training commands.
-    '''
+    """
     assert 'out_script' in config_data, 'Need to supply out_script to save modeling commands'
 
     data_dict, _ = load_pcs(filename=input_file, var_name=config_data.get('var_name', 'scores'),
