@@ -22,15 +22,13 @@ def process_indexfile(index, data_metadata, default_group='n/a', select_groups=F
     Reads index file (if it exists) and returns dictionaries containing metadata in the index file.
     The data_metadata will also be updated with the information read from the index file
 
-    Parameters
-    ----------
+    Args:
     index (str or None): path to index file.
     data_metadata (dict): loaded metadata containing uuid and group information.
     default_group (str): default group name to supply to data without assigned group labels
     select_groups (bool): when True, print metadata describing group selection
 
-    Returns
-    -------
+    Returns:
     index_data (dict): loaded index file.
     data_metadata (dict): updated metadata dictionary.
     """
@@ -68,16 +66,14 @@ def select_data_to_model(index_data, data_dict, data_metadata, select_groups=Fal
     in the index file if the select_groups flag is True. Otherwise, it will use all data
     to model behavior.
 
-    Parameters
-    ----------
+    Args:
     index_data (dict): loaded dictionary from index file
     data_dict (dict): dictionary containing PC scores for all sessions
     data_metadata (dict): dictionary containing metadata associated with the 
         recording sessions
     select_groups (bool): flag to solicit user input on which groups to select for modeling
 
-    Returns
-    -------
+    Returns:
     data_dict (dict): dictionary to model containing data from the selected 
         session uuids
     data_metadata (dict): updated metadata containing the selected uuids and
@@ -118,14 +114,12 @@ def prepare_model_metadata(data_dict, data_metadata, config_data):
     if hold_out is True, will split data and return list of heldout keys,
     and updates all dictionaries.
 
-    Parameters
-    ----------
+    Args:
     data_dict (OrderedDict): loaded data dictionary.
     data_metadata (OrderedDict): loaded metadata dictionary.
     config_data (dict): dictionary containing all modeling parameters.
 
-    Returns
-    -------
+    Returns:
     data_dict (OrderedDict): optionally whitened and updated data dictionary.
     model_parameters (dict): model parameters used to initialize the ARHMM
     train_list (list): list of session uuids to include for training.
@@ -210,14 +204,12 @@ def get_heldout_data_splits(data_dict, train_list, hold_out_list):
     """
     Split data by session UUIDs into training and held out datasets.
 
-    Parameters
-    ----------
+    Args:
     data_dict (OrderedDict): dictionary of all PC scores included in the model
     train_list (list): list of keys included in the training data
     hold_out_list (list): list of keys included in the held out data
 
-    Returns
-    -------
+    Returns:
     train_data (OrderedDict): dictionary of uuid to PC score key-value pairs for uuids in train_list
     test_data (OrderedDict): dictionary of uuids to PC score key-value pairs for uuids in hold_out_list.
     """
@@ -234,14 +226,12 @@ def get_training_data_splits(split_frac, data_dict):
     Split the data into a training and held out dataset by splitting each session by some
     fraction `percent_split`.
 
-    Parameters
-    ----------
+    Args:
     split_frac (float): fraction to split each session into training and held out data. A value of 0.9
         means 90% of the data will be preserved for training.
     data_dict (OrderedDict): dict of uuid-PC Score key-value pairs for all data included in the model.
 
-    Returns
-    -------
+    Returns:
     training_data (OrderedDict): the split percentage of the training data.
     validation_data (OrderedDict): the split percentage of the validation data
     """
@@ -267,15 +257,13 @@ def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, model_dir):
     Graphs model training performance progress throughout modeling.
     Will only run if verbose == True
 
-    Parameters
-    ----------
+    Args:
     config_data (dict): dictionary of model training parameters.
     iter_lls (list): list of training log-likelihoods for each training iteration
     iter_holls (list): list of held out log-likelihoods for each training iteration
     model_dir (str): path to the directory the model is saved in.
 
-    Returns
-    -------
+    Returns:
     img_path (str): path to saved graph.
     """
 

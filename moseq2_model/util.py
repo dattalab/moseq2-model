@@ -20,15 +20,13 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
     """
     Load the Principal Component Scores for modeling.
 
-    Parameters
-    ----------
+    Args:
     filename (str): path to the file that contains PC scores
     var_name (str): key where the pc scores are stored within ``filename``
     load_groups (bool): Load metadata group variable
     npcs (int): Number of PCs to load
 
-    Returns
-    -------
+    Returns:
     data_dict (OrderedDict): key-value pairs for keys being uuids and values being PC scores.
     metadata (OrderedDict): dictionary containing lists of index-aligned uuids and groups.
     """
@@ -110,12 +108,10 @@ def is_uuid(string):
 
     Checks to see if string is a uuid. Returns True if it is.
 
-    Parameters
-    ----------
+    Args:
     string (str): string containing a session uuid given by the index file, and originally generated when session is extracted.
 
-    Returns
-    -------
+    Returns:
     (bool): boolean to indicate if a string is a uuid.
     """
     regex = re.compile('^[a-f0-9]{8}-?[a-f0-9]{4}-?4[a-f0-9]{3}-?[89ab][a-f0-9]{3}-?[a-f0-9]{12}\Z', re.I)
@@ -128,15 +124,13 @@ def get_current_model(use_checkpoint, all_checkpoints, train_data, model_paramet
     Checks to see whether user is loading a checkpointed model, if so, loads the latest iteration.
     Otherwise, will instantiate a new model.
 
-    Parameters
-    ----------
+    Args:
     use_checkpoint (bool): CLI input parameter indicating user is loading a checkpointed model
     all_checkpoints (list): list of all found checkpoint paths
     train_data (OrderedDict): dictionary of uuid-PC score key-value pairs
     model_parameters (dict): dictionary of required modeling hyperparameters.
 
-    Returns
-    -------
+    Returns:
     arhmm (ARHMM): instantiated model object including loaded data
     itr (int): starting iteration number for the model to begin training from.
     """
@@ -169,8 +163,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
     """
     Computes the log-likelihoods of the training sessions.
 
-    Parameters
-    ----------
+    Args:
     arhmm (ARHMM): ARHMM model.
     data (dict): dict object with UUID keys containing the PCS used for training.
     groups (list): list of assigned groups for all corresponding session uuids. Only used if
@@ -178,8 +171,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
     separate_trans (bool): flag to compute separate log-likelihoods for each modeled group.
     normalize (bool): if set to True this function will normalize by frame counts in each session
 
-    Returns
-    -------
+    Returns:
     ll (list): list of log-likelihoods for the trained model
     """
 
@@ -198,14 +190,12 @@ def get_session_groupings(data_metadata, train_list, hold_out_list):
     Creates a list or tuple of assigned groups for training and (optionally)
     held out data.
 
-    Parameters
-    ----------
+    Args:
     data_metadata (dict): dict containing session group information
     all_keys (list): list of all corresponding included session UUIDs
     hold_out_list (list): list of held-out uuids
 
-    Returns
-    -------
+    Returns:
     groupings (tuple): 2-tuple containing lists of train groups
     and held-out groups (if held_out_list exists)
     """
@@ -224,13 +214,11 @@ def save_dict(filename, obj_to_save=None):
     """
     Save dictionary to file.
 
-    Parameters
-    ----------
+    Args:
     filename (str): path to file where dict is being saved.
     obj_to_save (dict): dict to save.
 
-    Returns
-    -------
+    Returns:
     None
     """
 
@@ -257,14 +245,12 @@ def dict_to_h5(h5file, export_dict, path='/'):
     Recursively save dicts to h5 file groups.
     # https://codereview.stackexchange.com/questions/120802/recursively-save-python-dictionaries-to-hdf5-files-using-h5py
 
-    Parameters
-    ----------
+    Args:
     h5file (h5py.File): opened h5py File object.
     export_dict (dict): dictionary to save
     path (str): path within h5 to save to.
 
-    Returns
-    -------
+    Returns:
     """
 
     for key, item in export_dict.items():
@@ -295,13 +281,11 @@ def load_arhmm_checkpoint(filename: str, train_data: dict) -> dict:
     """
     Load an arhmm checkpoint and re-add data into the arhmm model checkpoint.
 
-    Parameters
-    ----------
+    Args:
     filename (str): path that specifies the checkpoint.
     train_data (OrderedDict): an OrderedDict that contains the training data
 
-    Returns
-    -------
+    Returns:
     mdl_dict (dict): a dict containing the model with reloaded data, and associated training data
     """
 
@@ -320,14 +304,12 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
     """
     Save an arhmm checkpoint and strip out data used to train the model.
 
-    Parameters
-    ----------
+    Args:
     filename (str): path that specifies the checkpoint
     arhmm (dict): a dictionary containing the model obj, training iteration number,
                log-likelihoods of each training step, and labels for each step.
 
-    Returns
-    -------
+    Returns:
     """
 
     # Getting model object
@@ -344,13 +326,11 @@ def _load_h5_to_dict(file: h5py.File, path: str) -> dict:
     A convenience function to load the contents of an h5 file
     at a user-specified path into a dictionary.
 
-    Parameters
-    ----------
+    Args:
     filename (h5py.File): opened h5 file.
     path (str): path within the h5 file to load data from.
 
-    Returns
-    -------
+    Returns:
     (dict): dict containing all of the h5 file contents.
     """
 
@@ -372,13 +352,11 @@ def h5_to_dict(h5file, path: str = '/') -> dict:
     """
     Load h5 data to dictionary from a user specified path.
 
-    Parameters
-    ----------
+    Args:
     h5file (str or h5py.File): file path to the given h5 file or the h5 file handle
     path (str): path to the base dataset within the h5 file
 
-    Returns
-    -------
+    Returns:
     out (dict): a dict with h5 file contents with the same path structure
     """
 
@@ -397,14 +375,12 @@ def load_data_from_matlab(filename, var_name="features", npcs=10):
     """
     Load PC Scores from a specified variable column in a MATLAB file.
 
-    Parameters
-    ----------
+    Args:
     filename (str): path to MATLAB (.mat) file
     var_name (str): variable to load
     npcs (int): number of PCs to load.
 
-    Returns
-    -------
+    Returns:
     data_dict (OrderedDict): loaded dictionary of uuid and PC-score pairings.
     """
 
@@ -426,13 +402,11 @@ def load_cell_string_from_matlab(filename, var_name="uuids"):
     """
     Load cell strings from MATLAB file.
 
-    Parameters
-    ----------
+    Args:
     filename (str): path to .mat file
     var_name (str): variable name to read
 
-    Returns
-    -------
+    Returns:
     return_list (list): list of selected loaded variables
     """
 
@@ -456,12 +430,10 @@ def copy_model(model_obj):
     """
     Return a new shallow copy of the ARHMM that doesn't contain the training data.
 
-    Parameters
-    ----------
+    Args:
     model_obj (ARHMM): model to copy.
 
-    Returns
-    -------
+    Returns:
     cp (ARHMM): copy of the model
     """
 
@@ -486,12 +458,10 @@ def get_parameters_from_model(model):
     """
     Get parameter dictionary from model.
 
-    Parameters
-    ----------
+    Args:
     model (ARHMM): model to get parameters from.
 
-    Returns
-    -------
+    Returns:
     parameters (dict): dictionary containing all modeling parameters
     """
 
@@ -532,14 +502,12 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
     """
     Counts the total number of frames loaded from the PCA scores file.
 
-    Parameters
-    ----------
+    Args:
     data_dict (OrderedDict): Loaded PCA scores OrderedDict object.
     input_file (str): Path to PCA Scores file to load data_dict if not already data_dict is None
     var_name (str): Path within PCA h5 file to load scores from.
 
-    Returns
-    -------
+    Returns:
     total_frames (int): total number of counted frames.
     """
 
@@ -560,12 +528,10 @@ def get_parameter_strings(config_data):
     to run the modeling step. Function checks for the following paramters: [npcs, num_iter,
     separate_trans, robust, e_step, hold_out, max_states, converge, tolerance].
 
-    Parameters
-    ----------
+    Args:
     config_data (dict): Configuration parameters dict.
 
-    Returns
-    -------
+    Returns:
     parameters (str): String containing CLI command parameter flags.
     prefix (str): Prefix string for the learn-model command (Slurm only).
     """
@@ -607,16 +573,14 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     Creates the CLI learn-model command strings with parameter flags based on the contents of the configuration
     dict. Each model will a use different kappa value within the specified range.
 
-    Parameters
-    ----------
+    Args:
     input_file (str): Path to PCA Scores
     output_dir (str): Path to directory to save models in.
     config_data (dict): Configuration parameters dict.
     kappas (list): List of kappa values for model training commands.
     model_name_format (str): Filename string format string.
 
-    Returns
-    -------
+    Returns:
     command_string (str): CLI learn-model command strings with the requested parameters separated by newline characters
     """
 
@@ -658,13 +622,11 @@ def get_scan_range_kappas(data_dict, config_data):
     max(kappas) == 18000000
     >>> kappas == [18, 20016, 40014, 60012, 80010, 100008, 120006, 140004, 160002, 180000]
 
-    Parameters
-    ----------
+    Args:
     data_dict (OrderedDict): Loaded PCA score dictionary.
     config_data (dict): Configuration parameters dict.
 
-    Returns
-    -------
+    Returns:
     kappas (list): list of ints corresponding to the kappa value for each model.
     """
 

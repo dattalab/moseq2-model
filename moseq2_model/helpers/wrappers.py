@@ -22,14 +22,12 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     """
     Function used to train ARHMM on PCA data.
 
-    Parameters
-    ----------
+    Args:
     input_file (str): path to pca scores file.
     dest_file (str): path to save model to.
     config_data (dict): dictionary containing the modeling parameters.
     
-    Returns
-    -------
+    Returns:
     None
     """
 
@@ -177,14 +175,12 @@ def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
     """
     Wrapper function that spools multiple model training commands for a range of kappa values.
 
-    Parameters
-    ----------
+    Args:
     input_file (str): Path to PCA Scores
     config_data (dict): Dict containing model training parameters
     output_dir (str): Path to output directory to save trained models
 
-    Returns
-    -------
+    Returns:
     command_string (str): CLI command string for model training commands.
     """
     assert 'out_script' in config_data, 'Need to supply out_script to save modeling commands'

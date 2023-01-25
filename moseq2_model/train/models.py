@@ -20,13 +20,11 @@ def _get_empirical_ar_params(train_datas, params):
     Estimate the parameters of an AR observation model
     by fitting a single AR model to the entire dataset.
 
-    Parameters
-    ----------
+    Args:
     train_datas (list): list of np.ndarrays representing each session's PC scores
     params (dict): dict containing modeling parameters used for initialization
 
-    Returns
-    -------
+    Returns:
     obs_params (dict): dict of observed parameters to use in modeling.
     """
 
@@ -59,8 +57,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
     """
     Initializes ARHMM and adds data and group labels to the ARHMM model.
 
-    Parameters
-    ----------
+    Args:
     data_dict (OrderedDict): training data to add to model
     kappa (float): hyperparameter for setting syllable duration. Larger kappa = longer syllable durations
     gamma (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone)
@@ -79,8 +76,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
     robust (bool): use student's t-distributed AR model
     silent (bool): flag to print out model information.
 
-    Returns
-    -------
+    Returns:
     model (ARHMM): initialized model object
     """
 

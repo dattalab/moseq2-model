@@ -12,14 +12,12 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     Trains ARHMM from within a Jupyter notebook. Note that the configuration file will be overriden with the
     function parameters.
 
-    Parameters
-    ----------
+    Args:
     progress_paths (dict): notebook progress dict that contains paths to the pca scores, config, and index files.
     get_cmd (bool): flag to return the kappa scan learn-model commands.
     verbose (bool): compute modeling summary - can slow down training.
 
-    Returns
-    -------
+    Returns:
     None or kappa scan command
     """
 
