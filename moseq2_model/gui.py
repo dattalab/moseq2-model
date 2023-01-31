@@ -1,5 +1,5 @@
 """
-GUI front-end function for training ARHMM.
+GUI front-end functions for training ARHMM.
 """
 
 import ruamel.yaml as yaml
@@ -9,8 +9,7 @@ from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_mo
 
 def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     """
-    Trains ARHMM from within a Jupyter notebook. Note that the configuration file will be overriden with the
-    function parameters.
+    Train ARHMM from within a Jupyter notebook using parameters specified in the notebook.
 
     Args:
     progress_paths (dict): notebook progress dict that contains paths to the pca scores, config, and index files.
