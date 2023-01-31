@@ -512,7 +512,7 @@ def count_frames(data_dict=None, input_file=None, var_name='scores'):
 
 def get_parameter_strings(config_data):
     """
-    Creates the CLI learn-model command using the given config_data dict contents to run the modeling step.
+    Create the CLI learn-model command using the given config_data dict contents to run the modeling step.
 
     Args:
     config_data (dict): Configuration parameters dict.
@@ -556,7 +556,7 @@ def get_parameter_strings(config_data):
 
 def create_command_strings(input_file, output_dir, config_data, kappas, model_name_format='model-{:03d}-{}.p'):
     """
-    Creates the CLI learn-model command strings with parameter flags based on the contents of the configuration dict.
+    Create the CLI learn-model command strings with parameter flags based on the contents of the configuration dict.
 
     Args:
     input_file (str): Path to PC Scores
