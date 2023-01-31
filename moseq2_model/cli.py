@@ -25,14 +25,11 @@ def cli():
     pass
 
 
-@cli.command(name='count-frames', help="Counts number of frames in given h5 file (pca_scores)")
+@cli.command(name='count-frames', help="Count the number of frames in given h5 file (pca_scores)")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
 def count_frames(input_file, var_name):
-    """
-    Count the number of frames in the INPUT_FILE.
-    INPUT_FILE = path to h5 file
-    """
+    # Count the number of frames in the input file.
     count_frames_wrapper(input_file=input_file, var_name=var_name)
 
 
@@ -44,9 +41,9 @@ def modeling_parameters(function):
               help="Random seed for holding out data (set for reproducibility)")(function)
     function = click.option("--nfolds", type=int, default=5, help="Number of folds for split")(function)
     function = click.option("--ncpus", "-c", type=int, default=0, help="Number of cores to use for resampling")(function)
-    function = click.option("--num-iter", "-n", type=int, default=100, help="Number of times to resample model")(function)
+    function = click.option("--num-iter", "-n", type=int, default=100, help="Number of interations to resample model")(function)
     function = click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")(function)
-    function = click.option('--e-step', is_flag=True, help="Compute the expected state values for each animal")(function)
+    function = click.option('--e-step', is_flag=True, help="Compute the expected state sequence for each recordings")(function)
     function = click.option("--save-every", "-s", type=int, default=-1,
               help="Increment to save labels and model object (-1 for just last)")(function)
     function = click.option("--save-model", is_flag=True, help="Save model object at the end of training")(function)
@@ -59,8 +56,8 @@ def modeling_parameters(function):
     function = click.option("--gamma", "-g", type=float, default=1e3,
                             help="Gamma; hierarchical dirichlet process hyperparameter (try not to change it).")(function)
     function = click.option("--alpha", "-a", type=float, default=5.7,
-                            help="Alpha; hierarchical dirichlet process hyperparameter (try not t ochange it).")(function)
-    function = click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise for regularization. Not generally used")(function)
+                            help="Alpha; hierarchical dirichlet process hyperparameter (try not to change it).")(function)
+    function = click.option("--noise-level", type=float, default=0, help="Additive white gaussian noise to input data for regularization. Not generally used")(function)
     function = click.option("--nlags", type=int, default=3, help="Number of lags to use")(function)
     function = click.option("--separate-trans", is_flag=True, help="Use separate transition matrix for each group")(function)
     function = click.option("--robust", is_flag=True, help="Use robust AR-HMM model. More tolerant to noise")(function)
@@ -69,25 +66,22 @@ def modeling_parameters(function):
 
     return function
 
-@cli.command(name="learn-model", help="Trains ARHMM on PCA Scores with given training parameters")
+@cli.command(name="learn-model", help="Train ARHMM on PC Scores with given training parameters")
 @click.argument("input_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))
 @modeling_parameters
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa; hyperparameter used to set syllable duration. Larger k = longer syllable lengths")
-@click.option("--checkpoint-freq", type=int, default=-1, help='checkpoint the training after N iterations')
+@click.option("--checkpoint-freq", type=int, default=-1, help='save model checkpoint every n iterations')
 @click.option("--use-checkpoint", is_flag=True, help='indicate whether to use previously saved checkpoint')
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
 @click.option("--default-group", type=str, default="n/a", help="Default group name to use for separate-trans")
 @click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, **config_data):
-    """
-    Train the ARHMM using PC scores located in the INPUT_FILE, and saves the model to DEST_FILE
-    INPUT_FILE = path to h5 file
-    DEST_FILE = path for model output
-    """
+    # Train the ARHMM using PC scores located in the INPUT_FILE, and saves the model to DEST_FILE
+    
     learn_model_wrapper(input_file, dest_file, config_data)
 
-@cli.command(name='kappa-scan', help='Batch fit multiple models scanning over different syllable length probability prior.')
+@cli.command(name='kappa-scan', help='Batch train multiple model to scan over different kappa values.')
 @click.argument('input_file', type=click.Path(exists=True))
 @click.argument('output_dir', type=click.Path(exists=False))
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for session metadata and group information")
@@ -105,12 +99,7 @@ def learn_model(input_file, dest_file, **config_data):
 @click.option("--run-cmd", is_flag=True, help="Run scan command strings.")
 @modeling_parameters
 def kappa_scan_fit_models(input_file, output_dir, **config_data):
-    """
-    Scan through the kappa hyperparameter to find the kappa that best matches the changepoint duration
-    distribution. Train each ARHMM using PC scores located in the INPUT_FILE, and saves the models to OUTPUT_DIR.
-    INPUT_FILE = path to h5 file
-    OUTPUT_DIR = path for saving the model outputs
-    """
+    # Scan through the kappa hyperparameter to find the kappa that best matches the changepoint duration distribution. 
 
     config_data['out_script'] = join(output_dir, config_data['out_script'])
     kappa_scan_fit_models_wrapper(input_file, config_data, output_dir)
