@@ -17,7 +17,7 @@ from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, 
 
 def learn_model_wrapper(input_file, dest_file, config_data):
     """
-    Function used to train ARHMM on PCA data.
+    Wrapper function to train ARHMM on PC scores.
 
     Args:
     input_file (str): path to pc scores file.
@@ -170,11 +170,11 @@ def learn_model_wrapper(input_file, dest_file, config_data):
 
 def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
     """
-    Wrapper function that spools multiple model training commands for a range of kappa values.
+    Wrapper function to output multiple model training commands for a range of kappa values.
 
     Args:
     input_file (str): Path to PC Scores
-    config_data (dict): Dict containing model training parameters
+    config_data (dict): Dictionary containing model training parameters
     output_dir (str): Path to output directory to save trained models
 
     Returns:

@@ -19,8 +19,7 @@ from moseq2_model.train.util import whiten_all, whiten_each
 
 def process_indexfile(index, data_metadata, default_group='n/a', select_groups=False):
     """
-    Reads index file (if it exists) and returns dictionaries containing metadata in the index file.
-    The data_metadata will also be updated with the information read from the index file
+    Read index file (if applicable) and return dictionaries containing metadata in the index file.
 
     Args:
     index (str or None): path to index file.
@@ -62,22 +61,17 @@ def process_indexfile(index, data_metadata, default_group='n/a', select_groups=F
 
 def select_data_to_model(index_data, data_dict, data_metadata, select_groups=False):
     """
-    Prompts user to select data to model via the data uuids/groups and paths located
-    in the index file if the select_groups flag is True. Otherwise, it will use all data
-    to model behavior.
+    Select the data to model.
 
     Args:
     index_data (dict): loaded dictionary from index file
     data_dict (dict): dictionary containing PC scores for all sessions
-    data_metadata (dict): dictionary containing metadata associated with the 
-        recording sessions
+    data_metadata (dict): dictionary containing metadata associated with the recording sessions
     select_groups (bool): flag to solicit user input on which groups to select for modeling
 
     Returns:
-    data_dict (dict): dictionary to model containing data from the selected 
-        session uuids
-    data_metadata (dict): updated metadata containing the selected uuids and
-        groups
+    data_dict (dict): dictionary to model containing data from the selected session uuids
+    data_metadata (dict): updated metadata containing the selected uuids and groups
     """
 
     # If no input is given, load all the uuids and groups
@@ -110,9 +104,7 @@ def select_data_to_model(index_data, data_dict, data_metadata, select_groups=Fal
 
 def prepare_model_metadata(data_dict, data_metadata, config_data):
     """
-    Sets model training metadata parameters, whitens data,
-    if hold_out is True, will split data and return list of heldout keys,
-    and updates all dictionaries.
+    Set model training metadata parameters, whiten data, split data and return list of heldout keys if applicable, and update all dictionaries.
 
     Args:
     data_dict (OrderedDict): loaded data dictionary.
@@ -223,12 +215,10 @@ def get_heldout_data_splits(data_dict, train_list, hold_out_list):
 
 def get_training_data_splits(split_frac, data_dict):
     """
-    Split the data into a training and held out dataset by splitting each session by some
-    fraction `percent_split`.
+    Split the data into a training and held out dataset by splitting each session by some fraction `percent_split`.
 
     Args:
-    split_frac (float): fraction to split each session into training and held out data. A value of 0.9
-        means 90% of the data will be preserved for training.
+    split_frac (float): fraction to split each session into training data, leaving the rest as validation data.
     data_dict (OrderedDict): dict of uuid-PC Score key-value pairs for all data included in the model.
 
     Returns:
@@ -254,8 +244,7 @@ def get_training_data_splits(split_frac, data_dict):
 
 def graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, model_dir):
     """
-    Graphs model training performance progress throughout modeling.
-    Will only run if verbose == True
+    Graph model training performance progress throughout modeling if verbose is True
 
     Args:
     config_data (dict): dictionary of model training parameters.
