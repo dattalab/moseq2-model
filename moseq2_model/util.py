@@ -488,11 +488,11 @@ def get_parameters_from_model(model):
 
 def count_frames(data_dict=None, input_file=None, var_name='scores'):
     """
-    Count the total number of frames loaded from the PCA scores file.
+    Count the total number of frames loaded from the PC scores file.
 
     Args:
-    data_dict (OrderedDict): Loaded PCA scores OrderedDict object.
-    input_file (str): Path to PCA Scores file to load data_dict if not already data_dict is None
+    data_dict (OrderedDict): Loaded PC scores OrderedDict object.
+    input_file (str): Path to PC Scores file to load data_dict if not already data_dict is None
     var_name (str): Path within PCA h5 file to load scores from.
 
     Returns:
@@ -559,7 +559,7 @@ def create_command_strings(input_file, output_dir, config_data, kappas, model_na
     Creates the CLI learn-model command strings with parameter flags based on the contents of the configuration dict.
 
     Args:
-    input_file (str): Path to PCA Scores
+    input_file (str): Path to PC Scores
     output_dir (str): Path to directory to save models in.
     config_data (dict): Configuration parameters dict.
     kappas (list): List of kappa values for model training commands.
