@@ -17,27 +17,22 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
                 train_data=None, val_data=None, separate_trans=False, groups=None, 
                 verbose=False, check_every=2):
     """
-    ARHMM training: Resamples ARHMM for inputted number of iterations,
-    and optionally computes loglikelihood scores for each iteration if verbose is True.
+    Train ARHMM for inputted number of iterations.
 
     Args:
-    model (ARHMM): model to train
+    model (ARHMM): model object to train
     num_iter (int): total number of resampling iterations
     ncpus (int): number of cpus used to resample the model
     checkpoint_freq (int): frequency (iterations) to save a checkpoint of the model
     checkpoint_file (str): path to save new checkpoint file
     start (int): starting iteration index used to resume modeling. Default is 0
     progress_kwargs (dict): keyword arguments for progress bar
-    train_data (OrderedDict): dict of training data used for getting log-likelihods
-        if verbose is True
-    val_data (OrderedDict): dict of validation data used for getting validation
-        log-likelihoods if verbose is True.
+    train_data (OrderedDict): dict of training data used for getting log-likelihods if verbose is True
+    val_data (OrderedDict): dict of validation data used for getting validation log-likelihoods if verbose is True.
     separate_trans (bool): use separated transition matrices for each group
-    groups (list): list of groups included in modeling used for getting log-likelihoods
-        if verbose is True
+    groups (list): list of groups included in modeling used for getting log-likelihoods if verbose is True
     verbose (bool): get log-likelihoods at `check_every` interval
-    check_every (int): frequency (iterations) to record model training/validation
-        log-likelihoods during training
+    check_every (int): frequency (iterations) to record model training/validation log-likelihoods during training
 
     Returns:
     model (ARHMM): trained model.
@@ -86,14 +81,12 @@ def train_model(model, num_iter=100, ncpus=1, checkpoint_freq=None,
 
 def training_checkpoint(model, itr, checkpoint_file):
     """
-    Formats the model checkpoint filename and saves the model checkpoint
+    Format the model checkpoint filename and save the model checkpoint
 
     Args:
-    model (ARHMM): Model being trained.
+    model (ARHMM): Model object being trained.
     itr (itr): Current modeling iteration.
-    checkpoint_file (str): Model checkpoint file name.
-
-    Returns:
+    checkpoint_file (str): Model checkpoint filename.
     """
 
     # Pack the data to save in checkpoint
@@ -113,17 +106,17 @@ def training_checkpoint(model, itr, checkpoint_file):
 
 def get_model_summary(model, groups, train_data, val_data, separate_trans):
     """
-    Computes log-likelihood of train_data and val_data (if not None). aIs only run if verbose = True.
+    Compute log-likelihood of train_data and val_data (if not None) when verbose is True.
 
     Args:
-    model (ARHMM): model to compute lls.
+    model (ARHMM): model to compute log-likelihoods.
     groups (list): list of session group names.
     train_data (OrderedDict): Ordered dict of training data
     val_data: (OrderedDict or None): Ordered dict of validation/held-out data
-    separate_trans (bool) indicates whether to separate lls for each group.
+    separate_trans (bool): boolean flag that indicates whether to separate log-likelihoods for each group.
 
     Returns:
-    train_ll (float): normalized average training log-likelihood across all recording sessions.
+    train_ll (float): normalized average training log-likelihoods across all recording sessions.
     val_ll (float): normalized average held-out log-likelihood across all recording sessions.
     """
     # Get train and validation groups
@@ -151,7 +144,7 @@ def get_model_summary(model, groups, train_data, val_data, separate_trans):
 
 def get_labels_from_model(model):
     """
-    Grabs model labels for each training dataset and places them in a list.
+    Grab model labels for each training dataset and place them in a list.
 
     Args:
     model (ARHMM): trained ARHMM model
@@ -167,8 +160,7 @@ def get_labels_from_model(model):
 # taken from moseq by @mattjj and @alexbw
 def whiten_all(data_dict, center=True):
     """
-    Whitens the PC Scores (with Cholesky decomposition) using all
-    the data to compute the covariance matrix.
+    Whiten the PC Scores (with Cholesky decomposition) using all the data to compute the covariance matrix.
 
     Args:
     data_dict (OrderedDict): Training dataset
@@ -198,7 +190,7 @@ def whiten_each(data_dict, center=True):
 
     Args:
     data_dict (OrderedDict): Training dataset
-    center (bool): Indicates whether to center data by subtracting the mean PC score.
+    center (bool): Boolean flag that indicates whether to center data by subtracting the mean PC score.
 
     Returns:
     data_dict (OrderedDict): Whitened training data dictionary
@@ -213,8 +205,7 @@ def whiten_each(data_dict, center=True):
 
 def run_e_step(arhmm):
     """
-    Computes the expectation for each state across all frames of the training dataset
-    and places them in a list.
+    Compute the expected state sequence for sessions in the training dataset and place them in a list.
 
     Args:
     arhmm (ARHMM): model to compute expected states from.
@@ -272,8 +263,7 @@ def zscore_all(data_dict, npcs=10, center=True):
 # taken from syllables by @alexbw
 def get_crosslikes(arhmm, frame_by_frame=False):
     """
-    Gets the cross-likelihoods, a measure of confidence in label
-    segmentation, for each model label.
+    Get the cross-likelihoods, a measure of confidence in label segmentation, for each model label.
 
     Args:
     arhmm: the ARHMM model object
@@ -315,8 +305,7 @@ def get_crosslikes(arhmm, frame_by_frame=False):
 
 def slices_from_indicators(indseq):
     """
-    Compute start and stop indices (slices) for each contiguous sequence of True values in
-    `indseq`.
+    Compute start and stop indices (slices) for each contiguous sequence of True values in `indseq`.
 
     Args:
     indseq (list): Indicator array, containing True and False values
