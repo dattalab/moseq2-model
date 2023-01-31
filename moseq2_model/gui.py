@@ -12,7 +12,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     Train ARHMM from within a Jupyter notebook using parameters specified in the notebook.
 
     Args:
-    progress_paths (dict): notebook progress dict that contains paths to the pca scores, config, and index files.
+    progress_paths (dict): notebook progress dict that contains paths to the pc scores, config, and index files.
     get_cmd (bool): flag to return the kappa scan learn-model commands.
     verbose (bool): compute modeling summary - can slow down training.
 
@@ -27,7 +27,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     index = progress_paths['index_file']
     output_dir = progress_paths['base_model_path']
 
-    assert exists(input_file), "PCA Scores not found; set the correct path in progress_paths['scores_path']"
+    assert exists(input_file), "PCA Score not found; set the correct path in progress_paths['scores_path']"
     assert exists(config_file), "Config file not found; set the correct path in progress_paths['config_file']"
     assert exists(index), "Index file not found; set the correct path in progress_paths['index_file']"
 
