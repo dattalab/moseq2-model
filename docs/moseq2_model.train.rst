@@ -1,22 +1,6 @@
 moseq2\_model.train Package
 ===========================
 
-Train - Fit Module
-------------------------------
-
-.. automodule:: moseq2_model.train.fit
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Train - Label Utilities Module
---------------------------------------
-
-.. automodule:: moseq2_model.train.label_util
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Train - Model Module
 ---------------------------------
 

@@ -1,9 +1,6 @@
-'''
-Wrapper functions for all functionality included in MoSeq2-Model that is accessible via CLI or GUI.
-
-Each wrapper function executes the functionality from end-to-end given it's dependency parameters are inputted.
-(See CLI Click parameters)
-'''
+"""
+Wrapper functions for CLI and GUI.
+"""
 
 import os
 import sys
@@ -19,19 +16,17 @@ from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, 
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
 def learn_model_wrapper(input_file, dest_file, config_data):
-    '''
-    Function used to train ARHMM on PCA data.
+    """
+    Wrapper function to train ARHMM on PC scores.
 
-    Parameters
-    ----------
-    input_file (str): path to pca scores file.
+    Args:
+    input_file (str): path to pc scores file.
     dest_file (str): path to save model to.
     config_data (dict): dictionary containing the modeling parameters.
     
-    Returns
-    -------
+    Returns:
     None
-    '''
+    """
 
     dest_file = realpath(dest_file)
     # make sure the extension for model is correct
@@ -174,19 +169,17 @@ def learn_model_wrapper(input_file, dest_file, config_data):
 
 
 def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
-    '''
-    Wrapper function that spools multiple model training commands for a range of kappa values.
+    """
+    Wrapper function to output multiple model training commands for a range of kappa values.
 
-    Parameters
-    ----------
-    input_file (str): Path to PCA Scores
-    config_data (dict): Dict containing model training parameters
+    Args:
+    input_file (str): Path to PC Scores
+    config_data (dict): Dictionary containing model training parameters
     output_dir (str): Path to output directory to save trained models
 
-    Returns
-    -------
+    Returns:
     command_string (str): CLI command string for model training commands.
-    '''
+    """
     assert 'out_script' in config_data, 'Need to supply out_script to save modeling commands'
 
     data_dict, _ = load_pcs(filename=input_file, var_name=config_data.get('var_name', 'scores'),
