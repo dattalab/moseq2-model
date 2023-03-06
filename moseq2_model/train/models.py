@@ -1,6 +1,6 @@
-'''
+"""
 ARHMM model initialization utilities.
-'''
+"""
 
 import warnings
 import numpy as np
@@ -16,19 +16,16 @@ flush_print = partial(print, flush=True)
 
 # Empirical bayes estimate of S_0 (from MoSeq)
 def _get_empirical_ar_params(train_datas, params):
-    '''
-    Estimate the parameters of an AR observation model
-    by fitting a single AR model to the entire dataset.
+    """
+    Estimate the parameters of an AR observation model by fitting a single AR model to the entire dataset.
 
-    Parameters
-    ----------
+    Args:
     train_datas (list): list of np.ndarrays representing each session's PC scores
     params (dict): dict containing modeling parameters used for initialization
 
-    Returns
-    -------
+    Returns:
     obs_params (dict): dict of observed parameters to use in modeling.
-    '''
+    """
 
     assert isinstance(train_datas, list) and len(train_datas) > 0
     datadimension = train_datas[0].shape[1]
@@ -56,33 +53,31 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           K_0_scale=10.0, S_0_scale=0.01, max_states=100, empirical_bayes=True,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
           separate_trans=False, groups=None, robust=False, silent=False):
-    '''
-    Initializes ARHMM and adds data and group labels to the ARHMM model.
+    """
+    Initialize ARHMM and add data and group labels to the ARHMM model.
 
-    Parameters
-    ----------
+    Args:
     data_dict (OrderedDict): training data to add to model
     kappa (float): hyperparameter for setting syllable duration. Larger kappa = longer syllable durations
-    gamma (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone)
+    gamma (float): scaling parameter for hierarchical dirichlet process (try to not change it)
     nlags (int): number of lag frames to add to sessions
-    alpha (float): scaling parameter for hierarchical dirichlet process (it's recommended to leave this parameter alone)
+    alpha (float): scaling parameter for hierarchical dirichlet process (try to not change it)
     K_0_scale (float): Standard deviation of lagged data
-    S_0_scale (float): scale standard deviation initialization (don't touch this parameter unless necessary)
+    S_0_scale (float): scale standard deviation initialization (try to not change it)
     max_states (int): Maximum number of model states
-    empirical_bayes (bool): Use empirical bayes to initialize sigma
-    affine (bool): Use affine transformation in the AR processes
-    model_hypparams (dict): other model parameters (don't touch this parameter unless necessary)
-    obs_hypparams (dict): observed parameters nu_0, S_0, M_0, and K_0 (don't touch this parameter unless necessary)
-    sticky_init (bool): Initialize the model with random states
-    separate_trans (bool): use separate transition matrices for each group
+    empirical_bayes (bool): Boolean flag that specifies using empirical bayes to initialize sigma
+    affine (bool): Boolean flag that specifies using affine transformation in the AR processes
+    model_hypparams (dict): other model parameters (try to not change it)
+    obs_hypparams (dict): observed parameters nu_0, S_0, M_0, and K_0 (try to not change it)
+    sticky_init (bool): Boolean flag that specifies using random states to initialize the model
+    separate_trans (bool): Boolean flag that specifies using separate transition matrices for each group
     groups (list): list of groups to model
-    robust (bool): use student's t-distributed AR model
-    silent (bool): flag to print out model information.
+    robust (bool): Boolean flag that specifies using student's t-distributed AR model
+    silent (bool): Boolean flag that specifies printing out model information
 
-    Returns
-    -------
+    Returns:
     model (ARHMM): initialized model object
-    '''
+    """
 
     warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 

@@ -1,6 +1,6 @@
-'''
-GUI front-end function for training ARHMM.
-'''
+"""
+GUI front-end functions for training ARHMM.
+"""
 
 import ruamel.yaml as yaml
 from moseq2_model.cli import learn_model, kappa_scan_fit_models
@@ -8,20 +8,17 @@ from os.path import dirname, join, exists
 from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
 
 def learn_model_command(progress_paths, get_cmd=True, verbose=False):
-    '''
-    Trains ARHMM from within a Jupyter notebook. Note that the configuration file will be overriden with the
-    function parameters.
+    """
+    Train ARHMM from within a Jupyter notebook using parameters specified in the notebook.
 
-    Parameters
-    ----------
-    progress_paths (dict): notebook progress dict that contains paths to the pca scores, config, and index files.
+    Args:
+    progress_paths (dict): notebook progress dict that contains paths to the pc scores, config, and index files.
     get_cmd (bool): flag to return the kappa scan learn-model commands.
     verbose (bool): compute modeling summary - can slow down training.
 
-    Returns
-    -------
+    Returns:
     None or kappa scan command
-    '''
+    """
 
     # Load proper input variables
     input_file = progress_paths['scores_path']
@@ -30,7 +27,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     index = progress_paths['index_file']
     output_dir = progress_paths['base_model_path']
 
-    assert exists(input_file), "PCA Scores not found; set the correct path in progress_paths['scores_path']"
+    assert exists(input_file), "PCA Score not found; set the correct path in progress_paths['scores_path']"
     assert exists(config_file), "Config file not found; set the correct path in progress_paths['config_file']"
     assert exists(index), "Index file not found; set the correct path in progress_paths['index_file']"
 
