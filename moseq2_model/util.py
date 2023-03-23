@@ -1,11 +1,11 @@
 """
 Utility functions for handling loading and saving models and their respective metadata.
 """
+import os
 import re
 import h5py
 import click
 import joblib
-import pickle
 import scipy.io
 import warnings
 import numpy as np
@@ -87,6 +87,9 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
                         else:
                             warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
                             metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
+                    else:
+                        warnings.warn('groups not loaded from h5 file. Assigning each session to unique group')
+                        metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -231,6 +234,24 @@ def save_dict(filename, obj_to_save=None):
             dict_to_h5(f, obj_to_save)
     else:
         raise ValueError('Did not understand filetype')
+
+    
+def load_dict(filename):
+    """
+    Load dictionary from file.
+
+    Args:
+        filename (str): path to file where dict is saved
+    
+    Returns:
+        obj (dict): loaded dictionary
+    """
+    if filename.endswith(".h5"):
+        return h5_to_dict(filename)
+    elif filename.endswith(("pkl", "p", "z")):
+        return joblib.load(filename)
+    else:
+        raise ValueError(f"Does not support filetype {os.path.splitext(filename)[1]}")
 
 
 def dict_to_h5(h5file, export_dict, path='/'):

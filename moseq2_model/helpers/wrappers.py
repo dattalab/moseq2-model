@@ -7,11 +7,10 @@ import sys
 import glob
 import click
 from copy import deepcopy
-from collections import OrderedDict
-from moseq2_model.train.util import train_model, run_e_step
-from os.path import join, basename, realpath, dirname, exists, splitext
+from moseq2_model.train.util import train_model, run_e_step, apply_model
+from os.path import join, basename, realpath, dirname, splitext
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, get_scan_range_kappas,
-                               create_command_strings, get_current_model, get_loglikelihoods, get_session_groupings)
+                               create_command_strings, get_current_model, get_loglikelihoods, get_session_groupings, load_dict)
 from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
@@ -69,7 +68,7 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     groups = list(data_metadata['groups'].values())
 
     # Get train/held out data split uuids
-    data_dict, model_parameters, train_list, hold_out_list = \
+    data_dict, model_parameters, train_list, hold_out_list, whitening_parameters = \
         prepare_model_metadata(data_dict, data_metadata, config_data)
 
     # Pack data dicts corresponding to uuids in train_list and hold_out_list
@@ -154,7 +153,8 @@ def learn_model_wrapper(input_file, dest_file, config_data):
         'hold_out_list': hold_out_list,
         'train_list': train_list,
         'train_ll': train_ll,
-        'expected_states': expected_states if config_data['e_step'] else None
+        'expected_states': expected_states if config_data['e_step'] else None,
+        'whitening_parameters': whitening_parameters,
     }
 
     # Save model
@@ -166,6 +166,32 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     if config_data['verbose'] and len(iter_lls) > 0:
         img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, dirname(dest_file))
         return img_path
+
+
+def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
+    """
+    Wrapper function to apply a trained model to new data.
+
+    Args:
+    model_file (str): Path to trained model file
+    pc_file (str): Path to PC scores file
+    dest_file (str): Path to save output file
+
+    Returns:
+    None
+    """
+    # Load model
+    model_data = load_dict(model_file)
+
+    # Load PC scores
+    data_dict, data_metadata = load_pcs(filename=pc_file, var_name=config_data.get('var_name', 'scores'), npcs=model_data['run_parameters']['npcs'],
+                                        load_groups=config_data.get('load_groups', False))
+
+    # Apply model
+    syllables = apply_model(model_data['model'], model_data['whitening_parameters'], data_dict, data_metadata)
+
+    # Save output
+    save_dict(filename=dest_file, obj_to_save=syllables)
 
 
 def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):

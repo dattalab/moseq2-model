@@ -1,14 +1,12 @@
 """
 ARHMM utility functions
 """
-
-import math
+from typing import Union
 import numpy as np
-from cytoolz import valmap
 from tqdm.auto import tqdm
-from scipy.stats import norm
 from functools import partial
-from collections import OrderedDict, defaultdict
+from cytoolz import valmap, itemmap
+from collections import OrderedDict, defaultdict, namedtuple
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
 
@@ -157,6 +155,56 @@ def get_labels_from_model(model):
     return labels
 
 
+WhiteningParams = namedtuple('WhiteningParams', ['mu', 'L', 'offset'])
+
+
+def apply_model(model, whitening_params: Union[WhiteningParams, dict], data_dict, metadata):
+    '''
+    Apply trained model to data_dict. Note that this function might produce unexpected behavior
+    if the model was trained using separate transition matrices for different groups of sessions.
+    
+    Args:
+        model (ARHMM): trained model
+        whitening_params (namedtuple or dict): whitening parameters
+        data_dict (OrderedDict): data to apply model to
+        metadata (dict): metadata for data_dict
+    
+    Returns:
+        labels (dict): dictionary of labels predicted per session after modeling
+    '''
+    if isinstance(whitening_params, dict):
+        # this approach is not recommended, but supported
+        center = whitening_params[list(whitening_params)[0]].offset == 0
+        whitened_data, _ = whiten_each(data_dict, center)
+    else:
+        whitened_data = valmap(lambda x: apply_whitening(x, whitening_params.mu, whitening_params.L, whitening_params.offset), data_dict)
+
+    # apply model to data
+    if 'SeparateTrans' in type(model):
+        # not recommended, but supported
+        labels = itemmap(lambda item: (item[0], model.heldout_viterbi(item[1], group_id=metadata['groups'][item[0]])), whitened_data)
+    else:
+        labels = valmap(model.heldout_viterbi, whitened_data)
+
+    return labels
+
+
+def apply_whitening(data, mu, L, offset=0):
+    '''Apply whitening to data.
+    
+    Args:
+        data (np.ndarray): data to be whitened
+        mu (np.ndarray): mean of data
+        L (np.ndarray): Cholesky decomposition of covariance matrix
+        offset (float): offset to add to whitened data
+    
+    Returns:
+        data (np.ndarray): whitened data
+    '''
+
+    return np.linalg.solve(L, (data - mu).T).T + offset
+
+
 # taken from moseq by @mattjj and @alexbw
 def whiten_all(data_dict, center=True):
     """
@@ -178,9 +226,8 @@ def whiten_all(data_dict, center=True):
     L = np.linalg.cholesky(Sigma)
 
     offset = 0. if center else mu
-    apply_whitening = lambda x:  np.linalg.solve(L, (x-mu).T).T + offset
-
-    return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items())
+    apply_whitening = partial(apply_whitening, mu=mu, L=L, offset=offset)
+    return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items()), WhiteningParams(mu, L, offset)
 
 
 # taken from moseq by @mattjj and @alexbw
@@ -195,12 +242,12 @@ def whiten_each(data_dict, center=True):
     Returns:
     data_dict (OrderedDict): Whitened training data dictionary
     """
-
+    whitening_parameters = {}
     for k, v in data_dict.items():
-        tmp_dict = whiten_all({k: v}, center=center)
+        tmp_dict, whitening_parameters[k] = whiten_all({k: v}, center=center)
         data_dict[k] = tmp_dict[k]
 
-    return data_dict
+    return data_dict, whitening_parameters
 
 
 def run_e_step(arhmm):
