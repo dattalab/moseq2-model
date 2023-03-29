@@ -85,10 +85,10 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
                         if 'groups' in f:
                             metadata['groups'] = {key: f['groups'][i] for i, key in enumerate(data_dict) if key in f['metadata']}
                         else:
-                            warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
+                            warnings.warn('groups key not found in h5 file, assigning each session to unique group if no moseq2-index.yaml')
                             metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
                     else:
-                        warnings.warn('groups not loaded from h5 file. Assigning each session to unique group')
+                        warnings.warn('groups not loaded from h5 file. Assigning each session to unique group if no moseq2-index.yaml')
                         metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
                 else:
                     raise IOError('Could not load data from h5 file')
