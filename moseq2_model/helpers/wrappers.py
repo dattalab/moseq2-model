@@ -61,14 +61,16 @@ def learn_model_wrapper(input_file, dest_file, config_data):
                                                   config_data['default_group'], select_groups)
 
     # Get keys to include in training set
+    # If no group data in pca data, use group info from index file
     if index_data is not None:
         data_dict, data_metadata = select_data_to_model(index_data, data_dict,
                                                         data_metadata, select_groups)
-
+    
     all_keys = list(data_dict)
     groups = list(data_metadata['groups'].values())
 
     # Get train/held out data split uuids
+    # Whiten data and get model parameters
     data_dict, model_parameters, train_list, hold_out_list = \
         prepare_model_metadata(data_dict, data_metadata, config_data)
 
