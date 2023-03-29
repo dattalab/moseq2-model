@@ -73,7 +73,7 @@ def modeling_parameters(function):
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa; hyperparameter used to set syllable duration. Larger k = longer syllable lengths")
 @click.option("--checkpoint-freq", type=int, default=-1, help='save model checkpoint every n iterations')
 @click.option("--use-checkpoint", is_flag=True, help='indicate whether to use previously saved checkpoint')
-@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions")
 @click.option("--default-group", type=str, default="n/a", help="Default group name to use for separate-trans")
 @click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, **config_data):
@@ -87,6 +87,7 @@ def learn_model(input_file, dest_file, **config_data):
 @click.argument("pc_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))
 @click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions")
 @click.option("--load-groups", type=bool, default=True, help="If groups should be loaded with the PC scores.")
 def apply_model(model_file, pc_file, dest_file, **config_data):
     # Apply the ARHMM model located in MODEL_FILE to the PC scores in PC_FILE, and saves the results to DEST_FILE

@@ -55,12 +55,13 @@ def learn_model_wrapper(input_file, dest_file, config_data):
                                         load_groups=config_data['load_groups'])
 
     # Parse index file and update metadata information; namely groups
+    # If no group data in pca data, use group info from index file
     select_groups = config_data.get('select_groups', False)
     index_data, data_metadata = process_indexfile(config_data.get('index', None), data_metadata,
                                                   config_data['default_group'], select_groups)
 
     # Get keys to include in training set
-    # If no group data in pca data, use group info from index file
+    # TODO: select_groups not implemented
     if index_data is not None:
         data_dict, data_metadata = select_data_to_model(index_data, data_dict,
                                                         data_metadata, select_groups)
