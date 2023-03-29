@@ -189,6 +189,10 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
     data_dict, data_metadata = load_pcs(filename=pc_file, var_name=config_data.get('var_name', 'scores'), npcs=model_data['run_parameters']['npcs'],
                                         load_groups=config_data.get('load_groups', False))
 
+    # parse group information from index file
+    index_data, data_metadata = process_indexfile(config_data.get('index', None), data_metadata,
+                                                  config_data.get('default_group', 'n/a'), select_groups=False)      
+
     # Apply model
     syllables = apply_model(model_data['model'], model_data['whitening_parameters'], data_dict, data_metadata)
 
