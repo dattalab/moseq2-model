@@ -154,10 +154,7 @@ def get_labels_from_model(model):
     return labels
 
 
-WhiteningParams = namedtuple('WhiteningParams', ['mu', 'L', 'offset'])
-
-
-def apply_model(model, whitening_params, data_dict, metadata):
+def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
     '''
     Apply trained model to data_dict. Note that this function might produce unexpected behavior
     if the model was trained using separate transition matrices for different groups of sessions.
@@ -171,12 +168,14 @@ def apply_model(model, whitening_params, data_dict, metadata):
     Returns:
         labels (dict): dictionary of labels predicted per session after modeling
     '''
-    if isinstance(whitening_params, dict):
+
+    # check for whiten parameters to see if whiten_all or whiten_each
+    if whiten.lower[0].lower() == 'e':
         # this approach is not recommended, but supported
-        center = whitening_params[list(whitening_params)[0]].offset == 0
+        center = whitening_params[list(whitening_params)[0]]['offset'] == 0
         whitened_data, _ = whiten_each(data_dict, center)
     else:
-        whitened_data = valmap(lambda x: apply_whitening(x, whitening_params.mu, whitening_params.L, whitening_params.offset), data_dict)
+        whitened_data = valmap(lambda x: apply_whitening(x, whitening_params['mu'], whitening_params['L'], whitening_params['offset']), data_dict)
 
     # apply model to data
     if 'SeparateTrans' in type(model):
@@ -226,7 +225,8 @@ def whiten_all(data_dict, center=True):
 
     offset = 0. if center else mu
     apply_whitening = partial(apply_whitening, mu=mu, L=L, offset=offset)
-    return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items()), WhiteningParams(mu, L, offset)
+    whitening_parameters = {'mu': mu, 'L': L, 'offset': offset}
+    return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items()), whitening_parameters
 
 
 # taken from moseq by @mattjj and @alexbw
