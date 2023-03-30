@@ -1,12 +1,11 @@
 """
 ARHMM utility functions
 """
-from typing import Union
 import numpy as np
 from tqdm.auto import tqdm
 from functools import partial
 from cytoolz import valmap, itemmap
-from collections import OrderedDict, defaultdict, namedtuple
+from collections import OrderedDict, defaultdict
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
 
@@ -158,7 +157,7 @@ def get_labels_from_model(model):
 WhiteningParams = namedtuple('WhiteningParams', ['mu', 'L', 'offset'])
 
 
-def apply_model(model, whitening_params: Union[WhiteningParams, dict], data_dict, metadata):
+def apply_model(model, whitening_params, data_dict, metadata):
     '''
     Apply trained model to data_dict. Note that this function might produce unexpected behavior
     if the model was trained using separate transition matrices for different groups of sessions.
