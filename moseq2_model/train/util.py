@@ -169,6 +169,8 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
         labels (dict): dictionary of labels predicted per session after modeling
     '''
 
+    # whiten data function
+    apply_whitening = lambda x:  np.linalg.solve(L, (x-mu).T).T + offset
     # check for whiten parameters to see if whiten_all or whiten_each
     if whiten.lower[0].lower() == 'e':
         # this approach is not recommended, but supported
@@ -224,7 +226,7 @@ def whiten_all(data_dict, center=True):
     L = np.linalg.cholesky(Sigma)
 
     offset = 0. if center else mu
-    apply_whitening = partial(apply_whitening, mu=mu, L=L, offset=offset)
+    apply_whitening = lambda x:  np.linalg.solve(L, (x-mu).T).T + offset
     whitening_parameters = {'mu': mu, 'L': L, 'offset': offset}
     return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items()), whitening_parameters
 
