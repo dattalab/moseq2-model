@@ -170,14 +170,19 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
     '''
 
     # whiten data function
-    apply_whitening = lambda x:  np.linalg.solve(L, (x-mu).T).T + offset
+    try:
+        mu, L, offset = whitening_params['mu'], whitening_params['L'], whitening_params['offset']
+        apply_whitening = lambda x: np.linalg.solve(L, (x-mu).T).T + offset
+    except:
+        print('Whitening parameters not found.')
+    
     # check for whiten parameters to see if whiten_all or whiten_each
     if whiten[0].lower() == 'e':
         # this approach is not recommended, but supported
         center = whitening_params[list(whitening_params)[0]]['offset'] == 0
         whitened_data, _ = whiten_each(data_dict, center)
     else:
-        whitened_data = valmap(lambda x: apply_whitening(x, whitening_params['mu'], whitening_params['L'], whitening_params['offset']), data_dict)
+        whitened_data = valmap(lambda x: apply_whitening(x), data_dict)
 
     # apply model to data
     if 'SeparateTrans' in type(model):
