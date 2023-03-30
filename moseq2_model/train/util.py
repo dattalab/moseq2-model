@@ -172,7 +172,7 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
     # whiten data function
     apply_whitening = lambda x:  np.linalg.solve(L, (x-mu).T).T + offset
     # check for whiten parameters to see if whiten_all or whiten_each
-    if whiten.lower[0].lower() == 'e':
+    if whiten[0].lower() == 'e':
         # this approach is not recommended, but supported
         center = whitening_params[list(whitening_params)[0]]['offset'] == 0
         whitened_data, _ = whiten_each(data_dict, center)
