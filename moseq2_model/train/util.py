@@ -189,21 +189,6 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
     return labels
 
 
-def apply_whitening(data, mu, L, offset=0):
-    '''Apply whitening to data.
-    
-    Args:
-        data (np.ndarray): data to be whitened
-        mu (np.ndarray): mean of data
-        L (np.ndarray): Cholesky decomposition of covariance matrix
-        offset (float): offset to add to whitened data
-    
-    Returns:
-        data (np.ndarray): whitened data
-    '''
-
-    return np.linalg.solve(L, (data - mu).T).T + offset
-
 
 # taken from moseq by @mattjj and @alexbw
 def whiten_all(data_dict, center=True):
@@ -226,6 +211,7 @@ def whiten_all(data_dict, center=True):
     L = np.linalg.cholesky(Sigma)
 
     offset = 0. if center else mu
+    # set up function to whiten data
     apply_whitening = lambda x:  np.linalg.solve(L, (x-mu).T).T + offset
     whitening_parameters = {'mu': mu, 'L': L, 'offset': offset}
     return OrderedDict((k, contig(apply_whitening(v))) for k, v in data_dict.items()), whitening_parameters
