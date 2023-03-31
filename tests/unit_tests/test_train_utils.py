@@ -28,7 +28,7 @@ def get_model(separate_trans=False, robust=False, groups=[]):
                                         load_groups=True)
     data_metadata['groups'] = {k: g for k, g in zip(data_dict, groups)}
 
-    data_dict, model_parameters, _, _ = \
+    data_dict, model_parameters, _, _, whitening_parameters = \
         prepare_model_metadata(data_dict, data_metadata, config_data)
 
     arhmm = ARHMM(data_dict=data_dict, **model_parameters)
@@ -45,7 +45,7 @@ class TestTrainUtils(TestCase):
 
         model, data_dict = get_model()
 
-        X = whiten_all(data_dict)
+        X, whitening_parameters = whiten_all(data_dict)
         training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
         model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
@@ -68,7 +68,7 @@ class TestTrainUtils(TestCase):
 
         model, data_dict = get_model(separate_trans=True, groups=['default', 'Group1'])
 
-        X = whiten_all(data_dict)
+        X, whitening_parameters = whiten_all(data_dict)
         training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
         model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
@@ -91,7 +91,7 @@ class TestTrainUtils(TestCase):
 
         model, data_dict = get_model()
 
-        X = whiten_all(data_dict)
+        X, whitening_parameters = whiten_all(data_dict)
         training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
         model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
@@ -105,16 +105,16 @@ class TestTrainUtils(TestCase):
 
         _, data_dict = get_model()
 
-        whitened_a = whiten_all(data_dict)
-        whitened_e = whiten_each(data_dict)
+        whitened_a, whitening_parameters = whiten_all(data_dict)
+        whitened_e, whitening_parameters = whiten_each(data_dict)
         assert data_dict.values() != whitened_a.values()
         assert whitened_a.values() != whitened_e.values()
 
     def test_whiten_each(self):
         _, data_dict = get_model()
 
-        whitened_a = whiten_all(data_dict, center=False)
-        whitened_e = whiten_each(data_dict, center=False)
+        whitened_a, whitening_parameters = whiten_all(data_dict, center=False)
+        whitened_e, whitening_parameters = whiten_each(data_dict, center=False)
         assert data_dict.values() != whitened_a.values()
         assert whitened_a.values() != whitened_e.values()
 

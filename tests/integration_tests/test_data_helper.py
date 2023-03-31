@@ -76,7 +76,7 @@ class TestDataHelpers(TestCase):
 
         data_dict, data_metadata = select_data_to_model(index_data, data_dict, data_metadata)
 
-        data_dict1, model_parameters, train_list, hold_out_list = \
+        data_dict1, model_parameters, train_list, hold_out_list, whitening_parameters = \
             prepare_model_metadata(data_dict, data_metadata, config_data)
 
         assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
@@ -85,7 +85,7 @@ class TestDataHelpers(TestCase):
 
         config_data['whiten'] = 'each'
         config_data['noise_level'] = 1
-        data_dict1, model_parameters, train_list, hold_out_list = \
+        data_dict1, model_parameters, train_list, hold_out_list, whitening_parameters = \
             prepare_model_metadata(data_dict, data_metadata, config_data)
 
         assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
@@ -93,7 +93,7 @@ class TestDataHelpers(TestCase):
         assert hold_out_list == [], "Some of the data is unintentionally held out"
 
         config_data['whiten'] = 'none'
-        data_dict1, model_parameters, train_list, hold_out_list = \
+        data_dict1, model_parameters, train_list, hold_out_list, whitening_parameters = \
             prepare_model_metadata(data_dict, data_metadata, config_data)
 
         assert data_dict.values() != data_dict1.values(), "Index loaded uuids and training data does not match scores file"
@@ -121,7 +121,7 @@ class TestDataHelpers(TestCase):
 
         data_dict, data_metadata = select_data_to_model(index_data, data_dict, data_metadata)
 
-        data_dict, model_parameters, train_list, hold_out_list = \
+        data_dict, model_parameters, train_list, hold_out_list, whitening_parameters = \
             prepare_model_metadata(data_dict, data_metadata, config_data)
 
         assert (sorted(train_list) != sorted(hold_out_list)), "Training data is the same as held out data"
