@@ -185,7 +185,7 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
         whitened_data = valmap(lambda x: apply_whitening(x), data_dict)
 
     # apply model to data
-    if 'SeparateTrans' in type(model):
+    if 'SeparateTrans' in str(type(model)):
         # not recommended, but supported
         labels = itemmap(lambda item: (item[0], model.heldout_viterbi(item[1], group_id=metadata['groups'][item[0]])), whitened_data)
     else:
