@@ -6,6 +6,7 @@ import os
 import sys
 import glob
 import click
+import numpy as np
 from copy import deepcopy
 from moseq2_model.train.util import train_model, run_e_step, apply_model
 from os.path import join, basename, realpath, dirname, splitext
@@ -194,10 +195,25 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
                                                   config_data.get('default_group', 'n/a'), select_groups=False)      
 
     # Apply model
-    syllables = apply_model(model_data['model'], model_data['whitening_parameters'], data_dict, data_metadata)
+    syllables = apply_model(model_data['model'], model_data['whitening_parameters'], data_dict, data_metadata, model_data['run_parameters']['whiten'])
+
+    # add -5 padding to the list of states
+    nlags = model_data['run_parameters'].get('nlags', 3)
+    for key in syllables.keys():
+        syllables[key] = np.append(np.repeat(-5, nlags), syllables[key])
+
+    # prepare model data dictionary to save
+    applied_model_data = {}
+    applied_model_data['labels'] = list(syllables.values())
+    applied_model_data['keys'] = list(syllables.keys())
+    applied_model_data['model_parameters'] = model_data['model_parameters']
+    applied_model_data['oracle_run_parameters'] = model_data['run_parameters']
+    applied_model_data['metadata'] = data_metadata
+    applied_model_data['model'] = model_data['model']
+    applied_model_data['whitening_parameters'] = model_data['whitening_parameters']
 
     # Save output
-    save_dict(filename=dest_file, obj_to_save=syllables)
+    save_dict(filename=dest_file, obj_to_save=applied_model_data)
 
 
 def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
