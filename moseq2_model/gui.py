@@ -5,7 +5,7 @@ GUI front-end functions for training ARHMM.
 import ruamel.yaml as yaml
 from moseq2_model.cli import learn_model, kappa_scan_fit_models
 from os.path import dirname, join, exists
-from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
+from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper, apply_model_wrapper
 
 def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     """
@@ -61,3 +61,17 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
         return command
     else:
         learn_model_wrapper(input_file, dest_file, config_data)
+    
+
+def apply_model_command(progress_paths, model_file):
+    # Load proper input variables
+    pc_file = progress_paths['scores_path']
+    dest_file = progress_paths['model_path']
+    config_file = progress_paths['config_file']
+    index = progress_paths['index_file']
+    output_dir = progress_paths['base_model_path']
+
+    with open(config_file, 'r') as f:
+        config_data = yaml.safe_load(f)
+
+    apply_model_wrapper(model_file, pc_file, dest_file, config_data)
