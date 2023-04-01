@@ -64,6 +64,13 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     
 
 def apply_model_command(progress_paths, model_file):
+    """Apply a pre-trained ARHMM model to a new dataset from within a Jupyter notebook.
+
+    Args:
+        progress_paths (dict): notebook progress dict that contains paths to the pc scores, config, and index files.
+        model_file (str): path to the pre-trained ARHMM model.
+    """
+
     # Load proper input variables
     pc_file = progress_paths['scores_path']
     dest_file = progress_paths['model_path']
@@ -71,7 +78,9 @@ def apply_model_command(progress_paths, model_file):
     index = progress_paths['index_file']
     output_dir = progress_paths['base_model_path']
 
+    # load config data
     with open(config_file, 'r') as f:
         config_data = yaml.safe_load(f)
 
+    # apply model to data
     apply_model_wrapper(model_file, pc_file, dest_file, config_data)
