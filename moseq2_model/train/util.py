@@ -144,7 +144,7 @@ def get_labels_from_model(model):
     Grab model labels for each training dataset and place them in a list.
 
     Args:
-    model (ARHMM): trained ARHMM model
+    model (ARHMM): trained ARHMM
 
     Returns:
     labels (list): An array of predicted syllable labels for each training session

@@ -165,7 +165,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
     Compute the log-likelihoods of the training sessions.
 
     Args:
-    arhmm (ARHMM): ARHMM model.
+    arhmm (ARHMM): the ARHMM model object.
     data (dict): dict object with UUID keys containing the PCS used for training.
     groups (list): list of assigned groups for all corresponding session uuids.
     separate_trans (bool): flag to compute separate log-likelihoods for each modeled group.
@@ -319,7 +319,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 
     Args:
     filename (str): path that specifies the checkpoint
-    arhmm (dict): a dictionary containing the arhmm model object, training iteration number, log-likelihoods of each training step, and labels for each step.
+    arhmm (dict): a dictionary containing the arhmm object, training iteration number, log-likelihoods of each training step, and labels for each step.
     """
 
     # Getting model object

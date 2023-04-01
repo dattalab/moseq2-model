@@ -82,7 +82,7 @@ def learn_model(input_file, dest_file, **config_data):
     learn_model_wrapper(input_file, dest_file, config_data)
 
 
-@cli.command(name='apply-model', help='Apply trained ARHMM model to PC scores.')
+@cli.command(name='apply-model', help='Apply trained ARHMM to PC scores.')
 @click.argument("model_file", type=click.Path(exists=True))
 @click.argument("pc_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))
@@ -90,7 +90,7 @@ def learn_model(input_file, dest_file, **config_data):
 @click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions")
 @click.option("--load-groups", type=bool, default=True, help="If groups should be loaded with the PC scores.")
 def apply_model(model_file, pc_file, dest_file, **config_data):
-    # Apply the ARHMM model located in MODEL_FILE to the PC scores in PC_FILE, and saves the results to DEST_FILE
+    # Apply the ARHMM located in MODEL_FILE to the PC scores in PC_FILE, and saves the results to DEST_FILE
 
     apply_model_wrapper(model_file, pc_file, dest_file, config_data)
 
