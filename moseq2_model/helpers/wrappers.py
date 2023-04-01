@@ -183,6 +183,14 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
     Returns:
     None
     """
+
+    assert splitext(basename(dest_file))[-1] in ['.mat', '.z', '.pkl', '.p', '.h5'], 'Incorrect model filetype'
+    os.makedirs(dirname(dest_file), exist_ok=True)
+
+    if not os.access(dirname(dest_file), os.W_OK):
+        raise IOError('Output directory is not writable.')
+
+
     # Load model
     model_data = load_dict(model_file)
 
