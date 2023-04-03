@@ -82,7 +82,7 @@ def learn_model(input_file, dest_file, **config_data):
     learn_model_wrapper(input_file, dest_file, config_data)
 
 
-@cli.command(name='apply-model', help='Apply trained ARHMM to PC scores.')
+@cli.command(name='apply-model', help='Apply pre-trained ARHMM to PC scores.')
 @click.argument("model_file", type=click.Path(exists=True))
 @click.argument("pc_file", type=click.Path(exists=True))
 @click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))

@@ -64,7 +64,7 @@ def learn_model_command(progress_paths, get_cmd=True, verbose=False):
     
 
 def apply_model_command(progress_paths, model_file):
-    """Apply a trained ARHMM to a new dataset from within a Jupyter notebook.
+    """Apply a pre-trained ARHMM to a new dataset from within a Jupyter notebook.
 
     Args:
         progress_paths (dict): notebook progress dict that contains paths to the pc scores, config, and index files.

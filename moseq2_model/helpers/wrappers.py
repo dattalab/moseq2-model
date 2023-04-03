@@ -173,10 +173,10 @@ def learn_model_wrapper(input_file, dest_file, config_data):
 
 def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
     """
-    Wrapper function to apply a trained model to new data.
+    Wrapper function to apply a pre-trained model to new data.
 
     Args:
-    model_file (str): Path to trained model file
+    model_file (str): Path to pre-trained model file
     pc_file (str): Path to PC scores file
     dest_file (str): Path to save output file
 

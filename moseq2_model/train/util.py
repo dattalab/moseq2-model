@@ -156,11 +156,11 @@ def get_labels_from_model(model):
 
 def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
     '''
-    Apply trained model to data_dict. Note that this function might produce unexpected behavior
+    Apply pre-trained model to data_dict. Note that this function might produce unexpected behavior
     if the model was trained using separate transition matrices for different groups of sessions.
     
     Args:
-        model (ARHMM): trained model
+        model (ARHMM): pre-trained model
         whitening_params (namedtuple or dict): whitening parameters
         data_dict (OrderedDict): data to apply model to
         metadata (dict): metadata for data_dict
