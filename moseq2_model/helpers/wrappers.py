@@ -211,14 +211,15 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
         syllables[key] = np.append(np.repeat(-5, nlags), syllables[key])
 
     # prepare model data dictionary to save
+    # save applied model data
     applied_model_data = {}
     applied_model_data['labels'] = list(syllables.values())
     applied_model_data['keys'] = list(syllables.keys())
-    applied_model_data['model_parameters'] = model_data['model_parameters']
-    applied_model_data['oracle_run_parameters'] = model_data['run_parameters']
     applied_model_data['metadata'] = data_metadata
-    applied_model_data['model'] = model_data['model']
-    applied_model_data['whitening_parameters'] = model_data['whitening_parameters']
+    
+    # copy over pre-trained model data
+    for key in ['model_parameters', 'run_parameters', 'model', 'whitening_parameters']:
+        applied_model_data[key] = model_data[key]
 
     # Save output
     save_dict(filename=dest_file, obj_to_save=applied_model_data)
