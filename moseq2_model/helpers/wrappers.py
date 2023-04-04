@@ -158,6 +158,7 @@ def learn_model_wrapper(input_file, dest_file, config_data):
         'train_ll': train_ll,
         'expected_states': expected_states if config_data['e_step'] else None,
         'whitening_parameters': whitening_parameters,
+        'pc_scores': os.path.abspath(pc_scores)
     }
 
     # Save model
