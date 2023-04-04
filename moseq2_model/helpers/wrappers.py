@@ -195,6 +195,9 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
     # Load model
     model_data = load_dict(model_file)
 
+    if model_data.get('whitening_parameters') is None:
+        raise KeyError('Whitening parameters not found in model file. Unable to apply model to new data. Please retrain the model using the latest version.')
+
     # Load PC scores
     data_dict, data_metadata = load_pcs(filename=pc_file, var_name=config_data.get('var_name', 'scores'), npcs=model_data['run_parameters']['npcs'],
                                         load_groups=config_data.get('load_groups', False))
