@@ -170,11 +170,8 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
     '''
 
     # whiten data function
-    try:
-        mu, L, offset = whitening_params['mu'], whitening_params['L'], whitening_params['offset']
-        apply_whitening = lambda x: np.linalg.solve(L, (x-mu).T).T + offset
-    except:
-        print('Whitening parameters not found.')
+    mu, L, offset = whitening_params['mu'], whitening_params['L'], whitening_params['offset']
+    apply_whitening = lambda x: np.linalg.solve(L, (x-mu).T).T + offset
     
     # check for whiten parameters to see if whiten_all or whiten_each
     if whiten[0].lower() == 'e':
