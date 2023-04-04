@@ -158,7 +158,7 @@ def learn_model_wrapper(input_file, dest_file, config_data):
         'train_ll': train_ll,
         'expected_states': expected_states if config_data['e_step'] else None,
         'whitening_parameters': whitening_parameters,
-        'pc_scores': os.path.abspath(pc_scores)
+        'pc_scores': os.path.abspath(input_file)
     }
 
     # Save model
@@ -217,7 +217,9 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
     applied_model_data['labels'] = list(syllables.values())
     applied_model_data['keys'] = list(syllables.keys())
     applied_model_data['metadata'] = data_metadata
-    
+    applied_model_data['pc_scores'] = os.path.abspath(pc_file)
+    applied_model_data['pre_trained_model'] = os.path.abspath(model_file)
+
     # copy over pre-trained model data
     for key in ['model_parameters', 'run_parameters', 'model', 'whitening_parameters']:
         applied_model_data[key] = model_data[key]
