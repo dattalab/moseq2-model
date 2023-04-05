@@ -8,6 +8,7 @@ import glob
 import click
 import numpy as np
 from copy import deepcopy
+from cytoolz import valmap
 from moseq2_model.train.util import train_model, run_e_step, apply_model
 from os.path import join, basename, realpath, dirname, splitext
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, get_scan_range_kappas,
@@ -211,8 +212,7 @@ def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
 
     # add -5 padding to the list of states
     nlags = model_data['run_parameters'].get('nlags', 3)
-    for key in syllables.keys():
-        syllables[key] = np.append(np.repeat(-5, nlags), syllables[key])
+    syllables = valmap(lambda v: np.concatenate(([-5] * nlags, v)), syllables)
 
     # prepare model data dictionary to save
     # save applied model data
