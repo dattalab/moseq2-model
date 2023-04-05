@@ -6,7 +6,7 @@ import os
 import click
 from os.path import join
 from moseq2_model.util import count_frames as count_frames_wrapper
-from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper
+from moseq2_model.helpers.wrappers import learn_model_wrapper, kappa_scan_fit_models_wrapper, apply_model_wrapper
 
 orig_init = click.core.Option.__init__
 
@@ -46,7 +46,7 @@ def modeling_parameters(function):
     function = click.option('--e-step', is_flag=True, help="Compute the expected state sequence for each recordings")(function)
     function = click.option("--save-every", "-s", type=int, default=-1,
               help="Increment to save labels and model object (-1 for just last)")(function)
-    function = click.option("--save-model", is_flag=True, help="Save model object at the end of training")(function)
+    function = click.option("--save-model", type=bool, default=True, help="Save model object at the end of training")(function)
     function = click.option("--max-states", "-m", type=int, default=100, help="Maximum number of states")(function)
     function = click.option("--npcs", type=int, default=10, help="Number of PCs to use")(function)
     function = click.option("--whiten", "-w", type=str, default='all', help="Whiten PCs: (e)each session (a)ll combined or (n)o whitening")(function)
@@ -73,13 +73,27 @@ def modeling_parameters(function):
 @click.option("--kappa", "-k", type=float, default=None, help="Kappa; hyperparameter used to set syllable duration. Larger k = longer syllable lengths")
 @click.option("--checkpoint-freq", type=int, default=-1, help='save model checkpoint every n iterations')
 @click.option("--use-checkpoint", is_flag=True, help='indicate whether to use previously saved checkpoint')
-@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions (used only with the separate-trans flag)")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions")
 @click.option("--default-group", type=str, default="n/a", help="Default group name to use for separate-trans")
 @click.option("--verbose", '-v', is_flag=True, help="Print syllable log-likelihoods during training.")
 def learn_model(input_file, dest_file, **config_data):
     # Train the ARHMM using PC scores located in the INPUT_FILE, and saves the model to DEST_FILE
     
     learn_model_wrapper(input_file, dest_file, config_data)
+
+
+@cli.command(name='apply-model', help='Apply pre-trained ARHMM to PC scores.')
+@click.argument("model_file", type=click.Path(exists=True))
+@click.argument("pc_file", type=click.Path(exists=True))
+@click.argument("dest_file", type=click.Path(file_okay=True, writable=True, resolve_path=True))
+@click.option("--var-name", type=str, default='scores', help="Variable name in input file with PCs")
+@click.option("--index", "-i", type=click.Path(), default="", help="Path to moseq2-index.yaml for group definitions")
+@click.option("--load-groups", type=bool, default=True, help="If groups should be loaded with the PC scores.")
+def apply_model(model_file, pc_file, dest_file, **config_data):
+    # Apply the ARHMM located in MODEL_FILE to the PC scores in PC_FILE, and saves the results to DEST_FILE
+
+    apply_model_wrapper(model_file, pc_file, dest_file, config_data)
+
 
 @cli.command(name='kappa-scan', help='Batch train multiple model to scan over different kappa values.')
 @click.argument('input_file', type=click.Path(exists=True))

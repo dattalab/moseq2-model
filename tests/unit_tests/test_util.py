@@ -309,7 +309,7 @@ class TestUtils(TestCase):
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
 
-        X = whiten_all(data_dict)
+        X, whitening_parameters = whiten_all(data_dict)
         training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
         model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
@@ -335,7 +335,7 @@ class TestUtils(TestCase):
         with open(config_file, 'r') as f:
             config_data = yaml.safe_load(f)
 
-        X = whiten_all(data_dict)
+        X, whitening_parameters = whiten_all(data_dict)
         training_data, validation_data = get_training_data_splits(config_data['percent_split'] / 100, X)
 
         model, lls, labels, iter_lls, iter_holls, _ = train_model(model, num_iter=5, train_data=training_data,
