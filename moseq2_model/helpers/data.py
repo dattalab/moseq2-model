@@ -174,12 +174,15 @@ def prepare_model_metadata(data_dict, data_metadata, config_data):
         model_parameters['groups'] = {k: data_metadata['groups'][k] for k in train}
 
     # Whiten the data
+    whitening_parameters = None
     if config_data['whiten'][0].lower() == 'a':
         click.echo('Whitening the training data using the whiten_all function')
-        data_dict = whiten_all(data_dict)
+        # in this case, whitening_parameters is a single tuple
+        data_dict, whitening_parameters = whiten_all(data_dict)
     elif config_data['whiten'][0].lower() == 'e':
         click.echo('Whitening the training data using the whiten_each function')
-        data_dict = whiten_each(data_dict)
+        # in this case, whitening_parameters is a dictionary of parameters
+        data_dict, whitening_parameters = whiten_each(data_dict)
     else:
         click.echo('Not whitening the data')
 
@@ -189,7 +192,7 @@ def prepare_model_metadata(data_dict, data_metadata, config_data):
         for k, v in data_dict.items():
             data_dict[k] = v + np.random.randn(*v.shape) * config_data['noise_level']
 
-    return data_dict, model_parameters, train, hold_out
+    return data_dict, model_parameters, train, hold_out, whitening_parameters
 
 
 def get_heldout_data_splits(data_dict, train_list, hold_out_list):

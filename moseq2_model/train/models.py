@@ -1,5 +1,5 @@
 """
-ARHMM model initialization utilities.
+ARHMM initialization utilities.
 """
 
 import warnings
@@ -54,7 +54,7 @@ def ARHMM(data_dict, kappa=1e6, gamma=999, nlags=3, alpha=5.7,
           affine=True, model_hypparams={}, obs_hypparams={}, sticky_init=False,
           separate_trans=False, groups=None, robust=False, silent=False):
     """
-    Initialize ARHMM and add data and group labels to the ARHMM model.
+    Initialize ARHMM and add data and group labels to the ARHMM.
 
     Args:
     data_dict (OrderedDict): training data to add to model

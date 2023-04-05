@@ -1,11 +1,11 @@
 """
 Utility functions for handling loading and saving models and their respective metadata.
 """
+import os
 import re
 import h5py
 import click
 import joblib
-import pickle
 import scipy.io
 import warnings
 import numpy as np
@@ -85,8 +85,11 @@ def load_pcs(filename, var_name="features", load_groups=False, npcs=10):
                         if 'groups' in f:
                             metadata['groups'] = {key: f['groups'][i] for i, key in enumerate(data_dict) if key in f['metadata']}
                         else:
-                            warnings.warn('groups key not found in h5 file, assigning each session to unique group...')
+                            warnings.warn('groups key not found in h5 file, assigning each session to unique group if no moseq2-index.yaml')
                             metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
+                    else:
+                        warnings.warn('groups not loaded from h5 file. Assigning each session to unique group if no moseq2-index.yaml')
+                        metadata['groups'] = {key: i for i, key in enumerate(data_dict)}
                 else:
                     raise IOError('Could not load data from h5 file')
             else:
@@ -162,7 +165,7 @@ def get_loglikelihoods(arhmm, data, groups, separate_trans, normalize=True):
     Compute the log-likelihoods of the training sessions.
 
     Args:
-    arhmm (ARHMM): ARHMM model.
+    arhmm (ARHMM): the ARHMM model object.
     data (dict): dict object with UUID keys containing the PCS used for training.
     groups (list): list of assigned groups for all corresponding session uuids.
     separate_trans (bool): flag to compute separate log-likelihoods for each modeled group.
@@ -232,6 +235,24 @@ def save_dict(filename, obj_to_save=None):
     else:
         raise ValueError('Did not understand filetype')
 
+    
+def load_dict(filename):
+    """
+    Load dictionary from file.
+
+    Args:
+        filename (str): path to file where dict is saved
+    
+    Returns:
+        obj (dict): loaded dictionary
+    """
+    if filename.endswith(".h5"):
+        return h5_to_dict(filename)
+    elif filename.endswith(("pkl", "p", "z")):
+        return joblib.load(filename)
+    else:
+        raise ValueError(f"Does not support filetype {os.path.splitext(filename)[1]}")
+
 
 def dict_to_h5(h5file, export_dict, path='/'):
     """
@@ -298,7 +319,7 @@ def save_arhmm_checkpoint(filename: str, arhmm: dict):
 
     Args:
     filename (str): path that specifies the checkpoint
-    arhmm (dict): a dictionary containing the arhmm model object, training iteration number, log-likelihoods of each training step, and labels for each step.
+    arhmm (dict): a dictionary containing the arhmm object, training iteration number, log-likelihoods of each training step, and labels for each step.
     """
 
     # Getting model object

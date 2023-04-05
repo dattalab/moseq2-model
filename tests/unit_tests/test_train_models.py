@@ -60,7 +60,7 @@ class TestTrainModels(TestCase):
         nkeys = 5
         all_keys = ['key1', 'key2', 'key3', 'key4', 'key5']
 
-        data_dict, model_parameters, train_list, hold_out_list = \
+        data_dict, model_parameters, train_list, hold_out_list, whitening_parameters = \
             prepare_model_metadata(data_dict, data_metadata, config_data)
 
         model_parameters['separate_trans'] = False

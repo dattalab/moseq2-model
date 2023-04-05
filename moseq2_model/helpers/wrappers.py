@@ -6,12 +6,13 @@ import os
 import sys
 import glob
 import click
+import numpy as np
 from copy import deepcopy
-from collections import OrderedDict
-from moseq2_model.train.util import train_model, run_e_step
-from os.path import join, basename, realpath, dirname, exists, splitext
+from cytoolz import valmap
+from moseq2_model.train.util import train_model, run_e_step, apply_model
+from os.path import join, basename, realpath, dirname, splitext
 from moseq2_model.util import (save_dict, load_pcs, get_parameters_from_model, copy_model, get_scan_range_kappas,
-                               create_command_strings, get_current_model, get_loglikelihoods, get_session_groupings)
+                               create_command_strings, get_current_model, get_loglikelihoods, get_session_groupings, load_dict)
 from moseq2_model.helpers.data import (process_indexfile, select_data_to_model, prepare_model_metadata,
                                        graph_modeling_loglikelihoods, get_heldout_data_splits, get_training_data_splits)
 
@@ -56,20 +57,22 @@ def learn_model_wrapper(input_file, dest_file, config_data):
                                         load_groups=config_data['load_groups'])
 
     # Parse index file and update metadata information; namely groups
+    # If no group data in pca data, use group info from index file
     select_groups = config_data.get('select_groups', False)
     index_data, data_metadata = process_indexfile(config_data.get('index', None), data_metadata,
                                                   config_data['default_group'], select_groups)
 
     # Get keys to include in training set
+    # TODO: select_groups not implemented
     if index_data is not None:
         data_dict, data_metadata = select_data_to_model(index_data, data_dict,
                                                         data_metadata, select_groups)
-
+    
     all_keys = list(data_dict)
     groups = list(data_metadata['groups'].values())
 
     # Get train/held out data split uuids
-    data_dict, model_parameters, train_list, hold_out_list = \
+    data_dict, model_parameters, train_list, hold_out_list, whitening_parameters = \
         prepare_model_metadata(data_dict, data_metadata, config_data)
 
     # Pack data dicts corresponding to uuids in train_list and hold_out_list
@@ -154,7 +157,9 @@ def learn_model_wrapper(input_file, dest_file, config_data):
         'hold_out_list': hold_out_list,
         'train_list': train_list,
         'train_ll': train_ll,
-        'expected_states': expected_states if config_data['e_step'] else None
+        'expected_states': expected_states if config_data['e_step'] else None,
+        'whitening_parameters': whitening_parameters,
+        'pc_score_path': os.path.abspath(input_file)
     }
 
     # Save model
@@ -166,6 +171,64 @@ def learn_model_wrapper(input_file, dest_file, config_data):
     if config_data['verbose'] and len(iter_lls) > 0:
         img_path = graph_modeling_loglikelihoods(config_data, iter_lls, iter_holls, dirname(dest_file))
         return img_path
+
+
+def apply_model_wrapper(model_file, pc_file, dest_file, config_data):
+    """
+    Wrapper function to apply a pre-trained model to new data.
+
+    Args:
+    model_file (str): Path to pre-trained model file
+    pc_file (str): Path to PC scores file
+    dest_file (str): Path to save output file
+
+    Returns:
+    None
+    """
+
+    assert splitext(basename(dest_file))[-1] in ['.mat', '.z', '.pkl', '.p', '.h5'], 'Incorrect model filetype'
+    os.makedirs(dirname(dest_file), exist_ok=True)
+
+    if not os.access(dirname(dest_file), os.W_OK):
+        raise IOError('Output directory is not writable.')
+
+
+    # Load model
+    model_data = load_dict(model_file)
+
+    if model_data.get('whitening_parameters') is None:
+        raise KeyError('Whitening parameters not found in model file. Unable to apply model to new data. Please retrain the model using the latest version.')
+
+    # Load PC scores
+    data_dict, data_metadata = load_pcs(filename=pc_file, var_name=config_data.get('var_name', 'scores'), npcs=model_data['run_parameters']['npcs'],
+                                        load_groups=config_data.get('load_groups', False))
+
+    # parse group information from index file
+    index_data, data_metadata = process_indexfile(config_data.get('index', None), data_metadata,
+                                                  config_data.get('default_group', 'n/a'), select_groups=False)      
+
+    # Apply model
+    syllables = apply_model(model_data['model'], model_data['whitening_parameters'], data_dict, data_metadata, model_data['run_parameters']['whiten'])
+
+    # add -5 padding to the list of states
+    nlags = model_data['run_parameters'].get('nlags', 3)
+    syllables = valmap(lambda v: np.concatenate(([-5] * nlags, v)), syllables)
+
+    # prepare model data dictionary to save
+    # save applied model data
+    applied_model_data = {}
+    applied_model_data['labels'] = list(syllables.values())
+    applied_model_data['keys'] = list(syllables.keys())
+    applied_model_data['metadata'] = data_metadata
+    applied_model_data['pc_score_path'] = os.path.abspath(pc_file)
+    applied_model_data['pre_trained_model_path'] = os.path.abspath(model_file)
+
+    # copy over pre-trained model data
+    for key in ['model_parameters', 'run_parameters', 'model', 'whitening_parameters']:
+        applied_model_data[key] = model_data[key]
+
+    # Save output
+    save_dict(filename=dest_file, obj_to_save=applied_model_data)
 
 
 def kappa_scan_fit_models_wrapper(input_file, config_data, output_dir):
