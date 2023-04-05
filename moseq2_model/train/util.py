@@ -179,7 +179,7 @@ def apply_model(model, whitening_params, data_dict, metadata, whiten='all'):
         center = whitening_params[list(whitening_params)[0]]['offset'] == 0
         whitened_data, _ = whiten_each(data_dict, center)
     else:
-        whitened_data = valmap(lambda x: apply_whitening(x), data_dict)
+        whitened_data = valmap(apply_whitening, data_dict)
 
     # apply model to data
     if 'SeparateTrans' in str(type(model)):
