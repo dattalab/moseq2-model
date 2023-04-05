@@ -14,6 +14,7 @@ jobs:
       stage: latest-pythons
       before_install:
         - pip install -U pip
+        - pip install numpy==1.18.3
         - pip install pytest==5.4.1 codecov pytest-cov
         - export PYTHONPATH=$PYTHONPATH:$(pwd)
       install:
