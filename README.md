@@ -1,8 +1,8 @@
 # MoSeq2-model 
 
 [![Build Status](https://travis-ci.com/dattalab/moseq2-model.svg?token=gvoikVySDHEmvHT7Dbed&branch=master)](https://travis-ci.com/dattalab/moseq2-model) 
-
 [![codecov](https://codecov.io/gh/dattalab/moseq2_model/branch/master/graph/badge.svg?token=q9xxVhps5o)](https://codecov.io/gh/dattalab/moseq2_model)
+[![DOI](https://zenodo.org/badge/81390468.svg)](https://zenodo.org/badge/latestdoi/81390468)
 
 # [Documentation: MoSeq2 Wiki](https://github.com/dattalab/moseq2-app/wiki)
 You can find more information about MoSeq Pipeline, installation, step-by-step instructions, documentation for Command Line Interface(CLI), tutorials etc in [MoSeq2 Wiki](https://github.com/dattalab/moseq2-app/wiki).
