@@ -306,6 +306,7 @@ def apply_model(model_file, pc_file, dest_file, **config_data):
 )
 @click.option("--get-cmd", is_flag=True, help="Print scan command strings.")
 @click.option("--run-cmd", is_flag=True, help="Run scan command strings.")
+@click.option("--error-on-fail", is_flag=True, help="Exit script if any model fails to train.")
 @modeling_parameters
 def kappa_scan_fit_models(input_file, output_dir, **config_data):
     # Scan through the kappa hyperparameter to find the kappa that best matches the changepoint duration distribution.
