@@ -9,6 +9,135 @@ from cytoolz import valmap, itemmap
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
+def residual_covariance(A, B, C):
+    """
+    Compute residual covariance matrix after linear regression.
+    
+    For a multivariate linear model Y = X * β + ε, computes the residual covariance
+    matrix using the formula A - B * C^(-1) * B^T.
+
+    This gives the covariance of residuals after fitting the optimal linear 
+    relationship between outputs and inputs.
+    
+    Parameters
+    ----------
+    A : ndarray, shape (n_outputs, n_outputs)
+        Total output covariance matrix. 
+    B : ndarray, shape (n_outputs, n_predictors) 
+        Cross-covariance between outputs and inputs.
+    C : ndarray, shape (n_predictors, n_predictors)
+        Input Gram matrix (design matrix covariance).
+        
+    Returns
+    -------
+    ndarray, shape (n_outputs, n_outputs)
+        Residual covariance matrix after linear regression.
+        
+    Notes
+    -----
+    Uses solve() instead of explicit matrix inversion for numerical stability.
+    Mathematically equivalent to the Schur complement of C in the block matrix
+    [[C, B^T], [B, A]].
+    """
+    return A - np.linalg.solve(C, B.T).T.dot(B.T)
+
+def minimum_regularization_coefficient(A, B, C):
+    """
+    Find minimum ridge regularization coefficient to ensure positive definite residual covariance.
+    
+    For a multivariate linear model Y = X * β + ε, computes the minimum regularization 
+    needed for the design matrix Gram matrix C to make the residual covariance 
+    S = A - B * C^(-1) * B^T positive definite. Uses ridge regularization: C_reg = C + λ * I.
+    
+    Parameters
+    ----------
+    A : ndarray, shape (n_outputs, n_outputs)
+        Total output covariance matrix (Y^T Y). Represents total variance/covariance 
+        structure in the response variables.
+        
+    B : ndarray, shape (n_outputs, n_predictors)
+        Cross-covariance between outputs and inputs (Y^T X). Captures how response 
+        variables relate to predictor variables.
+        
+    C : ndarray, shape (n_predictors, n_predictors)
+        Design matrix Gram matrix (X^T X). Represents covariance structure of predictor 
+        variables. Can become ill-conditioned with multicollinear predictors.
+        
+    Returns
+    -------
+    dict
+        Dictionary containing:
+        - 'regularization' : float
+            Minimum ridge regularization coefficient λ needed
+        - 'final_min_eigenvalue' : float
+            Smallest eigenvalue of regularized residual covariance matrix
+            
+    Notes
+    -----
+    The residual covariance S represents unexplained variance after linear regression. 
+    Regularization prevents numerical instability when C is ill-conditioned due to 
+    multicollinearity among predictors or insufficient data relative to model complexity.
+    """
+    initial_regularization_factor = 1e-4
+    
+    regularization = initial_regularization_factor
+    while True:
+        C_reg = C + regularization * np.eye(C.shape[0])
+        S = residual_covariance(A, B, C_reg)
+        min_eigenvalue = min(np.linalg.eigvalsh(S))
+        
+        if min_eigenvalue > 0:
+            return {'regularization': regularization, 'final_min_eigenvalue': min_eigenvalue}
+            
+        regularization *= 1.05
+
+def regularize_for_stability(obs_distns, obs_stats):
+    """
+    Regularize natural parameters to ensure positive definite residual covariance matrices.
+    
+    Iterates through observation distributions and their sufficient statistics, checking 
+    whether the resulting residual covariance matrix would be positive definite. If not,
+    applies ridge regularization to the Gram matrix (C component) to ensure numerical 
+    stability during model resampling.
+    
+    This prevents crashes in downstream Bayesian inference when natural parameters
+    plus sufficient statistics lead to non-positive-definite covariance matrices.
+    
+    Parameters
+    ----------
+    obs_distns : list of AutoRegression objects
+        Observation distribution objects for each state in the HMM. Each contains
+        natural_hypparam attribute that will be modified in-place if regularization
+        is needed.
+    obs_stats : list of ndarray
+        Sufficient statistics for each state, typically computed from data assigned
+        to that state. Combined with natural_hypparam to form posterior parameters.
+        
+    Notes
+    -----
+    Modifies obs_distns[i].natural_hypparam[2] in-place by adding ridge regularization
+    λ * I to the Gram matrix component when the residual covariance matrix has 
+    non-positive eigenvalues.
+    
+    Prints regularization information for each state that requires adjustment, showing
+    the improvement in minimum eigenvalue and the regularization coefficient used.
+    """
+    for i, (obs, statmat) in enumerate(zip(obs_distns, obs_stats)):
+        natparam = obs.natural_hypparam + statmat
+        A, B, C, _ = natparam
+
+        S = residual_covariance(A, B, C)
+        min_eigenvalue = min(np.linalg.eigvalsh(S))
+
+        if min_eigenvalue > 0:
+            continue 
+
+        result = minimum_regularization_coefficient(A, B, C)
+        regularization = result['regularization']
+        final_min_eigenvalue = result['final_min_eigenvalue']
+
+        print(f'Regularized AR params for state {i}: {min_eigenvalue:.2e} → {final_min_eigenvalue:.2e} (ridge regression coeff = {regularization:.2e})')
+        obs.natural_hypparam[2] = C + regularization * np.eye(C.shape[0])
 
 def train_model(
     model,
@@ -58,20 +187,10 @@ def train_model(
     iter_lls, iter_holls = [], []
 
     for itr in tqdm(range(start, num_iter), **progress_kwargs, desc="Training ARHMM"):
-        # Resample states, and gracefully return in case of a keyboard interrupt
-        try:
-            model.resample_model(num_procs=ncpus)
-        except KeyboardInterrupt:
-            print("Training manually interrupted.")
-            print("Returning and saving current iteration of model. ")
-            return (
-                model,
-                model.log_likelihood(),
-                get_labels_from_model(model),
-                iter_lls,
-                iter_holls,
-                True,
-            )
+        # Check and regularize natural parameters before resampling
+        if model._obs_stats is not None:
+            regularize_for_stability(model.obs_distns, model._obs_stats)
+        model.resample_model(num_procs=ncpus)
 
         summ_stats = {
             "model": model,
