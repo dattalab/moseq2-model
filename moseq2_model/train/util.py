@@ -201,10 +201,21 @@ def train_model(
     iter_lls, iter_holls = [], []
 
     for itr in tqdm(range(start, num_iter), **progress_kwargs, desc="Training ARHMM"):
-        # Check and regularize natural parameters before resampling
-        if model._obs_stats is not None:
-            regularize_for_stability(model.obs_distns, model._obs_stats)
-        model.resample_model(num_procs=ncpus)
+        try:
+            if model._obs_stats is not None:
+                regularize_for_stability(model.obs_distns, model._obs_stats)
+            model.resample_model(num_procs=ncpus)
+        except KeyboardInterrupt:
+            print("Training manually interrupted.")
+            print("Returning and saving current iteration of model. ")
+            return (
+                model,
+                model.log_likelihood(),
+                get_labels_from_model(model),
+                iter_lls,
+                iter_holls,
+                True,
+            )
 
         summ_stats = {
             "model": model,
