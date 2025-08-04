@@ -10,38 +10,6 @@ from cytoolz import valmap, itemmap
 from collections import OrderedDict, defaultdict
 from moseq2_model.util import save_arhmm_checkpoint, get_loglikelihoods
 
-def residual_covariance(A, B, C):
-    """
-    Compute residual covariance matrix after linear regression.
-    
-    For a multivariate linear model Y = X * β + ε, computes the residual covariance
-    matrix using the formula A - B * C^(-1) * B^T.
-
-    This gives the covariance of residuals after fitting the optimal linear 
-    relationship between outputs and inputs.
-    
-    Parameters
-    ----------
-    A : ndarray, shape (n_outputs, n_outputs)
-        Total output covariance matrix. 
-    B : ndarray, shape (n_outputs, n_predictors) 
-        Cross-covariance between outputs and inputs.
-    C : ndarray, shape (n_predictors, n_predictors)
-        Input Gram matrix (design matrix covariance).
-        
-    Returns
-    -------
-    ndarray, shape (n_outputs, n_outputs)
-        Residual covariance matrix after linear regression.
-        
-    Notes
-    -----
-    Uses solve() instead of explicit matrix inversion for numerical stability.
-    Mathematically equivalent to the Schur complement of C in the block matrix
-    [[C, B^T], [B, A]].
-    """
-    return A - np.linalg.solve(C, B.T).T.dot(B.T)
-
 def minimum_regularization_coefficient(A, B, C):
     """
     Find minimum ridge regularization coefficient to ensure positive definite residual covariance.
@@ -70,8 +38,12 @@ def minimum_regularization_coefficient(A, B, C):
         Dictionary containing:
         - 'regularization' : float
             Minimum ridge regularization coefficient λ needed
-        - 'final_min_eigenvalue' : float
+        - 'final_min_eigenvalue_S' : float
             Smallest eigenvalue of regularized residual covariance matrix
+        - 'final_min_eigenvalue_C' : float
+            Smallest eigenvalue of regularized Gram matrix C
+        - 'final_min_eigenvalue_inv_C' : float
+            Smallest eigenvalue of inverse of regularized Gram matrix C
             
     Notes
     -----
@@ -84,7 +56,7 @@ def minimum_regularization_coefficient(A, B, C):
     regularization = initial_regularization_factor
     while True:
         C_reg = C + regularization * np.eye(C.shape[0])
-        S = residual_covariance(A, B, C_reg)
+        S = A - np.linalg.solve(C_reg, B.T).T.dot(B.T)
         min_eigenvalue_S = min(np.linalg.eigvalsh(S))
         min_eigenvalue_C = min(np.linalg.eigvalsh(C_reg))
         min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C_reg)))
@@ -134,7 +106,7 @@ def regularize_for_stability(obs_distns, obs_stats):
         natparam = obs.natural_hypparam + statmat
         A, B, C, _ = natparam
 
-        S = residual_covariance(A, B, C)
+        S = A - np.linalg.solve(C, B.T).T.dot(B.T)
         min_eigenvalue_S = min(np.linalg.eigvalsh(S))
         min_eigenvalue_C = min(np.linalg.eigvalsh(C))
         min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C)))
