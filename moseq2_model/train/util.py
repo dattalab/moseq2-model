@@ -59,7 +59,12 @@ def minimum_regularization_coefficient(A, B, C):
         S = A - np.linalg.solve(C_reg, B.T).T.dot(B.T)
         min_eigenvalue_S = min(np.linalg.eigvalsh(S))
         min_eigenvalue_C = min(np.linalg.eigvalsh(C_reg))
-        min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C_reg)))
+
+        # Can't calculate inverse of C if C is not positive definite
+        if min_eigenvalue_C > 0:
+            min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C_reg)))
+        else:
+            min_eigenvalue_inv_C = 0
         
         if (min_eigenvalue_S > 0) and (min_eigenvalue_C > 0) and (min_eigenvalue_inv_C > 0):
             return {
@@ -109,7 +114,11 @@ def regularize_for_stability(obs_distns, obs_stats):
         S = A - np.linalg.solve(C, B.T).T.dot(B.T)
         min_eigenvalue_S = min(np.linalg.eigvalsh(S))
         min_eigenvalue_C = min(np.linalg.eigvalsh(C))
-        min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C)))
+
+        if min_eigenvalue_C > 0:
+            min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C)))
+        else:
+            min_eigenvalue_inv_C = 0
 
         if (min_eigenvalue_S > 0) and (min_eigenvalue_C > 0) and (min_eigenvalue_inv_C > 0):
             continue 
