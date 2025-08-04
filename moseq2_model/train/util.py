@@ -3,6 +3,7 @@ ARHMM utility functions
 """
 
 import numpy as np
+from pybasicbayes.util.general import inv_psd
 from tqdm.auto import tqdm
 from functools import partial
 from cytoolz import valmap, itemmap
@@ -84,10 +85,17 @@ def minimum_regularization_coefficient(A, B, C):
     while True:
         C_reg = C + regularization * np.eye(C.shape[0])
         S = residual_covariance(A, B, C_reg)
-        min_eigenvalue = min(np.linalg.eigvalsh(S))
+        min_eigenvalue_S = min(np.linalg.eigvalsh(S))
+        min_eigenvalue_C = min(np.linalg.eigvalsh(C_reg))
+        min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C_reg)))
         
-        if min_eigenvalue > 0:
-            return {'regularization': regularization, 'final_min_eigenvalue': min_eigenvalue}
+        if (min_eigenvalue_S > 0) and (min_eigenvalue_C > 0) and (min_eigenvalue_inv_C > 0):
+            return {
+                'regularization': regularization,
+                'final_min_eigenvalue_S': min_eigenvalue_S,
+                'final_min_eigenvalue_C': min_eigenvalue_C,
+                'final_min_eigenvalue_inv_C': min_eigenvalue_inv_C
+            }
             
         regularization *= 1.05
 
@@ -127,16 +135,22 @@ def regularize_for_stability(obs_distns, obs_stats):
         A, B, C, _ = natparam
 
         S = residual_covariance(A, B, C)
-        min_eigenvalue = min(np.linalg.eigvalsh(S))
+        min_eigenvalue_S = min(np.linalg.eigvalsh(S))
+        min_eigenvalue_C = min(np.linalg.eigvalsh(C))
+        min_eigenvalue_inv_C = min(np.linalg.eigvalsh(inv_psd(C)))
 
-        if min_eigenvalue > 0:
+        if (min_eigenvalue_S > 0) and (min_eigenvalue_C > 0) and (min_eigenvalue_inv_C > 0):
             continue 
 
         result = minimum_regularization_coefficient(A, B, C)
         regularization = result['regularization']
-        final_min_eigenvalue = result['final_min_eigenvalue']
+        final_min_eigenvalue_S = result['final_min_eigenvalue_S']
+        final_min_eigenvalue_C = result['final_min_eigenvalue_C']
+        final_min_eigenvalue_inv_C = result['final_min_eigenvalue_inv_C']
 
-        print(f'Regularized AR params for state {i}: {min_eigenvalue:.2e} → {final_min_eigenvalue:.2e} (ridge regression coeff = {regularization:.2e})')
+        print(f'Regularized S params for state {i}: {min_eigenvalue_S:.2e} → {final_min_eigenvalue_S:.2e} (ridge regression coeff = {regularization:.2e})')
+        print(f'Regularized C params for state {i}: {min_eigenvalue_C:.2e} → {final_min_eigenvalue_C:.2e}')
+        print(f'Regularized inv_C (K) params for state {i}: {min_eigenvalue_inv_C:.2e} → {final_min_eigenvalue_inv_C:.2e}')
         obs.natural_hypparam[2] = C + regularization * np.eye(C.shape[0])
 
 def train_model(
