@@ -60,6 +60,8 @@ def train_model(
     for itr in tqdm(range(start, num_iter), **progress_kwargs, desc="Training ARHMM"):
         # Resample states, and gracefully return in case of a keyboard interrupt
         try:
+            if hasattr(model, '_obs_stats') and model._obs_stats is not None:
+                regularize_for_stability(model.obs_distns, model._obs_stats)
             model.resample_model(num_procs=ncpus)
         except KeyboardInterrupt:
             print("Training manually interrupted.")
