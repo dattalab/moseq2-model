@@ -77,4 +77,11 @@ setup(
         "autoregressive @ git+https://github.com/dattalab/pyhsmm-autoregressive.git@master",
     ],
     entry_points={"console_scripts": ["moseq2-model = moseq2_model.cli:cli"]},
+    extras_require={
+        "docs": [
+            "sphinx",
+            "sphinx-click",
+            "sphinx-rtd-theme",
+        ],
+    },
 )

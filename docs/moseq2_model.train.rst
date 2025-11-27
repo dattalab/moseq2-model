@@ -10,7 +10,7 @@ Train - Model Module
    :show-inheritance:
 
 Train - General Utilities Module
--------------------------------
+--------------------------------
 
 .. automodule:: moseq2_model.train.util
    :members:

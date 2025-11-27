@@ -634,7 +634,8 @@ def create_command_strings(
 
     # Create and return the command string
     command_string = "\n".join(commands)
-    command_string = "set -e\n" + command_string
+    if config_data.get("error_on_fail", False):
+        command_string = "set -e\n" + command_string
     return command_string
 
 
