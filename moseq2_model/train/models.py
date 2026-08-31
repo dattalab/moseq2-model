@@ -8,11 +8,12 @@ from cytoolz import merge
 from functools import partial
 from autoregressive.distributions import AutoRegression
 from pybasicbayes.distributions import RobustAutoRegression
-from autoregressive.models import (
-    ARWeakLimitStickyHDPHMM,
-    ARWeakLimitStickyHDPHMMSeparateTrans,
-    FastARWeakLimitStickyHDPHMM,
-    FastARWeakLimitStickyHDPHMMSeparateTrans,
+from moseq2_model.train.corrected import (
+    BoostedAutoRegression,
+    CorrectedFastARHMM,
+    CorrectedFastARHMMSeparateTrans,
+    CorrectedRobustARHMM,
+    CorrectedRobustARHMMSeparateTrans,
 )
 
 
@@ -110,10 +111,15 @@ def ARHMM(
     default_obs_hypparams = {
         "nu_0": data_dim + 2,
         "S_0": S_0_scale * np.eye(data_dim),
+        # The identity block sits on the most recent lag, giving a random-walk
+        # prior mean. The autoregressive design vector is ordered oldest lag
+        # first (pybasicbayes.util.general.AR_striding lays out row t as
+        # [x_{t-nlags}, ..., x_{t-1}]), so the identity belongs in the final lag
+        # block, before the affine coordinate.
         "M_0": np.hstack(
             (
-                np.eye(data_dim),
                 np.zeros((data_dim, data_dim * (nlags - 1))),
+                np.eye(data_dim),
                 np.zeros((data_dim, int(affine))),
             )
         ),
@@ -142,29 +148,33 @@ def ARHMM(
     if separate_trans and not robust:
         # Loading C-accelerated model with separate transition graphs
         if not silent:
-            flush_print("Using model class FastARWeakLimitStickyHDPHMMSeparateTrans")
-        obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
-        model = FastARWeakLimitStickyHDPHMMSeparateTrans(
+            flush_print("Using model class CorrectedFastARHMMSeparateTrans")
+        obs_distns = [
+            BoostedAutoRegression(**obs_hypparams) for _ in range(max_states)
+        ]
+        model = CorrectedFastARHMMSeparateTrans(
             obs_distns=obs_distns, **model_hypparams
         )
     elif not separate_trans and not robust:
         # Loading default C-accelerated model
         if not silent:
-            flush_print("Using model class FastARWeakLimitStickyHDPHMM")
-        obs_distns = [AutoRegression(**obs_hypparams) for _ in range(max_states)]
-        model = FastARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
+            flush_print("Using model class CorrectedFastARHMM")
+        obs_distns = [
+            BoostedAutoRegression(**obs_hypparams) for _ in range(max_states)
+        ]
+        model = CorrectedFastARHMM(obs_distns=obs_distns, **model_hypparams)
     elif not separate_trans and robust:
         # Loading t-distributed ARHMM
         if not silent:
-            flush_print("Using ROBUST model class ARWeakLimitStickyHDPHMM")
+            flush_print("Using ROBUST model class CorrectedRobustARHMM")
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
-        model = ARWeakLimitStickyHDPHMM(obs_distns=obs_distns, **model_hypparams)
+        model = CorrectedRobustARHMM(obs_distns=obs_distns, **model_hypparams)
     elif separate_trans and robust:
         # Loading t-distributed ARHMM with separate transition graphs
         if not silent:
-            flush_print("Using ROBUST model class ARWeakLimitStickyHDPHMMSeparateTrans")
+            flush_print("Using ROBUST model class CorrectedRobustARHMMSeparateTrans")
         obs_distns = [RobustAutoRegression(**obs_hypparams) for _ in range(max_states)]
-        model = ARWeakLimitStickyHDPHMMSeparateTrans(
+        model = CorrectedRobustARHMMSeparateTrans(
             obs_distns=obs_distns, **model_hypparams
         )
 
@@ -178,10 +188,16 @@ def ARHMM(
             if groups[data_name] != "n/a":
                 if not silent:
                     flush_print(f"Group ID: {groups[data_name]}")
-                model.add_data(data, group_id=groups[data_name])
+                model.add_data(
+                    data, group_id=groups[data_name],
+                    initialize_from_prior=False,
+                )
         else:
-            # Load data without group, yielding single transition graph
-            model.add_data(data)
+            # Load data without group, yielding single transition graph.
+            # The state sequence is drawn from its posterior given the data
+            # rather than by forward-simulating the chain and ignoring the
+            # data, which is what pyhsmm does by default.
+            model.add_data(data, initialize_from_prior=False)
 
     # initialize states per SL's recommendation
     if sticky_init:
