@@ -1,5 +1,7 @@
 # MoSeq2-model 
 
+**This repository is archived.** `moseq2-model` now lives in [dattalab/moseq2-app](https://github.com/dattalab/moseq2-app/tree/main/packages/moseq2-model), with the rest of MoSeq2. Open issues and pull requests there.
+
 [![codecov](https://codecov.io/gh/dattalab/moseq2_model/branch/master/graph/badge.svg?token=q9xxVhps5o)](https://codecov.io/gh/dattalab/moseq2_model)
 [![DOI](https://zenodo.org/badge/81390468.svg)](https://zenodo.org/badge/latestdoi/81390468)
 
